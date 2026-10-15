@@ -38,6 +38,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
   const [rate, setRate] = useState<ScrollRate>(60);
   const [confirmSell, setConfirmSell] = useState(false);
   const dialog = useRef<HTMLElement>(null);
+  const showcase = useRef<HTMLDivElement>(null);
   const close = () => { if (!forging.current) command({ type: 'inventoryOpen', open: false }); };
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -54,6 +55,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
   const startRitual = () => {
     if (forging.current || !owned || !def || !owned.slotsLeft || !bag.scrolls[rate]) return;
     forging.current = true;
+    showcase.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
     setRitual({ snapshot, uid: owned.uid, weapon: def, rate });
   };
   const dismissRitual = () => {
@@ -97,7 +99,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
             {bag.outfits.includes(outfit.id) ? <button className="inventory-primary" onClick={() => command({ type: 'inventory', action: bag.equippedOutfit === outfit.id ? {type:'unequipOutfit'} : {type:'equipOutfit',outfitId:outfit.id} })}>{bag.equippedOutfit === outfit.id ? '卸下套服・恢復原裝' : '穿上套服'}</button> : <p>尚未收藏</p>}
             <p className="outfit-note">展示套服已加入收藏。套服不佔武器格、不使用武器卷軸。</p>
           </> : def ? <>
-            <div className={`inventory-showcase feedback-${snapshot.feedback?.kind ?? 'idle'}`} key={`${def.id}-${snapshot.feedback?.id ?? 0}`}><div className="inventory-rune">◇</div><WeaponArt weapon={def} large /><small>{WEAPON_KINDS[def.kind].name} · 外觀收藏</small></div>
+            <div ref={showcase} className={`inventory-showcase ${ritual ? 'forge-active' : ''}`}><div className="inventory-rune">◇</div><WeaponArt weapon={def} large /><small>{WEAPON_KINDS[def.kind].name} · 外觀收藏</small></div>
             <h3>{def.name}{tab === 'bag' && owned && owned.successes > 0 && <em> +{owned.successes}</em>}</h3><p className="inventory-description">{def.description}</p><p className="inventory-cosmetic">純外觀・不增加傷害或擊殺機率</p>
             {tab === 'bag' && owned ? <>
               <div className="inventory-value"><span>商人回收價</span><strong>◈ {sellValue(owned).toLocaleString()}</strong></div>
@@ -106,7 +108,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
               <div className="inventory-scroll-heading"><h4>武器卷軸</h4><small>成功只提升回收價</small></div>
               <div className="inventory-scrolls">{SCROLL_RATES.map((r) => <button key={r} className={`scroll-${r}`} aria-pressed={rate === r} onClick={() => setRate(r)}><ScrollArt rate={r} /><strong>{r}%</strong><small>持有 {bag.scrolls[r]}</small></button>)}</div>
               <p className="inventory-risk">成功增值 <b>+{rule.bonus.toLocaleString()}</b> · 失敗後 <b>{rule.breakOnFailure * 100}%</b> 損毀<br /><small>每次消耗 1 張卷軸與 1 次機會；本次總損毀率 {Number(((1 - rule.success) * rule.breakOnFailure * 100).toFixed(1))}%。</small></p>
-              <button className="inventory-primary upgrade" disabled={!owned.slotsLeft || !bag.scrolls[rate]} onClick={startRitual}>使用 {rate}% 卷軸</button>
+              <button className="inventory-primary upgrade" data-sfx="none" disabled={!!ritual || !owned.slotsLeft || !bag.scrolls[rate]} onClick={startRitual}>{ritual ? '強化中…' : `使用 ${rate}% 卷軸`}</button>
             </> : <div className="inventory-catalog-note"><strong>外觀圖鑑</strong><p>每個系列的性能相同。透過冒險收集後，可在「我的行囊」換裝、強化或出售。</p></div>}
           </> : <div className="inventory-empty"><h3>{snapshot.feedback?.kind === 'destroyed' ? '武器已損毀' : '挑選一把武器'}</h3><p>從左側行囊選取武器，查看外觀與強化資訊。</p></div>}
         </section>
@@ -117,7 +119,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
         </aside>
       </div>
       <footer className="inventory-bottom" inert={!!ritual}><span>純外觀 · 武器依職業保存 · 套服全職業共用</span><span>ESC 關閉 · DEMO 工坊</span></footer>
-      {ritual && <ForgeRitual weaponName={ritual.weapon.name} weaponArt={<WeaponArt weapon={ritual.weapon} large />} rate={ritual.rate} result={result}
+      {ritual && <ForgeRitual anchor={showcase} weaponName={ritual.weapon.name} weaponArt={<WeaponArt weapon={ritual.weapon} large />} rate={ritual.rate} result={result}
         onCommit={() => command({ type: 'inventory', action: { type: 'upgrade', uid: ritual.uid, rate: ritual.rate } })} onDismiss={dismissRitual} />}
     </section>
   </div>;
