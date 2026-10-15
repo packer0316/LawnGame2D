@@ -1,15 +1,33 @@
-import { useEffect, useState } from 'react';
-import type { GameCommand, HudState } from '@lawn/engine';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { GameCommand, HudState, SkillAction } from '@lawn/engine';
 import { AUTO_STATUS_TEXT, AutoPanel } from './AutoPanel';
 import { Icon } from './Icons';
+import { PickupLayer } from './PickupLayer';
+import { SettingsPanel } from './SettingsPanel';
+import { RoomPicker } from './RoomPicker';
 
 const BIG_WIN_TITLE = { big: 'BIG WIN', mega: 'MEGA WIN', super: 'SUPER WIN' } as const;
 
 /** 依 SPEC §2.6 的 HUD 配置。HUD 只顯示狀態，所有操作透過 command() 送回遊戲。 */
-export function Hud({ state, command, action }: { state: HudState | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | 'skill1' | 'skill2') => void }) {
+/** 技能列固定八格（鍵盤 1–8），職業技能不足八個時後面留空。 */
+const HOTBAR_SLOTS = 8;
+
+export function Hud({ state, command, action }: { state: HudState | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | 'secondary' | SkillAction) => void }) {
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [betOpen, setBetOpen] = useState(false);
+  const closeBet = useCallback(() => setBetOpen(false), []);
+  /** 技能方塊剛飛進來的格子（閃一下） */
+  const [arrived, setArrived] = useState<Record<number, number>>({});
+  const closeAll = () => {
+    setRoomsOpen(false);
+    setHelpOpen(false);
+    setAutoOpen(false);
+    setSettingsOpen(false);
+    setBetOpen(false);
+  };
   const [bigWinShown, setBigWinShown] = useState<number | null>(null);
 
   useEffect(() => {
@@ -36,68 +54,75 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
       <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
         <div className="world-title"><span className="eyebrow">LAWN / ADVENTURE</span><strong>{state.roomName}</strong></div>
-        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { setRoomsOpen((open) => !open); setHelpOpen(false); setAutoOpen(false); }}><Icon name="compass" /><span>換房</span><span className="room-count">{String(roomIndex).padStart(2, '0')} / {String(state.rooms.length).padStart(2, '0')}</span></button>
+        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}><Icon name="compass" /><span>換房</span><span className="room-count">{String(roomIndex).padStart(2, '0')} / {String(state.rooms.length).padStart(2, '0')}</span></button>
       </div>
 
       {roomsOpen && (
-        <div className="panel room-list">
-          <div className="room-list-heading"><span className="eyebrow">選擇目的地</span><button aria-label="關閉房間選單" onClick={() => setRoomsOpen(false)}><Icon name="close" /></button></div>
-          {state.rooms.map((room, i) => (
-            <button
-              key={room.id}
-              className={room.id === state.roomId ? 'current' : ''}
-              onClick={() => {
-                setRoomsOpen(false);
-                if (room.id !== state.roomId) command({ type: 'changeRoom', roomId: room.id });
-              }}
-            >
-              <span>
-                {String(i + 1).padStart(2, '0')} {room.name}
-              </span>
-              <span className="sub">
-                押注 {room.betRange[0]}–{room.betRange[1]}
-              </span>
-            </button>
-          ))}
-        </div>
+        <RoomPicker state={state} command={command} onClose={() => setRoomsOpen(false)} />
       )}
 
       <div className="hud-top-right">
-        <div className="panel balance">
-          <Icon name="coin" /><div><span className="label">持有金幣</span><strong>{state.balance.toLocaleString()}</strong></div>
-        </div>
-        <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { setHelpOpen(!helpOpen); setRoomsOpen(false); setAutoOpen(false); }}><Icon name="help" /></button>
+        <button className="help-toggle" aria-label="設定" title="設定（遊戲模式）" aria-expanded={settingsOpen} onClick={() => { const open = !settingsOpen; closeAll(); setSettingsOpen(open); }}><Icon name="gear" /></button>
+        <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { const open = !helpOpen; closeAll(); setHelpOpen(open); }}><Icon name="help" /></button>
       </div>
 
+      <div className="hud-bottom-stack">
+      <div className={`hotbar mode-${state.mode}`} aria-label="技能列">
+        <span className="hotbar-mode">{state.mode === 'dev' ? '開發' : '掉落'}</span>
+        {Array.from({ length: HOTBAR_SLOTS }, (_, slot) => {
+          const skill = state.skills.find((s) => s.slot === slot);
+          if (!skill) return <div key={slot} data-slot={slot} className="hotbar-slot empty"><kbd>{slot + 1}</kbd></div>;
+          const ratio = skill.totalMs > 0 ? skill.cooldownMs / skill.totalMs : 0;
+          const classes = ['hotbar-slot', ratio > 0 ? 'cooling' : '', skill.pendingMs > 0 ? 'pending' : '', state.mode === 'real' ? 'consumable' : '', skill.ultimate ? 'ultimate' : ''].filter(Boolean).join(' ');
+          return (
+            <button key={`${slot}:${skill.id}:${arrived[slot] ?? 0}`} data-slot={slot} className={`${classes} ${arrived[slot] ? 'arrived' : ''}`} title={`${skill.name} · ${skill.key}${state.mode === 'real' ? '（用一次）' : ''}`} onClick={() => action(`skill${slot + 1}` as SkillAction)}>
+              <kbd>{skill.key}</kbd>
+              <Icon name={skill.icon} />
+              <span>{skill.name}</span>
+              {ratio > 0 && <><div className="cooldown" style={{ transform: `scaleY(${ratio})` }} /><b className="cooldown-number">{Math.ceil(skill.cooldownMs / 1000)}</b></>}
+            </button>
+          );
+        })}
+      </div>
       <div className="hud-bottom">
         <div className="class-section">
           <span className="eyebrow">冒險職業</span>
           <div className="class-select">
-            {state.classes.map((c, i) => <button key={c.id} title={`${c.name} · ${i + 1}`} aria-label={c.name} aria-pressed={c.id === state.classId} className={c.id === state.classId ? 'active' : ''} onClick={() => command({ type: 'setClass', classId: c.id })}><Icon name={c.id} /><span>{c.name}</span></button>)}
+            {state.classes.map((c) => <button key={c.id} title={c.name} aria-label={c.name} aria-pressed={c.id === state.classId} className={c.id === state.classId ? 'active' : ''} onClick={() => command({ type: 'setClass', classId: c.id })}><Icon name={c.id} /><span>{c.name}</span></button>)}
           </div>
         </div>
         <div className="dock-divider" />
         <div className="skills">
           <button className="skill basic" onClick={() => action('attack')} title="普攻 · 按住 Z 連擊"><Icon name={state.classId} /><span>普攻</span><kbd>Z</kbd></button>
-          {state.skills.map((skill) => {
-            const ratio = skill.totalMs > 0 ? skill.cooldownMs / skill.totalMs : 0;
-            return <button key={skill.slot} className={`skill ${skill.slot}`} disabled={ratio > 0} onClick={() => action(skill.slot)}><Icon name={skill.slot === 'skill1' ? 'spark' : state.classId} /><span>{skill.name}</span><kbd>{skill.slot === 'skill1' ? 'X' : 'C'}</kbd>{ratio > 0 && <><div className="cooldown" style={{ transform: `scaleY(${ratio})` }} /><b className="cooldown-number">{Math.ceil(skill.cooldownMs / 1000)}</b></>}</button>;
-          })}
+          {state.secondary && (() => {
+            const s = state.secondary;
+            const ratio = s.totalMs > 0 ? s.cooldownMs / s.totalMs : 0;
+            return <button className="skill secondary" disabled={ratio > 0} onClick={() => action('secondary')} title={`${s.name} · X`}><Icon name={s.icon} /><span>{s.name}</span><kbd>X</kbd>{ratio > 0 && <><div className="cooldown" style={{ transform: `scaleY(${ratio})` }} /><b className="cooldown-number">{Math.ceil(s.cooldownMs / 1000)}</b></>}</button>;
+          })()}
         </div>
         <div className="dock-divider" />
         <div className="panel bet">
           <div className="bet-heading"><span className="eyebrow">每刀押注</span><span className={`tier tier-${state.betTier}`}>Lv. {state.betTier}</span></div>
-          <div className="bet-controls"><button aria-label="減少押注" disabled={state.bet <= Math.min(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: -1 })}>−</button><span className="value">{state.bet}</span><button aria-label="增加押注" disabled={state.bet >= Math.max(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: 1 })}>+</button></div>
+          <div className="bet-controls">
+            <button aria-label="減少押注" disabled={state.bet <= Math.min(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: -1 })}>−</button>
+            <button className="value" aria-label="選擇押注" aria-expanded={betOpen} title="點選押注" onClick={() => { const open = !betOpen; closeAll(); setBetOpen(open); }}>{state.bet.toLocaleString()}</button>
+            <button aria-label="增加押注" disabled={state.bet >= Math.max(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: 1 })}>+</button>
+          </div>
+          <div className="bet-balance" title="持有金幣"><Icon name="coin" /><span className="label">持有金幣</span><strong>{state.balance.toLocaleString()}</strong></div>
+          {betOpen && <BetPicker levels={state.betLevels} bet={state.bet} onPick={(bet) => { command({ type: 'setBet', bet }); setBetOpen(false); }} onClose={closeBet} />}
         </div>
         <div className="auto-group">
           <button className={`auto-button ${state.auto ? 'is-on' : ''}`} aria-pressed={state.auto} title="自動冒險 · A" onClick={() => command({ type: 'toggleAuto' })}><Icon name={state.auto ? 'pause' : 'play'} /><span>{state.auto ? '冒險中' : '自動冒險'}</span><small>{state.auto ? AUTO_STATUS_TEXT[state.autoStatus ?? 'search'] : '按 A 開始'}</small></button>
-          <button className="auto-gear" aria-label="自動冒險設定" aria-expanded={autoOpen} onClick={() => { setAutoOpen(!autoOpen); setRoomsOpen(false); setHelpOpen(false); }}><Icon name="gear" /></button>
+          <button className="auto-gear" aria-label="自動冒險設定" aria-expanded={autoOpen} onClick={() => { const open = !autoOpen; closeAll(); setAutoOpen(open); }}><Icon name="gear" /></button>
         </div>
+      </div>
       </div>
 
       <div className="hud-footer"><span>← → 移動 <i>·</i> SPACE 跳躍 <i>·</i> SHIFT 翻滾</span><span className="fps">{state.fps} FPS</span></div>
+      {settingsOpen && <SettingsPanel state={state} command={command} onClose={() => setSettingsOpen(false)} />}
+      <PickupLayer pickups={state.pickups} onArrive={(slot) => setArrived((a) => ({ ...a, [slot]: Date.now() }))} />
       {autoOpen && <AutoPanel state={state} command={command} onClose={() => setAutoOpen(false)} />}
-      {helpOpen && <div className="panel help"><span className="eyebrow">冒險指南</span><h3>操作說明</h3><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>Z</kbd> 按住連擊 <kbd>X C</kbd> 技能</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>1–4</kbd> 切換職業 <kbd>A</kbd> 自動冒險</p><p><kbd>F1</kbd> 碰撞與導航圖</p><small>命中時扣除押注；揮空不扣款。</small></div>}
+      {helpOpen && <div className="panel help"><span className="eyebrow">冒險指南</span><h3>操作說明</h3><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>Z</kbd> 按住連擊 <kbd>X</kbd> 小技能 <kbd>1–6</kbd> 技能列</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>A</kbd> 自動冒險（點職業圖示切換職業）</p><p><kbd>F1</kbd> 碰撞與導航圖</p><small>命中時扣除押注；揮空不扣款。</small></div>}
 
       {state.toast && (
         <div key={state.toast.id} className="panel toast">
@@ -112,6 +137,48 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
           <div className="sub">×{state.bigWin.multiple}</div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 押注清單：從押注數字往上展開，打開時目前押注置中；底下 MIN／MAX。點清單外面或按 Esc 關閉。 */
+function BetPicker({ levels, bet, onPick, onClose }: { levels: number[]; bet: number; onPick: (bet: number) => void; onClose: () => void }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const current = list?.querySelector<HTMLElement>('.current');
+    if (list && current) list.scrollTop = current.offsetTop - (list.clientHeight - current.offsetHeight) / 2;
+  }, []);
+  useEffect(() => {
+    // 押注數字本身在 .panel.bet 裡，點它由按鈕自己切換開關
+    const onPointer = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.panel.bet')) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('pointerdown', onPointer);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('pointerdown', onPointer);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+  const min = levels[0];
+  const max = levels.at(-1);
+  return (
+    <div className="panel bet-picker">
+      <div className="bet-picker-list" ref={listRef} role="listbox" aria-label="每刀押注">
+        {levels.map((level) => (
+          <button key={level} role="option" aria-selected={level === bet} className={level === bet ? 'current' : ''} onClick={() => onPick(level)}>
+            {level.toLocaleString()}
+          </button>
+        ))}
+      </div>
+      <div className="bet-picker-ends">
+        <button disabled={min === undefined || bet === min} onClick={() => min !== undefined && onPick(min)}>MIN</button>
+        <button disabled={max === undefined || bet === max} onClick={() => max !== undefined && onPick(max)}>MAX</button>
+      </div>
     </div>
   );
 }

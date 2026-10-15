@@ -4,6 +4,7 @@ import type { SheetAsset } from '../content/bundle';
 import { DEPTH } from '../map/MapView';
 import { SheetAnimator, frameName } from '../render/sheets';
 import type { MonsterSpawn } from '../server/types';
+import { patrolStep } from './patrol';
 
 type MonsterState = 'idle' | 'move' | 'hit' | 'die' | 'gone';
 
@@ -135,9 +136,9 @@ export class MonsterActor {
     const speed = this.state === 'move' && this.def.behavior.move !== 'static' ? this.def.behavior.speed : 0;
 
     if (this.body) {
-      if (speed > 0 && this.shouldTurn()) this.facing = this.facing === 1 ? -1 : 1;
-      stepBody(this.world, this.body, NO_INPUT, { forcedVx: speed * this.facing, canClimb: false });
-      if (speed > 0 && this.body.vx === 0) this.facing = this.facing === 1 ? -1 : 1;
+      const patrol = patrolStep(this.world, this.body, this.facing, speed, this.zone);
+      this.facing = patrol.facing;
+      if (patrol.stuck) this.enterMode('idle');
       this.syncBody();
     } else if (this.fly) {
       this.x += (speed * this.facing * dt) / 1000;
@@ -148,16 +149,6 @@ export class MonsterActor {
       this.fly.phase += dt / 400;
       this.y = this.fly.baseY + Math.sin(this.fly.phase) * 8;
     }
-  }
-
-  /** 前方沒有地面、或走出生怪區就轉身（不會走下平台）。 */
-  private shouldTurn(): boolean {
-    const body = this.body!;
-    const probe = body.x + this.facing * (PHYSICS.halfWidth + 4);
-    if (probe < this.zone.x || probe > this.zone.x + this.zone.w) return true;
-    if (body.ground === null) return false;
-    const ahead = this.world.groundBelow(probe, body.y - PHYSICS.stepTolerance);
-    return !ahead || Math.abs(ahead.y - body.y) > PHYSICS.stepTolerance;
   }
 
   private syncBody(): void {

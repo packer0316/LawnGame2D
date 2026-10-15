@@ -35,7 +35,7 @@ const classes = (JSON.parse(readFileSync(new URL('classes.json', contentDir), 'u
 const skills = new Map((JSON.parse(readFileSync(new URL('skills.json', contentDir), 'utf8')) as { skills: SkillDef[] }).skills.map((s) => [s.id, s]));
 const warrior = classes.find((c) => c.id === 'warrior')!;
 
-const avatar = { play() {}, setFacing() {}, animator: { speed: 1 } } as unknown as AvatarView;
+const avatar = { play() {}, setFacing() {}, playMotion: () => false, stopMotion() {}, animator: { speed: 1 } } as unknown as AvatarView;
 
 interface Fake {
   alive: boolean;
@@ -63,7 +63,7 @@ function hunt(targets: (MonsterActor & Fake)[], start: { x: number; y: number },
   auto.config.useSkills = false;
   let player!: Player;
   const hits: number[] = [];
-  player = new Player(world, start.x, start.y, warrior, skills, () => 300, avatar, {
+  player = new Player(world, start.x, start.y, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, {
     onStrike(skill) {
       // 跟 GameScene.findTargets 一樣用矩形判定
       const area = skill.strikes[0]!.area;
@@ -134,7 +134,7 @@ describe('自動掛機', () => {
   it('怪太少時走去下一房傳送點按 ↑', () => {
     const auto = new AutoHunt();
     auto.config.autoRoom = true;
-    const player = new Player(world, 620, 240, warrior, skills, () => 300, avatar, { onStrike() {} });
+    const player = new Player(world, 620, 240, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, { onStrike() {} });
     let pressedUpAt = -1;
     for (let i = 0; i < 60 * 20 && pressedUpAt < 0; i += 1) {
       const input = auto.step({ world, nav, map, player, monsters: [], basic: skills.get(warrior.basic)!, skills: [] });

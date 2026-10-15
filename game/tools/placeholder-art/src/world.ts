@@ -374,7 +374,7 @@ function drawTileset(colors: ThemeColors): Canvas {
  * 從亮度推算高度，再用 Sobel 算法線（Laigter 的做法）。
  * tile > 0 時只在同一格圖塊內取樣，避免相鄰圖塊互相影響、在地圖上出現格線。
  */
-function normalMap(source: Canvas, strength = 2, tile = 0): Canvas {
+export function normalMap(source: Canvas, strength = 2, tile = 0): Canvas {
   const out = new Canvas(source.width, source.height);
   let tx0 = 0;
   let ty0 = 0;
@@ -615,8 +615,8 @@ export function writeWorld(contentDir: string): { mapIds: string[] } {
   const rooms: RoomFile = {
     schemaVersion: 1,
     rooms: [
-      { id: 1, mapId: 'map_0001', name: '晨霧之森', betRange: [1, 50], lineup: ['mob_0001', 'mob_0002', 'mob_0003', 'mob_0004'], boss: { mobId: 'mob_0006', intervalSec: 180 } },
-      { id: 2, mapId: 'map_0002', name: '星螢秘窟', betRange: [1, 50], lineup: ['mob_0001', 'mob_0002', 'mob_0003', 'mob_0005'] },
+      { id: 1, mapId: 'map_0001', name: '晨霧之森', betRange: [1, 10000], lineup: ['mob_0001', 'mob_0002', 'mob_0003', 'mob_0004'], boss: { mobId: 'mob_0006', intervalSec: 180 } },
+      { id: 2, mapId: 'map_0002', name: '星螢秘窟', betRange: [1, 10000], lineup: ['mob_0001', 'mob_0002', 'mob_0003', 'mob_0005'] },
     ],
   };
   writeJson(`${contentDir}/rooms/rooms.json`, rooms);

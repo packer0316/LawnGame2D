@@ -9,15 +9,22 @@ import {
   type MapDef,
   type NavGraph,
   type Rect,
+  type SkillCue,
   type SkillDef,
+  type SkillMove,
+  type Strike,
 } from '@lawn/shared';
 import { Player, type PlayerInput } from '../actor/Player';
-import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig } from '../auto/AutoHunt';
+import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
+import { loadHeroMotions, motionDuration } from '../avatar/motions';
 import type { ContentBundle } from '../content/bundle';
-import { InputState } from '../core/input';
+import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
-import type { GameCommand, HudState } from '../hud';
+import { SkillDrops } from '../feel/SkillDrops';
+import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
+import { loadSkillIconTextures } from '../ui/skillIcons';
+import type { GameCommand, GameMode, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
 import { MonsterActor } from '../monster/MonsterActor';
 import { loadSheetAssets } from '../render/sheets';
@@ -30,14 +37,21 @@ const BIG_WIN = { big: 50, mega: 100, super: 300 } as const;
 /** 手動介入後多久恢復掛機（SPEC §3.6） */
 const AUTO_RESUME_MS = 3000;
 const AUTO_CONFIG_KEY = 'lawn.autoConfig';
+const MODE_KEY = 'lawn.mode';
+const HOTBAR_SLOTS = 8;
+/** 技能方塊從地上飛進技能列的時間；飛到之前那一格還不能用 */
+const PICKUP_FLIGHT_MS = 650;
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
   roomId?: number;
   mapOverride?: MapDef;
   classId?: ClassId;
+  mode?: GameMode;
   lighting?: boolean;
   spawnScale?: number;
+  /** 測試用：技能方塊掉落機率 */
+  dropChance?: number;
   showColliders?: boolean;
   onHud?: (state: HudState) => void;
   onExit?: () => void;
@@ -48,13 +62,19 @@ interface Projectile {
   sprite: Phaser.GameObjects.Sprite;
   /** 上一步的位置：判定用「掃過的區段」，貼身的怪也打得到、高速也不會穿過去 */
   lastX: number;
+  lastY: number;
   x: number;
   y: number;
-  dir: 1 | -1;
+  /** 飛行方向（弧度，0 = 往右） */
+  angle: number;
   speed: number;
   remaining: number;
   skill: SkillDef;
   strike: number;
+  /** 瞄準的目標（SPEC §3.4）；死掉後沿目前方向直飛 */
+  target: MonsterActor | null;
+  /** 追蹤：每秒最多轉幾弧度 */
+  turn: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -92,6 +112,8 @@ export class GameScene extends Phaser.Scene {
   private unsubscribes: (() => void)[] = [];
   private readonly damageStacks = new Map<number, { count: number; at: number }>();
   private playerLight: Phaser.GameObjects.Light | null = null;
+  /** 持有金幣在畫面上的位置（裝置像素）：撿到的金幣飛過去 */
+  private balanceAnchor: { x: number; y: number } | null = null;
   /** HUD 底欄佔用的高度（裝置像素），遊戲畫面畫在它上方 */
   private insetBottom = 0;
   /** 場景已銷毀：非同步載入回來後一律忽略 */
@@ -102,6 +124,16 @@ export class GameScene extends Phaser.Scene {
   /** 手動介入：這個時間（performance.now）之前不掛機 */
   private autoPausedUntil = 0;
   private autoSession = { startBalance: 0, startedAt: 0 };
+  private skillFx!: SkillFx;
+  private mode: GameMode = 'real';
+  /** 實際模式的技能列（每個職業各一排）：掉落的技能與飛到的時間 */
+  private readonly realSlots = new Map<ClassId, ({ skillId: string; readyAt: number } | null)[]>();
+  private drops!: SkillDrops;
+  private pickups: HudState['pickups'] = [];
+  /** 散射技能（分身飛鏢、影分身）：這次施放挑好的點 */
+  private scatter: { skillId: string; points: FxPoint[] } | null = null;
+  /** 連鎖技能：這次施放已經打過的怪與上一個點 */
+  private chain: { skillId: string; hit: Set<number>; last: FxPoint | null } | null = null;
 
   constructor() {
     super('game');
@@ -113,12 +145,17 @@ export class GameScene extends Phaser.Scene {
     this.classId = options.classId ?? 'warrior';
     this.colliders = options.showColliders ?? false;
     this.auto.config = loadAutoConfig();
+    this.mode = options.mode ?? loadMode();
   }
 
   create(): void {
     this.keys = new InputState(window);
     this.keys.onManualInput = () => this.pauseAutoForManual();
     this.fx = new FxLayer(this, this.bundle);
+    this.fx.coinTarget = () => this.coinTarget();
+    this.skillFx = new SkillFx(this, this.bundle, this.fx, () => this.opts.lighting !== false);
+    this.drops = new SkillDrops(this);
+    this.drops.onCollect = (cube) => this.collectDrop(cube);
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
@@ -136,8 +173,10 @@ export class GameScene extends Phaser.Scene {
       ...[...bundle.monsters.values()].map((entry) => entry.sheet),
       ...bundle.fx.values(),
     ]);
+    await loadHeroMotions(this);
+    await loadSkillIconTextures(this, [...bundle.skills.values()].flatMap((skill) => (skill.icon ? [skill.icon] : [])));
     if (this.dead) return;
-    this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1 });
+    this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1, ...(this.opts.dropChance !== undefined ? { dropChance: this.opts.dropChance } : {}) });
     this.unsubscribes.push(
       this.server.on('monsterSpawn', (spawn) => this.spawnMonster(spawn)),
       this.server.on('monsterRemove', ({ uid }) => this.monsters.get(uid)?.destroy()),
@@ -152,12 +191,16 @@ export class GameScene extends Phaser.Scene {
       0,
       classDef,
       bundle.skills,
-      (tag) => this.poseDuration(tag),
+      { pose: (tag) => this.poseDuration(tag), motion: motionDuration },
       this.avatar,
       {
         onStrike: (skill, index) => this.onStrike(skill, index),
+        onCue: (skill, cue) => this.onCue(skill, cue),
+        onMove: (skill, move) => this.onMove(skill, move),
         onSkillStart: (skill) => this.onSkillStart(skill),
         onRoll: () => this.onRoll(),
+        resolveSlot: (slot) => this.resolveSlot(slot),
+        onSlotUsed: (slot) => this.useSlot(slot),
         onLand: (impact) => this.onLand(impact),
       },
     );
@@ -182,12 +225,14 @@ export class GameScene extends Phaser.Scene {
     await MapView.preload(this, this.bundle.source, map, theme);
     if (this.dead) return;
 
+    this.drops.collectAll();
     this.mapView?.destroy();
     for (const monster of this.monsters.values()) monster.destroy();
     this.monsters.clear();
     for (const p of this.projectiles) p.sprite.destroy();
     this.projectiles = [];
     this.fx.destroy();
+    this.skillFx.clear();
 
     this.world = new FootholdWorld(map);
     // 編輯器預覽的地圖可能還沒產生導航圖：現場算一份
@@ -257,6 +302,24 @@ export class GameScene extends Phaser.Scene {
     camera.setZoom(height / INTERNAL_HEIGHT);
   }
 
+  setBalanceAnchor(anchor: { x: number; y: number }): void {
+    this.balanceAnchor = anchor;
+  }
+
+  /**
+   * 金幣飛去的地方（世界座標）：持有金幣在底欄裡，畫面只畫到底欄上方，
+   * 所以飛到畫面底邊、正對著持有金幣的位置；還不知道位置時飛向畫面右上角。
+   */
+  private coinTarget(): { x: number; y: number } {
+    const camera = this.cameras.main;
+    const view = camera.worldView;
+    const anchor = this.balanceAnchor;
+    if (!anchor) return { x: view.right - 40, y: view.y + 30 };
+    const screenX = Phaser.Math.Clamp(anchor.x, camera.x, camera.x + camera.width);
+    const screenY = Math.min(anchor.y, camera.y + camera.height - 4);
+    return { x: view.x + (screenX - camera.x) / camera.zoom, y: view.y + (screenY - camera.y) / camera.zoom };
+  }
+
   /** HUD 佔用的底部高度（裝置像素）。 */
   setViewInsets(bottom: number): void {
     const next = Math.max(0, Math.round(bottom));
@@ -323,6 +386,7 @@ export class GameScene extends Phaser.Scene {
     }
     for (const p of this.projectiles) p.sprite.setPosition(Math.round(p.x), Math.round(p.y));
     this.fx.update(animDt === 0 ? 0 : frameMs, this.hitStopMs > 0);
+    this.drops.update(animDt === 0 ? 0 : frameMs);
     this.mapView?.update(frameMs, this.cameras.main);
 
     this.hudElapsed += frameMs;
@@ -342,12 +406,12 @@ export class GameScene extends Phaser.Scene {
       jumpPressed: k.consume('jump'),
       jumpHeld: k.isHeld('jump'),
       attack: k.consume('attack') || k.isHeld('attack'),
-      skill1: k.consume('skill1'),
-      skill2: k.consume('skill2'),
+      secondary: k.consume('secondary'),
+      skill: SKILL_ACTIONS.findIndex((action) => k.consume(action)),
       roll: k.consume('roll'),
     };
     // 按住任何移動或攻擊鍵：掛機持續暫停，放開 3 秒後恢復
-    if (manual.x !== 0 || manual.up || manual.down || manual.jumpHeld || manual.attack) this.pauseAutoForManual();
+    if (manual.x !== 0 || manual.up || manual.down || manual.jumpHeld || manual.attack || manual.secondary || manual.skill >= 0) this.pauseAutoForManual();
     const driving = this.autoDriving;
     const input = driving ? this.stepAuto() : manual;
     this.player.step(this.world, input);
@@ -370,8 +434,86 @@ export class GameScene extends Phaser.Scene {
       player: this.player,
       monsters: this.monsters.values(),
       basic: this.bundle.skills.get(classDef.basic)!,
-      skills: classDef.skills.map((id) => this.bundle.skills.get(id)),
+      skills: this.autoSkills(),
     });
+  }
+
+  /** 掛機可用的技能：技能列（大技能）優先，再來常駐小技能。 */
+  private autoSkills(): AutoSkill[] {
+    const classDef = this.bundle.classes.get(this.classId)!;
+    const list: AutoSkill[] = [];
+    for (let slot = 0; slot < HOTBAR_SLOTS; slot += 1) {
+      const entry = this.resolveSlot(slot);
+      const skill = entry && this.bundle.skills.get(entry.skillId);
+      if (skill) list.push({ skill, press: { skill: slot }, ready: entry.consumable || this.player.canUse(skill.id) });
+    }
+    const secondary = classDef.secondary ? this.bundle.skills.get(classDef.secondary) : undefined;
+    if (secondary) list.push({ skill: secondary, press: { secondary: true }, ready: this.player.canUse(secondary.id) });
+    return list;
+  }
+
+  // ---------------------------------------------------------------------------
+  // 技能列：開發模式固定、實際模式靠掉落（SPEC §3.3）
+  // ---------------------------------------------------------------------------
+
+  private slotsOf(classId: ClassId): ({ skillId: string; readyAt: number } | null)[] {
+    let slots = this.realSlots.get(classId);
+    if (!slots) {
+      slots = Array.from({ length: HOTBAR_SLOTS }, () => null);
+      this.realSlots.set(classId, slots);
+    }
+    return slots;
+  }
+
+  private resolveSlot(slot: number): { skillId: string; consumable: boolean } | null {
+    if (this.mode === 'dev') {
+      const id = this.bundle.classes.get(this.classId)?.skills[slot];
+      return id ? { skillId: id, consumable: false } : null;
+    }
+    const item = this.slotsOf(this.classId)[slot];
+    if (!item || performance.now() < item.readyAt) return null;
+    return { skillId: item.skillId, consumable: true };
+  }
+
+  private useSlot(slot: number): void {
+    if (this.mode !== 'real') return;
+    this.slotsOf(this.classId)[slot] = null;
+    this.emitHud({});
+  }
+
+  /** 技能方塊展示完：放進該職業技能列的第一個空格，HUD 播放飛進去的動畫。 */
+  private collectDrop(cube: { id: number; skillId: string; x: number; y: number }): void {
+    const skill = this.bundle.skills.get(cube.skillId);
+    if (!skill) return;
+    const slots = this.slotsOf(skill.classId);
+    const slot = slots.indexOf(null);
+    if (slot < 0) {
+      this.showToast('技能欄已滿');
+      return;
+    }
+    const now = performance.now();
+    slots[slot] = { skillId: skill.id, readyAt: now + PICKUP_FLIGHT_MS };
+    if (skill.classId !== this.classId) {
+      this.showToast(`撿到 ${skill.name}（${this.bundle.classes.get(skill.classId)?.name ?? ''}）`);
+      return;
+    }
+    const screen = this.worldToScreen(cube.x, cube.y);
+    this.pickups = [...this.pickups.filter((p) => this.pickupAge(p.id) < 2000), { id: cube.id, slot, icon: skill.icon ?? 'spark', name: skill.name, x: screen.x, y: screen.y, flightMs: PICKUP_FLIGHT_MS }];
+    this.pickupTimes.set(cube.id, now);
+    this.emitHud({});
+  }
+
+  private readonly pickupTimes = new Map<number, number>();
+
+  private pickupAge(id: number): number {
+    return performance.now() - (this.pickupTimes.get(id) ?? 0);
+  }
+
+  private setMode(mode: GameMode): void {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    saveMode(mode);
+    this.showToast(mode === 'dev' ? '開發模式：技能列固定，可直接施放' : '實際模式：技能列靠打怪掉落');
   }
 
   private pauseAutoForManual(): void {
@@ -409,11 +551,6 @@ export class GameScene extends Phaser.Scene {
     if (k.consume('betUp')) this.command({ type: 'stepBet', delta: 1 });
     if (k.consume('betDown')) this.command({ type: 'stepBet', delta: -1 });
     if (k.consume('debug')) this.command({ type: 'toggleDebug' });
-    const classKeys = ['class1', 'class2', 'class3', 'class4'] as const;
-    const classIds: ClassId[] = ['warrior', 'mage', 'archer', 'assassin'];
-    classKeys.forEach((key, i) => {
-      if (k.consume(key)) this.command({ type: 'setClass', classId: classIds[i]! });
-    });
     if (k.consume('roomNext')) this.command({ type: 'changeRoom', roomId: this.neighborRoom(1) });
     if (k.consume('roomPrev')) this.command({ type: 'changeRoom', roomId: this.neighborRoom(-1) });
     if (k.consume('auto')) this.command({ type: 'toggleAuto' });
@@ -445,6 +582,9 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'toggleAuto':
         if (this.ready) this.setAuto(!this.autoOn);
+        break;
+      case 'setMode':
+        this.setMode(cmd.mode);
         break;
       case 'setAutoConfig':
         this.auto.config = structuredClone(cmd.config);
@@ -539,6 +679,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onSkillStart(skill: SkillDef): boolean {
+    if (skill.chain?.blink) {
+      // 影襲：第一刀的範圍內要有目標，不然不放（也不進冷卻）
+      if (this.findTargets(skill.strikes[0]!.area, 1, false).length > 0) return true;
+      this.showToast('附近沒有目標');
+      return false;
+    }
     if (!skill.blink) return true;
     const body = this.player.body;
     let best: MonsterActor | null = null;
@@ -550,18 +696,97 @@ export class GameScene extends Phaser.Scene {
       this.showToast('附近沒有目標');
       return false;
     }
-    const side = best.x >= body.x ? 1 : -1;
-    const x = best.x + side * 22;
-    const ground = this.world.groundBelow(x, best.y - 40);
-    this.fx.spawn('dust', body.x, body.y - 10);
-    body.x = Phaser.Math.Clamp(x, PHYSICS.halfWidth, this.world.width - PHYSICS.halfWidth);
-    if (ground) {
-      body.y = ground.y;
-      body.ground = ground.fh;
-    }
-    body.facing = side === 1 ? -1 : 1;
-    this.prevPlayer = { x: body.x, y: body.y };
+    this.teleportBehind(best);
     return true;
+  }
+
+  /**
+   * 瞬移到怪物背後、面向它。背後被牆擋住就停在牆邊；背後沒有落腳處改站到怪物前面；
+   * 兩邊都找不到地面就留在原地（不會瞬移到牆外、掉出地圖）。
+   */
+  private teleportBehind(target: MonsterActor): void {
+    const body = this.player.body;
+    const behind = target.x >= body.x ? 1 : -1;
+    const front = behind === 1 ? -1 : 1;
+    // 先找附近有地面的一側，都沒有才接受「停在空中、之後落到下面的地面」（飛行怪）
+    const spot =
+      this.spotBeside(target, behind, true) ?? this.spotBeside(target, front, true) ?? this.spotBeside(target, behind, false) ?? this.spotBeside(target, front, false);
+    if (!spot) return;
+    this.fx.spawn('dust', body.x, body.y - 10);
+    Object.assign(body, { x: spot.x, y: spot.y, ground: spot.fh, climb: null, vx: 0, vy: 0, facing: spot.side === 1 ? -1 : 1 });
+    this.prevPlayer = { x: body.x, y: body.y };
+  }
+
+  /** 怪物 side 側 22 px 的落腳點。near = 只接受怪物腳下附近的地面；否則底下只要有地面就停在空中自然落下。 */
+  private spotBeside(target: MonsterActor, side: 1 | -1, near: boolean): { x: number; y: number; fh: number | null; side: 1 | -1 } | null {
+    const x = this.world.blockByWalls(target.x, target.x + side * 22, target.y - PHYSICS.height, target.y - 2, PHYSICS.halfWidth);
+    const ground = this.world.groundBelow(x, target.y - 40);
+    if (!ground) return null;
+    if (ground.y - target.y < 120) return { x, y: ground.y, fh: ground.fh, side };
+    return near ? null : { x, y: target.y + 20, fh: null, side };
+  }
+
+  /** 技能位移發動：瞬移在這裡處理，衝刺與跳躍的物理在 Player，這裡只加殘影與塵土。 */
+  private onMove(_skill: SkillDef, move: SkillMove): void {
+    const body = this.player.body;
+    const ghost = () => {
+      const frame = this.avatar.motionFrame;
+      if (frame) this.skillFx.afterimage(frame, this.player.body.x, this.player.body.y, this.player.body.facing);
+    };
+    if (move.kind === 'blink') {
+      const before = { x: body.x, y: body.y };
+      for (let distance = move.distance; distance >= 40; distance *= 0.7) {
+        const wanted = Phaser.Math.Clamp(body.x + body.facing * distance, PHYSICS.halfWidth, this.world.width - PHYSICS.halfWidth);
+        const x = this.world.blockByWalls(body.x, wanted, body.y - PHYSICS.height, body.y - 2, PHYSICS.halfWidth);
+        const ground = this.world.groundBelow(x, body.y - 40);
+        if (!ground || ground.y - body.y > 160) continue;
+        Object.assign(body, { x, y: ground.y, ground: ground.fh, climb: null, vx: 0, vy: 0 });
+        break;
+      }
+      const frame = this.avatar.motionFrame;
+      if (frame) {
+        for (let i = 0; i < 3; i += 1) {
+          const t = i / 3;
+          this.skillFx.afterimage(frame, before.x + (body.x - before.x) * t, before.y + (body.y - before.y) * t, body.facing, 0xc59bff, 0.35 + t * 0.2);
+        }
+      }
+      this.prevPlayer = { x: body.x, y: body.y };
+      return;
+    }
+    this.fx.spawn('dust', body.x, body.y - 8, { flipX: body.facing === 1 });
+    const span = move.kind === 'dash' ? move.durationMs + 40 : 320;
+    const every = move.kind === 'dash' ? 25 : 55;
+    ghost();
+    this.time.addEvent({ delay: every, repeat: Math.max(0, Math.floor(span / every) - 1), callback: ghost });
+  }
+
+  /** 演出時點（隕石開始落下、迴旋刃飛出）。 */
+  private onCue(skill: SkillDef, cue: SkillCue): void {
+    const next = skill.strikes.find((strike) => strike.atMs >= cue.atMs) ?? skill.strikes[0]!;
+    this.skillFx.play(cue.fx, { ...this.fxContext(skill, next.area, [], null, cue.atMs), leadMs: next.atMs - cue.atMs });
+  }
+
+  private fxContext(skill: SkillDef, area: Area, targets: MonsterActor[], from: FxPoint | null, atMs: number): SkillFxContext {
+    const body = this.player.body;
+    const view = this.cameras.main.worldView;
+    return {
+      view: { x: view.x, y: view.y, w: view.width, h: view.height },
+      bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
+      points: this.scatter?.skillId === skill.id ? this.scatter.points : [],
+      groundAt: (x, fromY) => this.world.groundBelow(x, fromY)?.y ?? null,
+      frame: this.avatar.motionFrame,
+      remainingMs: Math.max(0, skill.strikes.at(-1)!.atMs - atMs) + 250,
+      reach: this.skillReach(skill),
+      x: body.x,
+      y: body.y,
+      facing: body.facing,
+      area: this.areaRect(area),
+      targets: targets.map((m) => m.center()),
+      origin: this.player.skillOrigin,
+      from,
+      tint: TIER_TINT[this.betTier] ?? 0xffffff,
+      leadMs: 0,
+    };
   }
 
   private onRoll(): void {
@@ -583,36 +808,219 @@ export class GameScene extends Phaser.Scene {
       this.fx.spawn(fxId, body.x + dir * offset, body.y - 26, { flipX: dir === 1, tint, additive: true, rainbow: this.betTier >= 5 });
     }
     if (skill.projectile) {
-      const asset = this.bundle.fx.get(skill.projectile.fx);
-      if (!asset) return;
-      const sprite = this.add.sprite(body.x + dir * 14, body.y - 26, asset.path, '0').setDepth(DEPTH.fx).setFlipX(dir === 1);
-      sprite.setTint(tint);
-      this.projectiles.push({ sprite, lastX: body.x, x: body.x + dir * 14, y: body.y - 26, dir, speed: skill.projectile.speed, remaining: strike.area.w ?? 300, skill, strike: index });
+      this.launchProjectile(skill, index, strike);
       return;
     }
-    const targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
+    let targets: MonsterActor[];
+    let from: FxPoint | null = null;
+    if (skill.chain) ({ targets, from } = this.chainTargets(skill, index, strike));
+    else if (skill.scatter) targets = this.scatterTargets(skill, index, strike);
+    else targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
+    if (strike.fx) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
     this.applyHits(skill, index, targets);
+  }
+
+  /**
+   * 連鎖（連鎖閃電、影襲）：第一刀照範圍找最近一隻，之後找離上一隻 range 內、這次還沒打過的最近一隻。
+   * chain.blink：每一刀瞬移到目標背後。
+   */
+  private chainTargets(skill: SkillDef, index: number, strike: Strike): { targets: MonsterActor[]; from: FxPoint | null } {
+    const chain = skill.chain!;
+    if (index === 0 || this.chain?.skillId !== skill.id) this.chain = { skillId: skill.id, hit: new Set(), last: null };
+    const state = this.chain;
+    let target: MonsterActor | null = null;
+    if (index === 0) {
+      target = this.findTargets(strike.area, 1, false)[0] ?? null;
+    } else if (state.last) {
+      let best = Infinity;
+      for (const m of this.monsters.values()) {
+        if (!m.alive || state.hit.has(m.spawn.uid)) continue;
+        const c = m.center();
+        const d = Math.hypot(c.x - state.last.x, c.y - state.last.y);
+        if (d <= chain.range && d < best) {
+          best = d;
+          target = m;
+        }
+      }
+    }
+    if (!target) return { targets: [], from: null };
+    const body = this.player.body;
+    let from: FxPoint | null = state.last ?? { x: body.x + body.facing * 14, y: body.y - 26 };
+    if (chain.blink) {
+      from = { x: body.x, y: body.y };
+      const frame = this.avatar.motionFrame;
+      if (frame) this.skillFx.afterimage(frame, body.x, body.y, body.facing, 0x8f5bd6, 0.5);
+      this.teleportBehind(target);
+    }
+    state.hit.add(target.spawn.uid);
+    state.last = target.center();
+    return { targets: [target], from };
+  }
+
+  /** 技能往前打得到多遠（特效用：劍氣、流星箭、迴旋刃飛多遠）。 */
+  private skillReach(skill: SkillDef): number {
+    let reach = 0;
+    for (const strike of skill.strikes) {
+      const a = strike.area;
+      if (a.shape === 'rect' || a.shape === 'line') reach = Math.max(reach, (a.offsetX ?? 0) + (a.w ?? 0));
+      else if (a.shape === 'circle' || a.shape === 'sector') reach = Math.max(reach, a.r ?? 0);
+      else if (a.shape === 'path') reach = Math.max(reach, a.w ?? 0);
+      else if (a.shape === 'map') reach = Math.max(reach, this.world.width);
+      else reach = Math.max(reach, this.cameras.main.worldView.width / 2);
+    }
+    return reach;
+  }
+
+  /**
+   * 散射（分身飛鏢、影分身）：第一刀在畫面內挑點（優先怪物、彼此分開，不夠就補隨機地面點），
+   * 之後每一刀打這些點附近的怪。
+   */
+  private scatterTargets(skill: SkillDef, index: number, strike: Strike): MonsterActor[] {
+    const { count, radius } = skill.scatter!;
+    if (index === 0 || this.scatter?.skillId !== skill.id) this.scatter = { skillId: skill.id, points: this.pickScatterPoints(count, radius, this.areaRect(strike.area)) };
+    const points = this.scatter.points;
+    const hits: { m: MonsterActor; d: number }[] = [];
+    for (const m of this.monsters.values()) {
+      if (!m.alive) continue;
+      const c = m.center();
+      const d = Math.min(...points.map((p) => Math.hypot(c.x - p.x, c.y - p.y)));
+      if (d <= radius) hits.push({ m, d });
+    }
+    return hits
+      .sort((a, b) => a.d - b.d)
+      .slice(0, strike.maxTargets)
+      .map((h) => h.m);
+  }
+
+  /** 在 area（畫面或整張地圖）裡挑散射點。 */
+  private pickScatterPoints(count: number, radius: number, area: Rect): FxPoint[] {
+    const view = new Phaser.Geom.Rectangle(area.x, area.y, area.w, area.h);
+    const body = this.player.body;
+    const inView = [...this.monsters.values()]
+      .filter((m) => m.alive && Phaser.Geom.Rectangle.Contains(view, m.x, m.y - 10))
+      .map((m) => ({ c: m.center(), d: Math.abs(m.x - body.x) + Math.abs(m.y - body.y) * 0.5 }))
+      .sort((a, b) => a.d - b.d);
+    const points: FxPoint[] = [];
+    for (const { c } of inView) {
+      if (points.length >= count) break;
+      if (points.every((p) => Math.hypot(p.x - c.x, p.y - c.y) >= radius * 1.4)) points.push(c);
+    }
+    for (let tries = 0; points.length < count && tries < 40; tries += 1) {
+      const x = view.x + 40 + Math.random() * (view.width - 80);
+      const ground = this.world.groundBelow(x, view.y + Math.random() * view.height * 0.6);
+      if (!ground || ground.y > view.bottom) continue;
+      points.push({ x, y: ground.y - 24 });
+    }
+    return points;
+  }
+
+  /** 投射物：出手時瞄準扇形內的怪（SPEC §3.4），追蹤型飛行中持續轉向。 */
+  private launchProjectile(skill: SkillDef, index: number, strike: Strike): void {
+    const spec = skill.projectile!;
+    const asset = this.bundle.fx.get(spec.fx);
+    if (!asset) return;
+    const body = this.player.body;
+    const dir = body.facing;
+    const x = body.x + dir * 14;
+    const y = body.y - 26;
+    const target = spec.aim ? this.aimTarget(x, y, dir, spec.aim.coneDeg, spec.aim.range) : null;
+    let angle = dir === 1 ? 0 : Math.PI;
+    if (target) {
+      const c = target.center();
+      angle = Math.atan2(c.y - y, c.x - x);
+    }
+    const sprite = this.add.sprite(x, y, asset.path, '0').setDepth(DEPTH.fx).setScale(spec.scale ?? 1);
+    sprite.setTint(spec.tint ?? TIER_TINT[this.betTier] ?? 0xffffff);
+    if (spec.tint !== undefined) sprite.setBlendMode(Phaser.BlendModes.ADD);
+    orientProjectile(sprite, angle);
+    this.projectiles.push({
+      sprite,
+      lastX: body.x,
+      lastY: y,
+      x,
+      y,
+      angle,
+      speed: spec.speed,
+      remaining: (spec.aim?.range ?? strike.area.w ?? 300) + 60,
+      skill,
+      strike: index,
+      target,
+      turn: ((spec.aim?.turnDegPerSec ?? 0) * Math.PI) / 180,
+    });
+  }
+
+  /** 面向 ±coneDeg、range 內的怪：角度偏差小的優先，再看距離。 */
+  private aimTarget(x: number, y: number, dir: 1 | -1, coneDeg: number, range: number): MonsterActor | null {
+    const cone = (coneDeg * Math.PI) / 180;
+    let best: { m: MonsterActor; score: number } | null = null;
+    for (const m of this.monsters.values()) {
+      if (!m.alive) continue;
+      const c = m.center();
+      const dx = (c.x - x) * dir;
+      const dy = c.y - y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > range || dx < -4) continue;
+      const off = Math.abs(Math.atan2(dy, Math.max(dx, 0.001)));
+      if (off > cone) continue;
+      const score = off * 180 + dist;
+      if (!best || score < best.score) best = { m, score };
+    }
+    return best?.m ?? null;
   }
 
   private stepProjectiles(): void {
     const dt = PHYSICS.dt;
     this.projectiles = this.projectiles.filter((p) => {
+      // 追蹤：朝目標轉，每步最多轉 turn × dt
+      if (p.target && p.turn > 0) {
+        if (p.target.alive) {
+          const c = p.target.center();
+          const want = Math.atan2(c.y - p.y, c.x - p.x);
+          const diff = Phaser.Math.Angle.Wrap(want - p.angle);
+          p.angle += Phaser.Math.Clamp(diff, -p.turn * dt, p.turn * dt);
+          orientProjectile(p.sprite, p.angle);
+        } else {
+          p.target = null;
+        }
+      }
       const move = p.speed * dt;
-      p.x += p.dir * move;
+      p.x += Math.cos(p.angle) * move;
+      p.y += Math.sin(p.angle) * move;
       p.remaining -= move;
-      const x1 = Math.min(p.lastX, p.x);
-      const x2 = Math.max(p.lastX, p.x);
-      // 掃過的區段內最靠近起點的那隻
+      // 掃過的線段上最靠近起點的那隻
       let hit: MonsterActor | undefined;
+      let hitAt = Infinity;
       for (const m of this.monsters.values()) {
-        if (!m.alive || !sweepHits(m.hitbox(), x1, x2, p.y, 4)) continue;
-        if (!hit || Math.abs(m.center().x - p.lastX) < Math.abs(hit.center().x - p.lastX)) hit = m;
+        if (!m.alive) continue;
+        const t = segmentHitsRect(m.hitbox(), p.lastX, p.lastY, p.x, p.y, 4);
+        if (t !== null && t < hitAt) {
+          hit = m;
+          hitAt = t;
+        }
       }
       p.lastX = p.x;
+      p.lastY = p.y;
       if (hit) {
-        this.applyHits(p.skill, p.strike, [hit]);
         const box = hit.hitbox();
-        this.fx.spawn('hit_spark', Phaser.Math.Clamp(p.x, box.x, box.x + box.w), p.y, { additive: true });
+        const hx = Phaser.Math.Clamp(p.x, box.x, box.x + box.w);
+        const hy = Phaser.Math.Clamp(p.y, box.y, box.y + box.h);
+        const explode = p.skill.projectile?.explode;
+        if (explode) {
+          // 爆裂箭：半徑內的怪一起判定（仍是一刀一注）
+          const strike = p.skill.strikes[p.strike]!;
+          const near = [...this.monsters.values()]
+            .filter((m) => m.alive)
+            .map((m) => ({ m, d: Math.hypot(m.center().x - hx, m.center().y - hy) }))
+            .filter(({ m, d }) => m === hit || d <= explode)
+            .sort((a, b) => a.d - b.d)
+            .slice(0, strike.maxTargets)
+            .map(({ m }) => m);
+          this.applyHits(p.skill, p.strike, near);
+          this.skillFx.explosion(hx, hy + 12, 1.3, 0xffa040);
+        } else {
+          this.applyHits(p.skill, p.strike, [hit]);
+          this.fx.spawn('hit_spark', hx, hy, { additive: true });
+        }
       }
       if (hit || p.remaining <= 0) {
         p.sprite.destroy();
@@ -620,6 +1028,41 @@ export class GameScene extends Phaser.Scene {
       }
       return true;
     });
+  }
+
+  /** 判定範圍的外框（世界座標）；特效也用這個。 */
+  private areaRect(area: Area): Rect {
+    const body = this.player.body;
+    const dir = body.facing;
+    const cy = body.y - 24;
+    switch (area.shape) {
+      case 'rect':
+      case 'line': {
+        const near = body.x + dir * (area.offsetX ?? 0);
+        const far = near + dir * (area.w ?? 0);
+        const h = area.h ?? 24;
+        return { x: Math.min(near, far), y: cy - h / 2, w: Math.abs(far - near), h };
+      }
+      case 'path': {
+        const origin = this.player.skillOrigin ?? { x: body.x, y: body.y };
+        const end = body.x + dir * (area.w ?? 0);
+        const h = area.h ?? 60;
+        const top = Math.min(origin.y, body.y) - 24 - h / 2;
+        const bottom = Math.max(origin.y, body.y) - 24 + h / 2;
+        return { x: Math.min(origin.x, end), y: top, w: Math.abs(end - origin.x), h: bottom - top };
+      }
+      case 'circle':
+      case 'sector': {
+        const r = area.r ?? 0;
+        return { x: body.x - r, y: cy - r, w: r * 2, h: r * 2 };
+      }
+      case 'screen': {
+        const view = this.cameras.main.worldView;
+        return { x: view.x, y: view.y, w: view.width, h: view.height };
+      }
+      case 'map':
+        return { x: 0, y: 0, w: this.world.width, h: this.world.height };
+    }
   }
 
   /** 範圍內的怪物，依距離排序取前 maxTargets 隻。 */
@@ -634,13 +1077,11 @@ export class GameScene extends Phaser.Scene {
       let inside = false;
       switch (area.shape) {
         case 'rect':
-        case 'line': {
-          const near = body.x + dir * (area.offsetX ?? 0);
-          const far = near + dir * (area.w ?? 0);
-          const h = area.h ?? 24;
-          inside = intersects(box, { x: Math.min(near, far), y: cy - h / 2, w: Math.abs(far - near), h });
+        case 'line':
+        case 'path':
+        case 'map':
+          inside = intersects(box, this.areaRect(area));
           break;
-        }
         case 'circle':
           inside = circleRect(body.x, cy, area.r ?? 0, box);
           break;
@@ -709,9 +1150,11 @@ export class GameScene extends Phaser.Scene {
       const c = monster.center();
       const floor = monster.y;
       const coins = Math.min(30, monster.def.fx.coinCount + Math.floor(outcome.multiplier / 10));
+      const drop = this.mode === 'real' && outcome.drop ? this.bundle.skills.get(outcome.drop.skillId) : undefined;
       monster.kill(() => {
         this.fx.coins(c.x, c.y, coins, floor);
         this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' });
+        if (drop) this.drops.spawn(drop.id, drop.icon ?? 'spark', c.x, c.y, floor);
       });
       this.onPayout(outcome.payout, outcome.multiplier, c);
     }
@@ -757,10 +1200,26 @@ export class GameScene extends Phaser.Scene {
   private emitHud(patch: Partial<HudState>): void {
     if (!this.opts.onHud) return;
     const classDef = this.bundle.classes.get(this.classId);
-    const skillInfo = (slot: 'skill1' | 'skill2', id: string | undefined) => {
-      const skill = id ? this.bundle.skills.get(id) : undefined;
-      return { slot, id: id ?? '', name: skill?.name ?? '', cooldownMs: this.ready && id ? this.player.cooldown(id) : 0, totalMs: (skill?.cooldownSec ?? 0) * 1000 };
+    const now = performance.now();
+    const info = (id: string, consumable: boolean) => {
+      const skill = this.bundle.skills.get(id);
+      return {
+        id,
+        name: skill?.name ?? '',
+        icon: skill?.icon ?? 'spark',
+        cooldownMs: this.ready && !consumable ? this.player.cooldown(id) : 0,
+        totalMs: consumable ? 0 : (skill?.cooldownSec ?? 0) * 1000,
+      };
     };
+    const hotbar: HudState['skills'] = [];
+    if (this.mode === 'dev') {
+      for (const [slot, id] of (classDef?.skills ?? []).entries()) hotbar.push({ ...info(id, false), slot, key: String(slot + 1), pendingMs: 0, ultimate: this.bundle.skills.get(id)?.ultimate ?? false });
+    } else {
+      for (const [slot, item] of this.slotsOf(this.classId).entries()) {
+        if (item) hotbar.push({ ...info(item.skillId, true), slot, key: String(slot + 1), pendingMs: Math.max(0, item.readyAt - now), ultimate: this.bundle.skills.get(item.skillId)?.ultimate ?? false });
+      }
+    }
+    this.pickups = this.pickups.filter((p) => this.pickupAge(p.id) < 2000);
     this.opts.onHud({
       loading: !this.ready,
       balance: this.displayBalance,
@@ -772,7 +1231,10 @@ export class GameScene extends Phaser.Scene {
       rooms: this.bundle.rooms.map((r) => ({ id: r.id, name: r.name, betRange: r.betRange, lineup: r.lineup ?? [] })),
       classId: this.classId,
       classes: [...this.bundle.classes.values()].map((c) => ({ id: c.id, name: c.name })),
-      skills: [skillInfo('skill1', classDef?.skills[0]), skillInfo('skill2', classDef?.skills[1])],
+      mode: this.mode,
+      skills: hotbar,
+      ...(classDef?.secondary ? { secondary: info(classDef.secondary, false) } : {}),
+      pickups: this.pickups,
       auto: this.autoOn,
       ...(this.autoOn
         ? {
@@ -803,6 +1265,25 @@ export class GameScene extends Phaser.Scene {
       balance: this.displayBalance,
       auto: this.autoOn ? 1 : 0,
       ...(this.autoOn ? this.auto.debugInfo() : {}),
+      ...this.playerScreen(),
+    };
+  }
+
+  /** 玩家腳底在畫面上的位置（CSS 像素；截圖腳本用來對準角色）。 */
+  private playerScreen(): { screenX: number; screenY: number } {
+    const body = this.player?.body;
+    if (!body) return { screenX: 0, screenY: 0 };
+    const screen = this.worldToScreen(body.x, body.y);
+    return { screenX: Math.round(screen.x), screenY: Math.round(screen.y) };
+  }
+
+  /** 世界座標 → 畫面座標（CSS 像素）。 */
+  private worldToScreen(x: number, y: number): { x: number; y: number } {
+    const camera = this.cameras.main;
+    const dpr = window.devicePixelRatio || 1;
+    return {
+      x: (camera.x + (x - camera.worldView.x) * camera.zoom) / dpr,
+      y: (camera.y + (y - camera.worldView.y) * camera.zoom) / dpr,
     };
   }
 
@@ -826,9 +1307,35 @@ function circleRect(cx: number, cy: number, r: number, rect: Rect): boolean {
   return (cx - nx) ** 2 + (cy - ny) ** 2 <= r * r;
 }
 
-/** 水平線段 [x1, x2]（高度 y）是否碰到 rect。 */
-function sweepHits(rect: Rect, x1: number, x2: number, y: number, pad: number): boolean {
-  return x2 >= rect.x - pad && x1 <= rect.x + rect.w + pad && y >= rect.y - pad && y <= rect.y + rect.h + pad;
+/** 線段 (x1,y1)→(x2,y2) 碰到外擴 pad 的 rect 時，回傳碰到的位置 t（0–1）；沒碰到回傳 null（Liang–Barsky）。 */
+function segmentHitsRect(rect: Rect, x1: number, y1: number, x2: number, y2: number, pad: number): number | null {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  let t0 = 0;
+  let t1 = 1;
+  const edges: [number, number][] = [
+    [-dx, x1 - (rect.x - pad)],
+    [dx, rect.x + rect.w + pad - x1],
+    [-dy, y1 - (rect.y - pad)],
+    [dy, rect.y + rect.h + pad - y1],
+  ];
+  for (const [p, q] of edges) {
+    if (p === 0) {
+      if (q < 0) return null;
+      continue;
+    }
+    const r = q / p;
+    if (p < 0) t0 = Math.max(t0, r);
+    else t1 = Math.min(t1, r);
+    if (t0 > t1) return null;
+  }
+  return t0;
+}
+
+/** 投射物素材面向左：往右半邊飛時水平翻轉，避免上下顛倒。 */
+function orientProjectile(sprite: Phaser.GameObjects.Sprite, angle: number): void {
+  if (Math.cos(angle) >= 0) sprite.setFlipX(true).setRotation(angle);
+  else sprite.setFlipX(false).setRotation(angle - Math.PI);
 }
 
 function loadAutoConfig(): AutoConfig {
@@ -845,6 +1352,24 @@ function loadAutoConfig(): AutoConfig {
 function saveAutoConfig(config: AutoConfig): void {
   try {
     localStorage.setItem(AUTO_CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // 無痕模式等情況無法存，忽略
+  }
+}
+
+function loadMode(): GameMode {
+  try {
+    const params = new URLSearchParams(location.search).get('mode');
+    if (params === 'dev' || params === 'real') return params;
+    return localStorage.getItem(MODE_KEY) === 'dev' ? 'dev' : 'real';
+  } catch {
+    return 'real';
+  }
+}
+
+function saveMode(mode: GameMode): void {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
   } catch {
     // 無痕模式等情況無法存，忽略
   }

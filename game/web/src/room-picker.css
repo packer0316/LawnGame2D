@@ -1,0 +1,6 @@
+.room-categories { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
+.room-categories button { border: 1px solid #607e714d; border-radius: 20px; padding: 6px 10px; font-size: 11px; background: #102b26; color: #abc2b5; }
+.room-categories button[aria-pressed="true"] { border-color: #d0bc79; background: #52624166; color: #f5e5b1; }
+.room-category-caption { grid-column: 1 / -1; margin: 2px 0 4px; color: #b5c5b7; font-size: 11px; }
+.room-list .room-region { font-size: 10px; letter-spacing: .5px; filter: brightness(1.4); }
+.room-list > button { min-height: 100px; }

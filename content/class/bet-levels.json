@@ -2,13 +2,25 @@
   "schemaVersion": 1,
   "levels": [
     { "bet": 1, "visualTier": 1 },
-    { "bet": 2, "visualTier": 1 },
-    { "bet": 5, "visualTier": 2 },
-    { "bet": 10, "visualTier": 2 },
-    { "bet": 20, "visualTier": 3 },
-    { "bet": 50, "visualTier": 3 },
-    { "bet": 100, "visualTier": 4 },
-    { "bet": 200, "visualTier": 4 },
-    { "bet": 500, "visualTier": 5 }
+    { "bet": 5, "visualTier": 1 },
+    { "bet": 10, "visualTier": 1 },
+    { "bet": 20, "visualTier": 2 },
+    { "bet": 30, "visualTier": 2 },
+    { "bet": 40, "visualTier": 2 },
+    { "bet": 50, "visualTier": 2 },
+    { "bet": 100, "visualTier": 3 },
+    { "bet": 150, "visualTier": 3 },
+    { "bet": 200, "visualTier": 3 },
+    { "bet": 250, "visualTier": 3 },
+    { "bet": 300, "visualTier": 3 },
+    { "bet": 400, "visualTier": 4 },
+    { "bet": 500, "visualTier": 4 },
+    { "bet": 1000, "visualTier": 4 },
+    { "bet": 1500, "visualTier": 4 },
+    { "bet": 2000, "visualTier": 4 },
+    { "bet": 3000, "visualTier": 5 },
+    { "bet": 4000, "visualTier": 5 },
+    { "bet": 5000, "visualTier": 5 },
+    { "bet": 10000, "visualTier": 5 }
   ]
 }

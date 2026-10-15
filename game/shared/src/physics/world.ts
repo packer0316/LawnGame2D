@@ -76,15 +76,39 @@ export class FootholdWorld {
     return best;
   }
 
-  /** 從 prevY 落到 newY 的途中第一個碰到的足場。 */
-  findLanding(x: number, prevY: number, newY: number, ignore: number | null): { fh: number; y: number } | null {
-    let best: { fh: number; y: number } | null = null;
+  /**
+   * 腳底從 (x0, y0) 移到 (x1, y1) 的途中，第一個「由上往下」穿過的足場，回傳穿過的那一點。
+   * 沿整條移動線段檢查，不只看終點的 x：高速水平移動（衝刺、跳斬）撞進上坡時才不會穿地。
+   * solidOnly：只看實心足場。上升中用這個，可以從下面跳穿單向平台，但不能橫衝進實心斜坡。
+   */
+  findLanding(x0: number, y0: number, x1: number, y1: number, ignore: number | null, solidOnly = false): { fh: number; x: number; y: number } | null {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let best: { fh: number; x: number; y: number; t: number } | null = null;
     for (const seg of this.segments) {
-      if (seg.fh === ignore || x < seg.x1 - EPS || x > seg.x2 + EPS) continue;
+      if (seg.fh === ignore || (solidOnly && seg.oneWay)) continue;
+      // 把移動線段裁到這段足場的 x 範圍：t ∈ [ta, tb]
+      let ta = 0;
+      let tb = 1;
+      if (Math.abs(dx) < EPS) {
+        if (x0 < seg.x1 - EPS || x0 > seg.x2 + EPS) continue;
+      } else {
+        const tl = (seg.x1 - EPS - x0) / dx;
+        const tr = (seg.x2 + EPS - x0) / dx;
+        ta = Math.max(0, Math.min(tl, tr));
+        tb = Math.min(1, Math.max(tl, tr));
+        if (ta > tb) continue;
+      }
+      // 裁出的區間內，腳底減足場高度是線性的：起點在上面（≤ 0）、終點在下面（≥ 0）就是穿過
+      const da = y0 + dy * ta - segmentY(seg, x0 + dx * ta);
+      const db = y0 + dy * tb - segmentY(seg, x0 + dx * tb);
+      if (da > EPS || db < -EPS) continue;
+      const t = da >= -EPS ? ta : ta + ((tb - ta) * da) / (da - db);
+      const x = x0 + dx * t;
       const y = segmentY(seg, x);
-      if (y >= prevY - EPS && y <= newY + EPS && (!best || y < best.y)) best = { fh: seg.fh, y };
+      if (!best || t < best.t - EPS || (Math.abs(t - best.t) <= EPS && y < best.y)) best = { fh: seg.fh, x, y, t };
     }
-    return best;
+    return best && { fh: best.fh, x: best.x, y: best.y };
   }
 
   /** 水平移動被牆擋住時，回傳修正後的 x。top／bottom 是身體的垂直範圍。 */

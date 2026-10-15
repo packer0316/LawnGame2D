@@ -43,13 +43,20 @@ export interface AutoContext {
   player: Player;
   monsters: Iterable<MonsterActor>;
   basic: SkillDef;
-  skills: readonly (SkillDef | undefined)[];
+  /** 現在放得出去的技能（常駐小技能、技能列）與要按的鍵；ready = 冷卻好了／掉落技能已經到手 */
+  skills: readonly AutoSkill[];
+}
+
+export interface AutoSkill {
+  skill: SkillDef;
+  press: Partial<PlayerInput>;
+  ready: boolean;
 }
 
 /** 自動換房：走得到的怪少於 minMobs 隻，持續 afterMs 就前往下一房（SPEC §3.6） */
 export const AUTO_ROOM = { minMobs: 3, afterMs: 8000 } as const;
 
-const IDLE: PlayerInput = { x: 0, up: false, down: false, jumpPressed: false, jumpHeld: false, attack: false, skill1: false, skill2: false, roll: false };
+const IDLE: PlayerInput = { x: 0, up: false, down: false, jumpPressed: false, jumpHeld: false, attack: false, secondary: false, skill: -1, roll: false };
 const input = (patch: Partial<PlayerInput>): PlayerInput => ({ ...IDLE, ...patch });
 
 /** 技能第一刀往前打得到多遠（水平）。 */
@@ -63,13 +70,25 @@ function reachOf(area: Area): number {
       return area.r ?? 0;
     case 'screen':
       return 400;
+    case 'path':
+      return area.w ?? 40;
+    case 'map':
+      return 4000;
   }
+}
+
+/** 技能打得到多遠：第一刀的範圍，加上往前的衝刺／瞬移距離。 */
+function skillReach(skill: SkillDef): number {
+  const move = skill.move;
+  const travel = move?.kind === 'dash' ? Math.max(0, move.distance) : move?.kind === 'blink' ? move.distance : move?.kind === 'leap' ? Math.max(0, move.vx) * 0.6 : 0;
+  return reachOf(skill.strikes[0]!.area) + travel;
 }
 
 /** 技能第一刀的上下範圍（相對身體中心）。 */
 function heightOf(area: Area): number {
   if (area.shape === 'circle' || area.shape === 'sector') return (area.r ?? 0) * 2;
   if (area.shape === 'screen') return 540;
+  if (area.shape === 'map') return 4000;
   return area.h ?? 28;
 }
 
@@ -219,7 +238,10 @@ export class AutoHunt {
     const box = monster.hitbox();
     const area = ctx.basic.strikes[0]!.area;
     const dy = ctx.player.body.y - 24 - (box.y + box.h / 2);
-    const reachY = heightOf(area) / 2 + box.h / 2 - 2;
+    const aim = ctx.basic.projectile?.aim;
+    const dx = Math.abs(box.x + box.w / 2 - ctx.player.body.x);
+    const coneY = aim && dx <= aim.range ? dx * Math.tan((aim.coneDeg * Math.PI) / 180) * 0.9 : 0;
+    const reachY = Math.max(heightOf(area) / 2, coneY) + box.h / 2 - 2;
     if (Math.abs(dy) <= reachY) return 0;
     return dy > 0 ? dy - reachY : -1;
   }
@@ -281,12 +303,13 @@ export class AutoHunt {
     }
 
     if (this.config.useSkills) {
-      for (const [i, skill] of ctx.skills.entries()) {
-        if (!skill || !ctx.player.canUse(skill.id)) continue;
+      for (const { skill, press, ready } of ctx.skills) {
+        if (!ready) continue;
         const strike = skill.strikes[0]!;
-        const inRange = [...ctx.monsters].filter((m) => m.alive && Math.abs(m.x - body.x) <= reachOf(strike.area) + 20 && Math.abs(m.y - body.y) < 80).length;
-        const worth = strike.maxTargets <= 1 || inRange >= 2 || target.math?.tier === 'elite' || target.math?.tier === 'boss';
-        if (worth) return input(i === 0 ? { skill1: true } : { skill2: true });
+        const reach = skillReach(skill);
+        const inRange = [...ctx.monsters].filter((m) => m.alive && (m.x - body.x) * body.facing >= -60 && Math.abs(m.x - body.x) <= reach + 20 && Math.abs(m.y - body.y) < 80).length;
+        const worth = inRange >= 1 && (strike.maxTargets <= 1 || skill.chain !== undefined || inRange >= 2 || target.math?.tier === 'elite' || target.math?.tier === 'boss');
+        if (worth) return input(press);
       }
     }
     return input({ attack: true });

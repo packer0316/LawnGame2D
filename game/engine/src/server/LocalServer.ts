@@ -22,9 +22,14 @@ export interface LocalServerOptions {
   /** 測試用：每個生怪區的數量上限倍率 */
   spawnScale?: number;
   storageKey?: string;
+  /** 測試用：技能方塊掉落機率改成固定值（例如 1 = 每殺必掉） */
+  dropChance?: number;
 }
 
 const MAX_STRIKES_PER_SECOND = 24;
+
+/** 擊殺時掉落技能方塊的機率（依怪物等級，SPEC §3.3）。掉落是免費的，使用時每刀照常扣注，不影響 RTP。 */
+export const SKILL_DROP_CHANCE: Record<string, number> = { normal: 0.05, elite: 0.25, special: 0.35, boss: 1 };
 
 function secureRandom(): number {
   const buffer = new Uint32Array(1);
@@ -54,6 +59,7 @@ export class LocalServer implements GameServer {
   private readonly latency: [number, number];
   private readonly spawnScale: number;
   private readonly storageKey: string;
+  private readonly dropChance: number | undefined;
 
   constructor(
     private readonly bundle: ContentBundle,
@@ -63,6 +69,7 @@ export class LocalServer implements GameServer {
     this.latency = options.latencyMs ?? [30, 100];
     this.spawnScale = options.spawnScale ?? 1;
     this.storageKey = options.storageKey ?? 'lawn.balance';
+    this.dropChance = options.dropChance;
     this.balance = this.loadBalance(options.startingBalance ?? 100_000);
     this.timer = setInterval(() => this.tick(), 250);
   }
@@ -122,19 +129,37 @@ export class LocalServer implements GameServer {
       strike.weightRule,
       secureRandom,
     );
+    const drops = new Map<number, string>();
     for (const outcome of outcomes) {
       if (!outcome.killed) continue;
       this.balance += outcome.payout;
       const dead = this.monsters.get(outcome.uid);
-      if (dead) this.removeMonster(dead, false);
+      if (!dead) continue;
+      const drop = this.rollDrop(dead, skill.classId);
+      if (drop) drops.set(outcome.uid, drop);
+      this.removeMonster(dead, false);
     }
     this.saveBalance();
     return {
       seq: req.seq,
       cost: req.bet,
-      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout })),
+      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout, ...(drops.has(uid) ? { drop: { skillId: drops.get(uid)! } } : {}) })),
       balance: this.balance,
     };
+  }
+
+  /** 掉落：該職業的大技能（技能列，不含常駐小技能）隨機一個。 */
+  private rollDrop(monster: LiveMonster, classId: string): string | null {
+    const tier = this.bundle.monsters.get(monster.spawn.typeId)?.math?.tier ?? 'normal';
+    if (secureRandom() >= (this.dropChance ?? SKILL_DROP_CHANCE[tier] ?? 0)) return null;
+    const classDef = [...this.bundle.classes.values()].find((c) => c.id === classId);
+    const pool = (classDef?.skills ?? [])
+      .filter((id) => id !== classDef?.secondary)
+      .map((id) => ({ id, weight: this.bundle.skills.get(id)?.dropWeight ?? 1 }))
+      .filter((entry) => entry.weight > 0);
+    const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
+    let pick = secureRandom() * total;
+    return pool.find((entry) => (pick -= entry.weight) < 0)?.id ?? pool.at(-1)?.id ?? null;
   }
 
   dispose(): void {

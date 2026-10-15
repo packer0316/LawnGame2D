@@ -2,6 +2,8 @@ import * as Phaser from 'phaser';
 import { FootholdWorld, TILE_FLIP_X, TILE_FLIP_Y, type MapDef, type MapLight, type ThemeDef } from '@lawn/shared';
 import type { ContentSource } from '../content';
 import { loadImages } from '../render/sheets';
+import { PortalView } from './PortalView';
+import { drawLandmarkScenery, landmarkFor } from './LandmarkScenery';
 
 /** 畫面層級（SPEC §4.1）。 */
 export const DEPTH = {
@@ -45,6 +47,7 @@ export class MapView {
   private debug: Phaser.GameObjects.Graphics | null = null;
   private scenery: Phaser.GameObjects.Graphics | null = null;
   private motes: Phaser.GameObjects.Graphics | null = null;
+  private portals: PortalView[] = [];
   private elapsed = 0;
   lighting = true;
 
@@ -111,12 +114,19 @@ export class MapView {
 
     scene.cameras.main.setBackgroundColor('#1a1826');
     if (theme?.backgrounds.some((bg) => bg.image.includes('_painted'))) this.buildScenery();
+    this.portals = map.portals.filter((p) => p.type !== 'spawn').map((p, i) =>
+      new PortalView(scene, p.x, p.y, DEPTH.tilesBack + 3, this.lighting, i * 1.7));
   }
 
   /** 稀疏蕨葉、花朵與藤蔓，依實際足場擺放，碰撞仍完全由地圖決定。 */
   private buildScenery(): void {
     const g = this.scene.add.graphics().setDepth(DEPTH.tilesBack + 1);
     this.scenery = g;
+    if (landmarkFor(this.map)) {
+      drawLandmarkScenery(g, this.map);
+      this.motes = this.scene.add.graphics().setDepth(DEPTH.tilesBack + 2);
+      return;
+    }
     for (const fh of this.map.footholds) {
       for (let i = 0; i < fh.points.length - 1; i++) {
         const a = fh.points[i]!, b = fh.points[i + 1]!;
@@ -170,20 +180,18 @@ export class MapView {
     }
     if (this.motes) {
       const g = this.motes.clear(), t = this.elapsed / 1000;
+      const landmark = landmarkFor(this.map);
+      const petal = landmark?.id === 'jp_fuji';
+      const tint = petal ? 0xffc5dc : landmark?.id === 'gr_santorini' ? 0xe7f5ff : 0xffefbe;
       for (let i = 0; i < 30; i++) {
         const x = view.x + ((i * 83.7 + Math.sin(t * 0.25 + i) * 16) % view.width + view.width) % view.width;
         const y = view.y + ((i * 47.3 - t * (1 + i % 3)) % view.height + view.height) % view.height;
         const alpha = 0.15 + (Math.sin(t * 1.4 + i * 2) + 1) * 0.22;
         g.fillStyle(0xf4e7ad, alpha * 0.08).fillCircle(x, y, 5);
-        g.fillStyle(0xffefbe, alpha).fillRect(x, y, i % 4 === 0 ? 2 : 1, 1);
-      }
-      for (const p of this.map.portals) {
-        if (p.type === 'spawn') continue;
-        g.lineStyle(2, 0x85e2ca, 0.3 + Math.sin(t * 2) * 0.1).strokeEllipse(p.x, p.y - 23, 23, 44);
-        g.lineStyle(1, 0xf2e2ab, 0.65).strokeEllipse(p.x, p.y - 23, 17, 38);
-        g.fillStyle(0x67dabc, 0.1).fillEllipse(p.x, p.y - 23, 17, 38);
+        g.fillStyle(tint, alpha).fillRect(x, y, petal ? 3 : i % 4 === 0 ? 2 : 1, petal ? 2 : 1);
       }
     }
+    for (const portal of this.portals) portal.update(this.elapsed, camera);
     for (const entry of this.lightEntries) {
       if (entry.def.flicker <= 0) continue;
       const t = this.elapsed / 1000 + entry.phase;
@@ -246,6 +254,8 @@ export class MapView {
   destroy(): void {
     this.scenery?.destroy();
     this.motes?.destroy();
+    for (const portal of this.portals) portal.destroy();
+    this.portals = [];
     for (const { sprite } of this.backgrounds) sprite.destroy();
     for (const layer of this.layers) layer.destroy();
     this.tilemap?.destroy();

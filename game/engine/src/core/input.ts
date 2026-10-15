@@ -1,3 +1,7 @@
+/** 技能列的八格（鍵盤 1–8）。 */
+export const SKILL_ACTIONS = ['skill1', 'skill2', 'skill3', 'skill4', 'skill5', 'skill6', 'skill7', 'skill8'] as const;
+export type SkillAction = (typeof SKILL_ACTIONS)[number];
+
 /** 遊戲動作；鍵盤、觸控按鈕、掛機都透過這層輸入（SPEC §2.6）。 */
 export type Action =
   | 'left'
@@ -6,17 +10,13 @@ export type Action =
   | 'down'
   | 'jump'
   | 'attack'
-  | 'skill1'
-  | 'skill2'
+  | 'secondary'
+  | SkillAction
   | 'roll'
   | 'betDown'
   | 'betUp'
   | 'auto'
   | 'debug'
-  | 'class1'
-  | 'class2'
-  | 'class3'
-  | 'class4'
   | 'roomPrev'
   | 'roomNext';
 
@@ -36,23 +36,36 @@ const KEYMAP: Record<string, Action> = {
   AltLeft: 'jump',
   AltRight: 'jump',
   KeyZ: 'attack',
+  KeyX: 'secondary',
   ControlLeft: 'attack',
   ControlRight: 'attack',
-  KeyX: 'skill1',
-  KeyC: 'skill2',
   ShiftLeft: 'roll',
   ShiftRight: 'roll',
   KeyQ: 'betDown',
   KeyE: 'betUp',
   KeyA: 'auto',
   F1: 'debug',
-  Digit1: 'class1',
-  Digit2: 'class2',
-  Digit3: 'class3',
-  Digit4: 'class4',
+  Digit1: 'skill1',
+  Digit2: 'skill2',
+  Digit3: 'skill3',
+  Digit4: 'skill4',
+  Digit5: 'skill5',
+  Digit6: 'skill6',
+  Digit7: 'skill7',
+  Digit8: 'skill8',
+  Numpad1: 'skill1',
+  Numpad2: 'skill2',
+  Numpad3: 'skill3',
+  Numpad4: 'skill4',
+  Numpad5: 'skill5',
+  Numpad6: 'skill6',
+  Numpad7: 'skill7',
+  Numpad8: 'skill8',
   PageUp: 'roomPrev',
   PageDown: 'roomNext',
 };
+
+const MANUAL_ACTIONS = new Set<Action>(['left', 'right', 'up', 'down', 'jump', 'attack', 'secondary', 'roll', ...SKILL_ACTIONS]);
 
 /**
  * 記錄按住與「剛按下」。剛按下的事件會保留到被消耗為止，
@@ -86,7 +99,7 @@ export class InputState {
   press(action: Action): void {
     if (!this.held.has(action)) this.pressed.add(action);
     this.held.add(action);
-    if (['left', 'right', 'up', 'down', 'jump', 'attack', 'skill1', 'skill2', 'roll'].includes(action)) this.onManualInput?.();
+    if (MANUAL_ACTIONS.has(action)) this.onManualInput?.();
   }
 
   release(action: Action): void {

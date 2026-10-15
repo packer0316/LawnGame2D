@@ -110,6 +110,32 @@ describe('足場物理', () => {
     expect(body.y).toBe(200);
   });
 
+  it('空中高速橫衝進上坡不會穿地（只看終點 x 會穿過去）', () => {
+    // 腳底在平地上方 5 px，一步衝 48 px（skill_0005 的衝刺速度），終點已經在坡頂平台下方
+    const body = createBody(world, 95, 150);
+    Object.assign(body, { y: 195, ground: null });
+    stepBody(world, body, NO_INPUT, { forcedVx: 2875, canClimb: false });
+    expect(body.ground).toBe(1);
+    expect(body.y).toBeCloseTo(168, 5);
+    run(body, 60);
+    expect(body.ground).toBe(1);
+  });
+
+  it('上升中橫衝進實心斜坡也會被接住', () => {
+    const body = createBody(world, 95, 150);
+    Object.assign(body, { y: 195, vy: -120, ground: null });
+    stepBody(world, body, NO_INPUT, { forcedVx: 2875, canClimb: false });
+    expect(body.ground).toBe(1);
+    expect(body.y).toBeLessThanOrEqual(200);
+  });
+
+  it('跳躍途中橫向穿過單向平台下方不會被吸上去', () => {
+    const body = createBody(world, 20, 200);
+    stepBody(world, body, input({ x: 1, jumpPressed: true, jumpHeld: true }));
+    for (let i = 0; i < 8; i += 1) stepBody(world, body, input({ x: 1, jumpHeld: true }));
+    expect(body.ground).toBeNull();
+  });
+
   it('跑出地圖右緣前停下', () => {
     const body = createBody(world, 180, 120);
     run(body, 30, { x: 1 });

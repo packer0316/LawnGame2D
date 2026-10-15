@@ -12,6 +12,7 @@ import {
 } from '@lawn/shared';
 import type { SheetAsset } from '../content/bundle';
 import { SheetAnimator, frameName } from '../render/sheets';
+import { HERO_MOTIONS_KEY, heroMotionsSheet } from './motions';
 
 /** 角色需要的內容：人物 sheet 與武器部件。 */
 export interface AvatarContent {
@@ -33,6 +34,10 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private lastFrame = -1;
   private dirty = true;
   weapon: string | null = null;
+  /** 技能整體動畫（人物 + 武器合圖）：播放時隱藏紙娃娃 */
+  private readonly motionSprite: Phaser.GameObjects.Sprite;
+  private readonly motionAnimator = new SheetAnimator(heroMotionsSheet);
+  private motionOn = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -46,7 +51,36 @@ export class AvatarView extends Phaser.GameObjects.Container {
       this.sprites.set(layer, sprite);
       this.add(sprite);
     }
+    this.motionSprite = scene.add.sprite(-AVATAR_CANVAS.footX, -AVATAR_CANVAS.footY, '__MISSING').setOrigin(0, 0).setVisible(false);
+    this.add(this.motionSprite);
     this.animator.play('stand');
+  }
+
+  /** 正在播技能整體動畫。 */
+  get inMotion(): boolean {
+    return this.motionOn;
+  }
+
+  /** 目前畫面上的整體動畫幀（殘影用）；沒有在播時為 null。 */
+  get motionFrame(): { key: string; frame: string } | null {
+    return this.motionOn ? { key: HERO_MOTIONS_KEY, frame: frameName(null, this.motionAnimator.frame) } : null;
+  }
+
+  /** 播放技能整體動畫；素材沒有這個 Tag（或圖還沒載入）時回傳 false，呼叫端改播紙娃娃動作。 */
+  playMotion(tag: string, options: { speed?: number; loop?: boolean } = {}): boolean {
+    if (!this.scene.textures.exists(HERO_MOTIONS_KEY) || !this.motionAnimator.play(tag, { restart: true, loop: options.loop ?? false })) return false;
+    this.motionAnimator.speed = options.speed ?? 1;
+    this.motionOn = true;
+    this.dirty = true;
+    this.refresh();
+    return true;
+  }
+
+  stopMotion(): void {
+    if (!this.motionOn) return;
+    this.motionOn = false;
+    this.dirty = true;
+    this.refresh();
   }
 
   get frame(): number {
@@ -82,12 +116,24 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 推進動畫；頓幀時傳 0。 */
   tick(dtMs: number): void {
+    if (this.motionOn) {
+      this.motionAnimator.update(dtMs);
+      this.motionSprite.setFrame(frameName(null, this.motionAnimator.frame));
+      return;
+    }
     this.animator.update(dtMs);
     this.refresh();
   }
 
   /** 依目前幀擺好每個圖層。 */
   refresh(): void {
+    if (this.motionOn) {
+      for (const sprite of this.sprites.values()) sprite.setVisible(false);
+      this.motionSprite.setTexture(HERO_MOTIONS_KEY, frameName(null, this.motionAnimator.frame)).setVisible(true);
+      this.dirty = true; // 回到紙娃娃時重畫
+      return;
+    }
+    this.motionSprite.setVisible(false);
     const f = this.animator.frame;
     if (!this.dirty && f === this.lastFrame) return;
     this.lastFrame = f;
@@ -110,13 +156,13 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 受擊閃白等效果：套到所有圖層。 */
   setFill(color: number | null): void {
-    for (const sprite of this.sprites.values()) {
+    for (const sprite of [...this.sprites.values(), this.motionSprite]) {
       if (color === null) sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.MULTIPLY);
       else sprite.setTint(color).setTintMode(Phaser.TintModes.FILL);
     }
   }
 
   setLit(enabled: boolean): void {
-    for (const sprite of this.sprites.values()) sprite.setLighting(enabled);
+    for (const sprite of [...this.sprites.values(), this.motionSprite]) sprite.setLighting(enabled);
   }
 }

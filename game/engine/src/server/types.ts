@@ -45,7 +45,8 @@ export type ErrorCode = 'INSUFFICIENT_BALANCE' | 'RATE_LIMIT' | 'BET_OUT_OF_RANG
 export interface AttackResult {
   seq: number;
   cost: number;
-  results: { uid: number; killed: boolean; multiplier: number; payout: number }[];
+  /** drop：擊殺時掉落的技能方塊（實際模式撿起來放進技能列，用一次就沒了） */
+  results: { uid: number; killed: boolean; multiplier: number; payout: number; drop?: { skillId: string } }[];
   balance: number;
   error?: ErrorCode;
 }

@@ -7,6 +7,7 @@ import { writeFx } from './fx';
 import { writeMonsters } from './monsters';
 import { writeJson } from './sheet';
 import { writeWorld } from './world';
+import { writeLandmarks } from './landmarks';
 
 /**
  * 產生 Aseprite 匯出格式的測試內容（STUDIO_SPEC §8、§8.1）。
@@ -26,6 +27,7 @@ const { itemIds } = writeAvatar(out);
 const { monsterIds } = writeMonsters(out);
 const { fxIds } = writeFx(out);
 const { mapIds } = writeWorld(out);
+writeLandmarks(out);
 
 // content/class/ 由遊戲手寫（COLLAB §1），測試內容直接複製一份。
 const classDir = path.join(here, '../../../../content/class');

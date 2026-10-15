@@ -3,7 +3,7 @@ import type { ClassId, MapDef } from '@lawn/shared';
 import type { ContentSource } from './content';
 import { loadContentBundle } from './content/bundle';
 import type { Action } from './core/input';
-import type { GameCommand, HudState } from './hud';
+import type { GameCommand, GameMode, HudState } from './hud';
 import { GameScene } from './scenes/GameScene';
 
 export interface CreateGameOptions {
@@ -19,10 +19,14 @@ export interface CreateGameOptions {
   /** HUD 狀態（約每 100ms 一次，有變化時也會推）。 */
   onHud?: (state: HudState) => void;
   classId?: ClassId;
+  /** 開發模式／實際模式；沒給就用上次在設定裡選的（預設實際模式） */
+  mode?: GameMode;
   /** 動態光照；預設開。 */
   lighting?: boolean;
   /** 測試用：生怪數量倍率。 */
   spawnScale?: number;
+  /** 測試用：技能方塊掉落機率（0–1） */
+  dropChance?: number;
   /** 顯示足場、牆、天花板、繩梯、生怪區。 */
   showColliders?: boolean;
 }
@@ -38,6 +42,8 @@ export interface GameHandle {
   release(action: Action): void;
   /** HUD 佔用的區域（CSS 像素）。遊戲畫面只畫在底欄上方。 */
   setViewInsets(insets: { bottom: number }): void;
+  /** HUD 元素在畫面上的位置（CSS 像素）：balance = 持有金幣，撿到的金幣飛過去 */
+  setHudAnchors(anchors: { balance?: { x: number; y: number } }): void;
 }
 
 /** 內部高度固定 540 像素（SPEC §4.1）。 */
@@ -68,6 +74,7 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
   let scene: GameScene | null = null;
   let destroyed = false;
   /** 場景建立前就設定的 HUD 高度，建立後套用 */
+  let balanceAnchor: { x: number; y: number } | null = null;
   let insetBottom = 0;
 
   const start = async () => {
@@ -78,14 +85,17 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
       ...(options.roomId !== undefined ? { roomId: options.roomId } : {}),
       ...(options.mapOverride ? { mapOverride: options.mapOverride } : {}),
       ...(options.classId ? { classId: options.classId } : {}),
+      ...(options.mode ? { mode: options.mode } : {}),
       lighting: options.lighting ?? true,
       spawnScale: options.spawnScale ?? 1,
+      ...(options.dropChance !== undefined ? { dropChance: options.dropChance } : {}),
       showColliders: options.showColliders ?? false,
       ...(options.onHud ? { onHud: options.onHud } : {}),
       ...(options.onExit ? { onExit: options.onExit } : {}),
     });
     scene = game.scene.getScene('game') as GameScene;
     scene.setViewInsets(insetBottom);
+    if (balanceAnchor) scene.setBalanceAnchor(balanceAnchor);
   };
   start().catch((error: unknown) => {
     console.error(error);
@@ -131,6 +141,11 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
     setViewInsets(insets) {
       insetBottom = insets.bottom * dpr;
       scene?.setViewInsets(insetBottom);
+    },
+    setHudAnchors(anchors) {
+      if (!anchors.balance) return;
+      balanceAnchor = { x: anchors.balance.x * dpr, y: anchors.balance.y * dpr };
+      scene?.setBalanceAnchor(balanceAnchor);
     },
   };
 }

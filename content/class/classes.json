@@ -5,37 +5,85 @@
       "id": "warrior",
       "name": "劍士",
       "basic": "skill_0001",
-      "skills": ["skill_0004", "skill_0005"],
+      "skills": [
+        "skill_0004",
+        "skill_0005",
+        "skill_0006",
+        "skill_0007",
+        "skill_0008",
+        "skill_0009",
+        "skill_0040",
+        "skill_0041"
+      ],
+      "secondary": "skill_0009",
       "weapon": "weapon_0001",
       "maxAirJumps": 0,
-      "damage": [120, 260]
+      "damage": [
+        120,
+        260
+      ]
     },
     {
       "id": "mage",
       "name": "法師",
       "basic": "skill_0011",
-      "skills": ["skill_0012", "skill_0013"],
+      "skills": [
+        "skill_0012",
+        "skill_0013",
+        "skill_0014",
+        "skill_0015",
+        "skill_0016",
+        "skill_0042",
+        "skill_0043"
+      ],
+      "secondary": "skill_0012",
       "weapon": "weapon_0002",
       "maxAirJumps": 0,
-      "damage": [150, 320]
+      "damage": [
+        150,
+        320
+      ]
     },
     {
       "id": "archer",
       "name": "弓箭手",
       "basic": "skill_0021",
-      "skills": ["skill_0022", "skill_0023"],
+      "skills": [
+        "skill_0022",
+        "skill_0023",
+        "skill_0024",
+        "skill_0025",
+        "skill_0026",
+        "skill_0044",
+        "skill_0045"
+      ],
+      "secondary": "skill_0024",
       "weapon": "weapon_0003",
       "maxAirJumps": 0,
-      "damage": [100, 240]
+      "damage": [
+        100,
+        240
+      ]
     },
     {
       "id": "assassin",
       "name": "刺客",
       "basic": "skill_0031",
-      "skills": ["skill_0032", "skill_0033"],
+      "skills": [
+        "skill_0032",
+        "skill_0033",
+        "skill_0034",
+        "skill_0035",
+        "skill_0046",
+        "skill_0047"
+      ],
+      "secondary": "skill_0032",
       "weapon": "weapon_0004",
       "maxAirJumps": 1,
-      "damage": [80, 180]
+      "damage": [
+        80,
+        180
+      ]
     }
   ]
 }

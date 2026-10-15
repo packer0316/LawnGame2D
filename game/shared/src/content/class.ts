@@ -7,9 +7,12 @@ import { ClassIdSchema, IdSchema, RangeSchema } from './common';
  */
 
 export const AreaSchema = z.object({
-  /** rect：前方矩形；circle：自身周圍；sector：前方扇形；line：前方直線；screen：整個畫面 */
-  shape: z.enum(['rect', 'circle', 'sector', 'line', 'screen']),
-  /** 長度（rect、line 的前方距離） */
+  /**
+   * rect：前方矩形；circle：自身周圍；sector：前方扇形；line：前方直線；screen：整個畫面；
+   * path：技能開始時的位置到現在位置（衝刺、瞬移掃過的路線），再往前延伸 w；map：整張地圖（大絕招）
+   */
+  shape: z.enum(['rect', 'circle', 'sector', 'line', 'screen', 'path', 'map']),
+  /** 長度（rect、line 的前方距離；path 往前延伸的距離） */
   w: z.number().min(0).optional(),
   /** 高度（rect、line 的上下範圍） */
   h: z.number().min(0).optional(),
@@ -28,16 +31,42 @@ export const StrikeSchema = z.object({
   /** false = 只打最近的第一隻 */
   pierce: z.boolean(),
   weightRule: z.enum(['even', 'primary50']),
+  /** 這一刀的程式特效（engine/src/feel/SkillFx.ts），例如 lightning、quake、nova */
+  fx: z.string().optional(),
 });
 export type Strike = z.infer<typeof StrikeSchema>;
+
+/**
+ * 技能位移（SPEC §3.3）。atMs 是動作開始後第幾毫秒發動。
+ * - dash：貼地衝刺 distance 像素（負數 = 往後），花 durationMs
+ * - leap：跳起來，vy 往上的速度、vx 空中的水平速度（負數 = 往後）
+ * - blink：瞬間移到前方 distance 像素（被牆擋住或前方沒地面就縮短）
+ */
+export const SkillMoveSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('dash'), atMs: z.number().min(0), distance: z.number(), durationMs: z.number().positive() }),
+  z.object({ kind: z.literal('leap'), atMs: z.number().min(0), vx: z.number(), vy: z.number().positive() }),
+  z.object({ kind: z.literal('blink'), atMs: z.number().min(0), distance: z.number().positive() }),
+]);
+export type SkillMove = z.infer<typeof SkillMoveSchema>;
+
+/** 不判定的演出時點（例如隕石開始落下、迴旋刃飛出）。 */
+export const SkillCueSchema = z.object({ atMs: z.number().min(0), fx: z.string() });
+export type SkillCue = z.infer<typeof SkillCueSchema>;
 
 export const SkillDefSchema = z.object({
   id: IdSchema,
   name: z.string().min(1),
   classId: ClassIdSchema,
   kind: z.enum(['basic', 'active']),
-  /** 角色動作 Tag，例如 swing1、cast */
+  /** 角色動作 Tag，例如 swing1、cast（沒有 motion 或缺少整體動畫時使用） */
   pose: z.string().min(1),
+  /**
+   * 整體動畫（人物 + 武器合圖，例如 Codex 的森境旅人技能動作）：播放時取代紙娃娃。
+   * speed 是播放倍率；loop = 技能期間重複播放（連射、連斬）。
+   */
+  motion: z.object({ tag: z.string().min(1), speed: z.number().positive().optional(), loop: z.boolean().optional() }).optional(),
+  /** 技能列的圖示名稱（HUD） */
+  icon: z.string().optional(),
   /** 每一刀 = 一次判定 = 命中時扣一注 */
   strikes: z.array(StrikeSchema).min(1),
   cooldownSec: z.number().min(0),
@@ -47,10 +76,38 @@ export const SkillDefSchema = z.object({
   comboNext: IdSchema.optional(),
   /** 判定期間往前的推進速度（px/s） */
   lunge: z.number().optional(),
-  /** 投射物：命中時才扣款（SPEC §3.1） */
-  projectile: z.object({ fx: z.string(), speed: z.number().positive() }).optional(),
+  /**
+   * 投射物：命中時才扣款（SPEC §3.1）。explode = 命中時對半徑內的怪一起判定。
+   * aim = 出手時在面向 ±coneDeg、range 內找目標並朝它飛；turnDegPerSec > 0 時飛行中持續追蹤（每秒最多轉幾度）
+   */
+  projectile: z
+    .object({
+      fx: z.string(),
+      speed: z.number().positive(),
+      explode: z.number().positive().optional(),
+      tint: z.number().int().optional(),
+      scale: z.number().positive().optional(),
+      aim: z.object({ coneDeg: z.number().min(0).max(90), range: z.number().positive(), turnDegPerSec: z.number().min(0) }).optional(),
+    })
+    .optional(),
   /** 瞬移到最近目標背後（刺客影襲） */
   blink: z.boolean().optional(),
+  move: SkillMoveSchema.optional(),
+  cues: z.array(SkillCueSchema).optional(),
+  /**
+   * 連鎖：第一刀照 area 找目標，之後每一刀找離上一個目標 range 內、還沒打過的最近一隻。
+   * blink = 每一刀瞬移到目標背後（刺客影襲）
+   */
+  chain: z.object({ range: z.number().positive(), blink: z.boolean().optional() }).optional(),
+  /**
+   * 散射（分身飛鏢、影分身）：第一刀時在畫面內挑 count 個點（優先是怪物、彼此分開），
+   * 之後每一刀打這些點 radius 內的怪
+   */
+  scatter: z.object({ count: z.number().int().positive(), radius: z.number().positive() }).optional(),
+  /** 大絕招：HUD 金框；實際模式掉落權重較低 */
+  ultimate: z.boolean().optional(),
+  /** 實際模式的掉落權重（預設 1） */
+  dropWeight: z.number().min(0).optional(),
   hitStopMs: z.number().min(0),
   shake: z.number().min(0),
   fx: z.string().optional(),
@@ -64,8 +121,10 @@ export const ClassDefSchema = z.object({
   name: z.string().min(1),
   /** 普攻（連擊的第一段） */
   basic: IdSchema,
-  /** 技能 1、技能 2 */
-  skills: z.tuple([IdSchema, IdSchema]),
+  /** 技能列（HUD 上排，鍵盤 1–8）。開發模式固定放這些；實際模式靠打怪掉落（不含 secondary） */
+  skills: z.array(IdSchema).min(1).max(8),
+  /** 常駐小技能（鍵盤 X）：實際模式除了普攻之外唯一一直能用的技能，不會掉落 */
+  secondary: IdSchema.optional(),
   /** 預設武器部件 */
   weapon: IdSchema,
   /** 空中可再跳幾次（刺客 = 1） */

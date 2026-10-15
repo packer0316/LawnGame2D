@@ -189,23 +189,27 @@ function stepAir(world: FootholdWorld, body: BodyState, input: BodyInput, option
   }
   body.vy = Math.min(PHYSICS.maxFall, body.vy + PHYSICS.gravity * PHYSICS.dt);
 
+  const fromX = body.x;
   const toX = body.x + body.vx * PHYSICS.dt;
   body.x = world.blockByWalls(body.x, toX, body.y - PHYSICS.height, body.y - 1, PHYSICS.halfWidth);
   if (body.x !== toX) body.vx = 0;
 
+  const rising = body.vy < 0;
   let newY = body.y + body.vy * PHYSICS.dt;
-  if (body.vy < 0) {
+  if (rising) {
     const hit = world.ceilingHit(body.x, PHYSICS.halfWidth, body.y - PHYSICS.height, newY - PHYSICS.height);
     if (hit !== null) {
       newY = hit + PHYSICS.height;
       body.vy = 0;
     }
-    body.y = newY;
-    return;
   }
-  const landing = world.findLanding(body.x, body.y, newY, body.dropMs > 0 ? body.dropFh : null);
+  // 上升中只會被實心足場接住（橫衝進斜坡）；下降時單向平台也會接住
+  const landing = world.findLanding(fromX, body.y, body.x, newY, body.dropMs > 0 ? body.dropFh : null, rising);
   if (landing) {
-    body.y = landing.y;
+    // 落到的足場延伸到這一步的終點時就停在終點，不吃掉水平位移
+    const endY = world.footholdY(landing.fh, body.x);
+    if (endY === null) body.x = landing.x;
+    body.y = endY ?? landing.y;
     body.ground = landing.fh;
     body.vy = 0;
     body.airJumps = 0;

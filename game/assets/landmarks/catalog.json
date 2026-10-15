@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "categories": ["奇幻原境", "台灣景點", "日本景點", "世界景點"],
+  "scenes": [
+    {"id":"tw_jiufen","themeId":"theme_0004","category":"台灣景點","country":"台灣","name":"九份燈雨山城","roomIds":[4],"stone":"#52626a","joint":"#2b3d45","surface":"#8b9a97","beam":"#593b30","accent":"#bb4832","light":"#ffe2a8","ambient":"#eef3ff","intensity":0.88,"material":"slate","platform":"wood"},
+    {"id":"tw_alishan","themeId":"theme_0005","category":"台灣景點","country":"台灣","name":"阿里山曙光雲海","roomIds":[5],"stone":"#555d4b","joint":"#303e35","surface":"#82976a","beam":"#825a3b","accent":"#b89b63","light":"#ffe7aa","ambient":"#fff8e9","intensity":1,"material":"moss","platform":"timber"},
+    {"id":"jp_fuji","themeId":"theme_0006","category":"日本景點","country":"日本","name":"富士山櫻映湖畔","roomIds":[9],"stone":"#657181","joint":"#3f4a60","surface":"#b1bec2","beam":"#625069","accent":"#d6a4bd","light":"#ffe1ee","ambient":"#fff5fc","intensity":1,"material":"basalt","platform":"stone"},
+    {"id":"jp_kyoto","themeId":"theme_0007","category":"日本景點","country":"日本","name":"京都千本鳥居","roomIds":[10],"stone":"#626760","joint":"#343c38","surface":"#a0a392","beam":"#a63e2d","accent":"#db8750","light":"#ffd69b","ambient":"#f3f4e8","intensity":0.9,"material":"ashlar","platform":"lacquer"},
+    {"id":"gr_santorini","themeId":"theme_0008","category":"世界景點","country":"希臘","name":"聖托里尼藍灣","roomIds":[16],"stone":"#c6c5ba","joint":"#7d919e","surface":"#f1eadd","beam":"#d6d5c7","accent":"#3b76a3","light":"#fff0c8","ambient":"#ffffff","intensity":1,"material":"plaster","platform":"terrace"},
+    {"id":"eg_giza","themeId":"theme_0009","category":"世界景點","country":"埃及","name":"吉薩金砂神殿","roomIds":[17],"stone":"#b18a52","joint":"#795634","surface":"#e1bf80","beam":"#ae824a","accent":"#377f80","light":"#ffcf83","ambient":"#fff1d8","intensity":1,"material":"sandstone","platform":"carved"}
+  ]
+}

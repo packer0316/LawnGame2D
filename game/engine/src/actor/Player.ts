@@ -6,7 +6,9 @@ import {
   type BodyState,
   type ClassDef,
   type FootholdWorld,
+  type SkillCue,
   type SkillDef,
+  type SkillMove,
   type StepEvents,
 } from '@lawn/shared';
 import type { AvatarView } from '../avatar/AvatarView';
@@ -29,24 +31,55 @@ export interface PlayerInput {
   jumpPressed: boolean;
   jumpHeld: boolean;
   attack: boolean;
-  skill1: boolean;
-  skill2: boolean;
+  /** 常駐小技能（X） */
+  secondary: boolean;
+  /** 這一步按下的技能列格子（0 起算）；-1 = 沒按 */
+  skill: number;
   roll: boolean;
 }
 
-type BufferedAction = 'attack' | 'skill1' | 'skill2' | 'roll' | 'jump';
+type BufferedAction = 'attack' | 'secondary' | 'skill' | 'roll' | 'jump';
 
-type State =
-  | { kind: 'free' }
-  | { kind: 'attack'; skill: SkillDef; elapsed: number; nextStrike: number; duration: number }
-  | { kind: 'roll'; elapsed: number; dir: 1 | -1 };
+interface AttackState {
+  kind: 'attack';
+  skill: SkillDef;
+  elapsed: number;
+  nextStrike: number;
+  nextCue: number;
+  duration: number;
+  /** 位移已經發動 */
+  moved: boolean;
+  /** 衝刺已結束（停下來，不要靠摩擦力滑很遠） */
+  dashDone: boolean;
+  /** 技能開始時的位置（path 範圍的起點） */
+  origin: { x: number; y: number };
+}
+
+type State = { kind: 'free' } | AttackState | { kind: 'roll'; elapsed: number; dir: 1 | -1 };
+
+/** 動作長度（毫秒，1 倍速）。 */
+export interface PoseTiming {
+  pose(tag: string): number;
+  motion(tag: string): number;
+}
 
 export interface PlayerHooks {
   /** 第 index 刀判定的時間到了 */
   onStrike(skill: SkillDef, index: number): void;
+  /** 技能演出時點（不判定） */
+  onCue?(skill: SkillDef, cue: SkillCue): void;
+  /** 技能位移發動（blink 由場景瞬移；dash、leap 的物理由 Player 處理，場景只加演出） */
+  onMove?(skill: SkillDef, move: SkillMove): void;
   /** 技能開始前呼叫；回傳 false 表示不能放（例如影襲找不到目標） */
   onSkillStart?(skill: SkillDef): boolean;
   onRoll?(): void;
+  /**
+   * 技能列第 slot 格現在是什麼技能（null = 空的或還不能用）。consumable = 用一次就沒了、不看冷卻（實際模式的掉落技能）。
+   * 沒有提供時照 classDef.skills（開發模式）。
+   */
+  resolveSlot?(slot: number): { skillId: string; consumable: boolean } | null;
+  /** 消耗型技能列格子已經放出去 */
+  onSlotUsed?(slot: number): void;
   onJump?(air: boolean): void;
   onLand?(impact: number): void;
 }
@@ -55,13 +88,15 @@ export class Player {
   readonly body: BodyState;
   private state: State = { kind: 'free' };
   private nowMs = 0;
-  private buffer: { action: BufferedAction; at: number } | null = null;
+  private buffer: { action: BufferedAction; slot: number; at: number } | null = null;
   private readonly cooldowns = new Map<string, number>();
   private rollCooldownMs = 0;
   private combo: { next: string; until: number } | null = null;
   private landMs = 0;
   private lastFallSpeed = 0;
   private prone = false;
+  /** 最後一次站在地上的位置：掉出地圖時回到這裡 */
+  private safeGround: { x: number; y: number; fh: number } | null = null;
   lastEvents: StepEvents | null = null;
 
   constructor(
@@ -70,8 +105,7 @@ export class Player {
     y: number,
     public classDef: ClassDef,
     private readonly skills: Map<string, SkillDef>,
-    /** 動作 Tag 的總長（毫秒） */
-    private readonly poseDuration: (tag: string) => number,
+    private readonly timing: PoseTiming,
     readonly avatar: AvatarView,
     private readonly hooks: PlayerHooks,
   ) {
@@ -80,6 +114,11 @@ export class Player {
 
   get attacking(): SkillDef | null {
     return this.state.kind === 'attack' ? this.state.skill : null;
+  }
+
+  /** 目前技能開始時的位置（path 範圍用）。 */
+  get skillOrigin(): { x: number; y: number } | null {
+    return this.state.kind === 'attack' ? this.state.origin : null;
   }
 
   get rolling(): boolean {
@@ -111,12 +150,12 @@ export class Player {
 
     const presses: [BufferedAction, boolean][] = [
       ['attack', input.attack],
-      ['skill1', input.skill1],
-      ['skill2', input.skill2],
+      ['secondary', input.secondary],
+      ['skill', input.skill >= 0],
       ['roll', input.roll],
       ['jump', input.jumpPressed],
     ];
-    for (const [action, pressed] of presses) if (pressed) this.buffer = { action, at: this.nowMs };
+    for (const [action, pressed] of presses) if (pressed) this.buffer = { action, slot: input.skill, at: this.nowMs };
     if (this.buffer && this.nowMs - this.buffer.at > FEEL.bufferMs) this.buffer = null;
 
     let options: BodyOptions = { maxAirJumps: this.classDef.maxAirJumps };
@@ -127,6 +166,25 @@ export class Player {
     } else if (this.state.kind === 'attack') {
       const s = this.state;
       s.elapsed += dt;
+      const move = s.skill.move;
+      if (move && !s.moved && s.elapsed >= move.atMs) {
+        s.moved = true;
+        if (move.kind === 'leap') {
+          this.body.vy = -move.vy;
+          this.body.ground = null;
+          this.body.climb = null;
+        }
+        this.hooks.onMove?.(s.skill, move);
+      }
+      if (move?.kind === 'dash' && s.moved && !s.dashDone && s.elapsed >= move.atMs + move.durationMs) {
+        s.dashDone = true;
+        this.body.vx = 0;
+      }
+      const cues = s.skill.cues ?? [];
+      while (s.nextCue < cues.length && cues[s.nextCue]!.atMs <= s.elapsed) {
+        this.hooks.onCue?.(s.skill, cues[s.nextCue]!);
+        s.nextCue += 1;
+      }
       while (s.nextStrike < s.skill.strikes.length && s.skill.strikes[s.nextStrike]!.atMs <= s.elapsed) {
         this.hooks.onStrike(s.skill, s.nextStrike);
         s.nextStrike += 1;
@@ -171,7 +229,8 @@ export class Player {
         up: free && input.up,
         down: free && input.down,
         jumpPressed: free && jumpPressed,
-        jumpHeld: input.jumpHeld,
+        // 技能跳躍（旋風斬、昇龍斬）不受「放開跳躍鍵就降低高度」影響
+        jumpHeld: input.jumpHeld || (this.state.kind === 'attack' && this.state.moved && this.state.skill.move?.kind === 'leap'),
       },
       options,
     );
@@ -183,10 +242,12 @@ export class Player {
       this.hooks.onLand?.(this.lastFallSpeed);
       this.lastFallSpeed = 0;
     }
-    if (events.fellOut) {
-      // 掉出地圖：回到最近的地面（保險）
-      this.body.y = 0;
-      this.body.vy = 0;
+    if (this.body.ground !== null) {
+      this.safeGround = { x: this.body.x, y: this.body.y, fh: this.body.ground };
+    } else if (events.fellOut) {
+      // 掉出地圖（保險）：回到最後站過的地面；連一次都沒站過才從地圖頂端落下
+      const safe = this.safeGround;
+      Object.assign(this.body, safe ? { x: safe.x, y: safe.y, ground: safe.fh } : { y: 0 }, { vx: 0, vy: 0, climb: null });
     }
   }
 
@@ -198,6 +259,11 @@ export class Player {
     }
     if (this.state.kind === 'attack') {
       const s = this.state;
+      const move = s.skill.move;
+      if (move?.kind === 'dash' && s.moved && s.elapsed < move.atMs + move.durationMs) {
+        return { ...base, forcedVx: (this.body.facing * move.distance) / (move.durationMs / 1000), canClimb: false };
+      }
+      if (move?.kind === 'leap' && s.moved && this.body.ground === null) return { ...base, forcedVx: this.body.facing * move.vx, canClimb: false };
       const strike = s.skill.strikes[Math.min(s.nextStrike, s.skill.strikes.length - 1)]!;
       const lunging = s.skill.lunge && Math.abs(s.elapsed - strike.atMs) < 70 && s.nextStrike <= s.skill.strikes.length;
       if (this.body.ground === null) return { ...base, forcedVx: this.body.vx * 0.9, canClimb: false };
@@ -225,26 +291,52 @@ export class Player {
     }
 
     let skillId: string;
-    if (buffered.action === 'attack') {
+    let consumable = false;
+    if (buffered.action === 'secondary') {
+      if (!this.classDef.secondary) {
+        this.buffer = null;
+        return false;
+      }
+      skillId = this.classDef.secondary;
+    } else if (buffered.action === 'attack') {
       const chaining =
         (this.state.kind === 'attack' && this.state.skill.comboNext) || (this.combo && this.combo.until >= this.nowMs ? this.combo.next : null);
       skillId = chaining || this.classDef.basic;
     } else {
-      skillId = buffered.action === 'skill1' ? this.classDef.skills[0] : this.classDef.skills[1];
+      const slot = this.hooks.resolveSlot
+        ? this.hooks.resolveSlot(buffered.slot)
+        : this.classDef.skills[buffered.slot]
+          ? { skillId: this.classDef.skills[buffered.slot]!, consumable: false }
+          : null;
+      if (!slot) {
+        this.buffer = null;
+        return false;
+      }
+      skillId = slot.skillId;
+      consumable = slot.consumable;
     }
     const skill = this.skills.get(skillId);
-    if (!skill || (this.cooldowns.get(skillId) ?? 0) > 0) return false;
+    if (!skill || (!consumable && (this.cooldowns.get(skillId) ?? 0) > 0)) return false;
     if (this.hooks.onSkillStart && !this.hooks.onSkillStart(skill)) {
       this.buffer = null;
       return false;
     }
     this.buffer = null;
     const lastStrike = skill.strikes.at(-1)!.atMs;
-    const duration = Math.max(this.poseDuration(skill.pose), lastStrike + 80, skill.cancelFromMs);
-    this.state = { kind: 'attack', skill, elapsed: 0, nextStrike: 0, duration };
-    if (skill.cooldownSec > 0) this.cooldowns.set(skill.id, skill.cooldownSec * 1000);
+    // 有整體動畫就播整體動畫（取代紙娃娃），沒有就播紙娃娃的 pose
+    const motion = skill.motion;
+    const usingMotion = motion !== undefined && this.avatar.playMotion(motion.tag, { speed: motion.speed ?? 1, loop: motion.loop ?? false });
+    const actionMs = usingMotion ? (motion.loop ? 0 : this.timing.motion(motion.tag) / (motion.speed ?? 1)) : this.timing.pose(skill.pose);
+    const moveEnd = skill.move?.kind === 'dash' ? skill.move.atMs + skill.move.durationMs : 0;
+    const duration = Math.max(actionMs, lastStrike + 80, skill.cancelFromMs, moveEnd);
+    this.state = { kind: 'attack', skill, elapsed: 0, nextStrike: 0, nextCue: 0, duration, moved: false, dashDone: false, origin: { x: this.body.x, y: this.body.y } };
+    if (consumable) this.hooks.onSlotUsed?.(buffered.slot);
+    else if (skill.cooldownSec > 0) this.cooldowns.set(skill.id, skill.cooldownSec * 1000);
     this.combo = null;
-    this.avatar.play(skill.pose, { restart: true, loop: duration > this.poseDuration(skill.pose) + 1 });
+    if (!usingMotion) {
+      this.avatar.stopMotion();
+      this.avatar.play(skill.pose, { restart: true, loop: duration > this.timing.pose(skill.pose) + 1 });
+    }
     return true;
   }
 
@@ -259,6 +351,7 @@ export class Player {
   animate(): void {
     const avatar = this.avatar;
     avatar.setFacing(this.body.facing);
+    if (this.state.kind !== 'attack') avatar.stopMotion();
     if (this.state.kind !== 'free') return;
     const b = this.body;
     if (b.climb !== null) {
