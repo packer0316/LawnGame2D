@@ -2,4 +2,7 @@
 *.png binary
 *.aseprite binary
 *.ase binary
+*.mp3 binary
+*.ogg binary
+*.wav binary
 *.bat text eol=crlf

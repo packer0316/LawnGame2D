@@ -54,6 +54,32 @@ export class SkillAudio {
     source.start(now);source.stop(now+duration+.02);
   }
   clear():void { for(const v of this.voices){try{v.stop();}catch{/* already ended */}} this.voices.clear(); }
+  /** Distinct seal/eye/cut/dash/sheath percussion; one voice per beat, never per monster. */
+  moon(stage:'seal'|'eye'|'cut'|'dash'|'shadow'|'sheath'|'hit'|'finish'):void {
+    const c=this.context;
+    if(!c||c.state!=='running'||this.scene.sound.mute||this.voices.size>=24)return;
+    const score={seal:[90,350,.65,.035],eye:[1300,580,.12,.04],cut:[800,70,.36,.10],dash:[520,90,.22,.065],shadow:[1100,460,.28,.025],sheath:[2400,900,.09,.05],hit:[180,48,.12,.10],finish:[100,30,.55,.15]}[stage]!;
+    const [from,to,duration,level]=score as [number,number,number,number];
+    const now=c.currentTime,volume=Math.min(1,this.scene.sound.volume);
+    if(volume<=0)return;
+    const oscillator=c.createOscillator(),gain=c.createGain();
+    oscillator.type=stage==='sheath'?'triangle':'sine';
+    oscillator.frequency.setValueAtTime(from,now);oscillator.frequency.exponentialRampToValueAtTime(to,now+duration);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,level*volume),now+.008);
+    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
+    oscillator.connect(gain);gain.connect(c.destination);this.voices.add(oscillator);
+    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.voices.delete(oscillator);};
+    oscillator.start(now);oscillator.stop(now+duration+.02);
+    if(!this.noise||stage==='seal'||stage==='eye'||stage==='shadow')return;
+    const noise=c.createBufferSource(),filter=c.createBiquadFilter(),ng=c.createGain();
+    noise.buffer=this.noise;filter.type='bandpass';filter.Q.value=.8;
+    filter.frequency.setValueAtTime(stage==='sheath'?5000:stage==='dash'?3200:1800,now);
+    filter.frequency.exponentialRampToValueAtTime(240,now+duration);
+    ng.gain.setValueAtTime(level*volume,now);ng.gain.exponentialRampToValueAtTime(.0001,now+duration);
+    noise.connect(filter);filter.connect(ng);ng.connect(c.destination);this.voices.add(noise);
+    noise.onended=()=>{noise.disconnect();filter.disconnect();ng.disconnect();this.voices.delete(noise);};
+    noise.start(now);noise.stop(now+duration+.02);
+  }
   destroy():void {
     window.removeEventListener('pointerdown',this.unlock);window.removeEventListener('keydown',this.unlock);
     this.clear();void this.context?.close().catch(()=>undefined);this.context=null;this.noise=null;

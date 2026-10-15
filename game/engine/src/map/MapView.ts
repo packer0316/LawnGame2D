@@ -4,6 +4,8 @@ import type { ContentSource } from '../content';
 import { loadImages } from '../render/sheets';
 import { PortalView } from './PortalView';
 import { drawLandmarkScenery, landmarkFor } from './LandmarkScenery';
+import santoriniTiles from '../../../assets/landmarks/gr_santorini-tiles-v2.png?url';
+import santoriniNormals from '../../../assets/landmarks/gr_santorini-tiles-v2_n.png?url';
 
 /** 畫面層級（SPEC §4.1）。 */
 export const DEPTH = {
@@ -64,7 +66,11 @@ export class MapView {
     for (const layer of map.tileLayers) images.push({ key: layer.tileset, path: layer.tileset, normal: normalOf(layer.tileset) });
     for (const bg of theme?.backgrounds ?? []) images.push({ key: bg.image, path: bg.image, normal: bg.normal });
     const unique = new Map(images.map((image) => [image.key, image]));
-    await loadImages(scene, source, [...unique.values()]);
+    await loadImages(scene, {
+      json: path=>source.json(path),
+      imageUrl: path=>path==='tilesets/gr_santorini.png'?Promise.resolve(santoriniTiles)
+        :path==='tilesets/gr_santorini_n.png'?Promise.resolve(santoriniNormals):source.imageUrl(path),
+    }, [...unique.values()]);
   }
 
   build(options: { lighting: boolean }): void {

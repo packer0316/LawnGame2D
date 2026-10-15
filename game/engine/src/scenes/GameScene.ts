@@ -17,6 +17,7 @@ import {
   type Strike,
 } from '@lawn/shared';
 import { Player, type PlayerInput } from '../actor/Player';
+import { BgmPlayer } from '../audio/BgmPlayer';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
 import { loadHeroMotions, motionDuration } from '../avatar/motions';
@@ -34,6 +35,7 @@ import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
 import { impactFeel } from '../feel/SkillPresentation';
 import type { GameCommand, GameMode, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
+import { landmarkBgm } from '../map/LandmarkScenery';
 import { MonsterActor } from '../monster/MonsterActor';
 import { isThemedMonsterSheet } from '../monster/themedRoster';
 import { loadSheetAssets } from '../render/sheets';
@@ -125,6 +127,7 @@ export class GameScene extends Phaser.Scene {
   private playerLight: Phaser.GameObjects.Light | null = null;
   /** 掉落物：金幣、武器、卷軸（落地漂浮後吸到玩家身上） */
   private pickups!: Pickups;
+  private bgm!: BgmPlayer;
   /** HUD 底欄佔用的高度（裝置像素），遊戲畫面畫在它上方 */
   private insetBottom = 0;
   /** 場景已銷毀：非同步載入回來後一律忽略 */
@@ -163,6 +166,7 @@ export class GameScene extends Phaser.Scene {
     this.pickups.target = () => ({ x: this.player?.body.x ?? 0, y: (this.player?.body.y ?? 0) - 26 });
     this.pickups.onCollect = (x, y, kind) => this.fx.spawn('hit_spark', x, y, { additive: true, scale: kind === 'item' ? 1.4 : 0.7 });
     this.skillFx = new SkillFx(this, this.bundle, this.fx, () => this.opts.lighting !== false);
+    this.bgm = new BgmPlayer(this.bundle.source);
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
@@ -279,6 +283,8 @@ export class GameScene extends Phaser.Scene {
 
     this.roomId = snapshot.roomId;
     this.roomName = room?.name ?? map.name;
+    // 房間設定優先，其次景點的專屬曲子（九份、京都…），最後地圖；同一首不重播。怪潮目前沒有專屬曲子，維持房間 BGM（SPEC §4.6）
+    this.bgm.play(room?.bgm ?? landmarkBgm(map) ?? map.bgm);
     this.betRange = snapshot.betRange;
     this.serverBalance = snapshot.balance;
     this.clampBet();
@@ -856,6 +862,13 @@ export class GameScene extends Phaser.Scene {
     const view = this.cameras.main.worldView;
     return {
       view: { x: view.x, y: view.y, w: view.width, h: view.height },
+      bodyArt:this.avatar.bodyArt,
+      setPlayerVisible:visible=>this.avatar.setVisible(visible),
+      restoreCamera:()=>{
+        if(this.dead)return;
+        this.applyZoom();
+        this.cameras.main.startFollow(this.cameraTarget,false,.12,.12).setDeadzone(48,36);
+      },
       classId: skill.classId,
       bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
       points: this.scatter?.skillId === skill.id ? this.scatter.points : [],
@@ -1403,6 +1416,7 @@ export class GameScene extends Phaser.Scene {
     for (const off of this.unsubscribes) off();
     this.server?.dispose();
     this.keys?.dispose();
+    this.bgm?.destroy();
   }
 }
 

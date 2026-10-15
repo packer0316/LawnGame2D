@@ -1,0 +1,16 @@
+{
+  "mode": "built-in image_gen",
+  "date": "2026-10-16",
+  "assets": [
+    {
+      "file": "ink-thunder-v2.png",
+      "prompt": "Use case: stylized-concept. Production game VFX sprite sheet, TRANSPARENT BACKGROUND. Exactly 16 animation frames in a rigid 4 columns by 4 rows regular grid, reading left to right top to bottom, no grid lines or labels. Landscape canvas. Each cell contains the SAME horizontal LEFT-TO-RIGHT lightning slash made of Japanese sumi-e ink brushwork and dazzling cyan-white thunder. Each slash occupies 88% cell width, central 50% height, with generous transparent padding on every cell edge. Fixed endpoints and fixed camera across all frames. This is a powerful ninja ultimate sword-dash trail, NOT a weapon, not a letter Z: a long wide tapered dry-brush stroke with ragged black/indigo ink eddies and splashes, a brilliant white-hot cyan cutting core, luminous cobalt edges, curling blue-violet lightning veins woven into the brush, energetic hand-painted detailed texture. Make it very vivid and spectacular, strong bold ink masses and bright electric light. Frames 1-4: condensed narrow luminous stroke erupts and expands to a broad brush wave. Frames 5-12: full-width massive electric ink slash at peak intensity, roiling ink wisps and evolving organic lightning, maintained core silhouette for a continuous 8-frame loop. Frames 13-16: stroke splits into beautiful dissolving ink curls and electric embers, dissipating. All 16 are ONE temporal animation of ONE horizontal stroke. No characters, weapons, symbols, text, borders, backgrounds, paper texture or scenery. Actual alpha transparency between strokes, not black background. High-quality 2D anime game effects, fluid detailed painted sprites. Every frame fully isolated in its cell.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-0194662d-175a-4653-bcc5-41ff67baa0fb.png",
+      "layout": {
+        "columns": 4,
+        "rows": 4,
+        "frames": 16
+      }
+    }
+  ]
+}

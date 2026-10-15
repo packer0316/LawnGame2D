@@ -45,6 +45,8 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private cosmetic: WeaponDefinition | null = null;
   private outfit: string | null = null;
   private get base(): SheetAsset { return OUTFIT_VISUALS.get(this.outfit ?? '')?.base ?? this.content.base; }
+  /** Costume-aware body atlas for cinematic poses, without baking in the equipped weapon. */
+  get bodyArt(): SheetAsset { return this.base; }
   private get motionKey(): string { return OUTFIT_VISUALS.get(this.outfit ?? '')?.motions.path ?? HERO_MOTIONS_KEY; }
   private readonly cosmeticSprite: Phaser.GameObjects.Sprite;
   /** body 合圖沒有獨立前手時，重畫握柄處的手掌，保留手指遮擋。 */

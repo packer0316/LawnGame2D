@@ -15,6 +15,18 @@ export function landmarkTiles(s: Scene): Canvas {
   const stone = hex(s.stone), joint = hex(s.joint), surface = hex(s.surface), beam = hex(s.beam), accent = hex(s.accent);
   const wood = ['wood', 'timber', 'lacquer'].includes(s.platform);
   const texture = (x: number, y: number) => {
+    if(s.id==='gr_santorini') {
+      // 64 px periodic limestone courses match the existing 4×4 body-tile repeat.
+      const row=Math.floor(y/16),bx=(x+(row%2)*16)%32,by=y%16;
+      const block=Math.floor((x+(row%2)*16)/32)%2;
+      const limestone=hex('#bfc1af'),mortar=hex('#7c9292');
+      if(by===0||bx===0)return mortar;
+      if(by===1||bx===1)return hex('#eee9d6');
+      if(by===15||bx===31)return hex('#a3aa9c');
+      const grain=((x*13+y*7)%17===0)?-.06:0;
+      const chip=(bx===4&&by===4)||(bx===25&&by===12);
+      return chip?hex('#99a69d'):shade(limestone,.96+block*.04+(row%2)*.025+grain);
+    }
     const courseHeight = s.material === 'slate' ? 8 : s.material === 'sandstone' ? 16 : 12;
     const row = Math.floor(y / courseHeight);
     const bx = (x + (row % 2) * 12) % 24, by = y % courseHeight;
@@ -70,7 +82,13 @@ export function landmarkTiles(s: Scene): Canvas {
       c.line(x+15,y+5,x+15,y+10,joint);
       c.line(x,y+11,x+15,y+11,shade(surface,0.8));
       if(s.platform==='carved') {c.line(x+4,y+6,x+8,y+9,accent);c.line(x+8,y+9,x+12,y+6,accent);}
-      if(s.platform==='terrace') c.fillRect(x+5,y+6,5,3,shade(surface,1.06));
+      if(s.platform==='terrace') {
+        c.fillRect(x,y+5,16,6,hex('#c2c3b0'));
+        c.line(x,y+5,x+15,y+5,hex('#f4eedb'));
+        c.line(x+7,y+5,x+7,y+10,hex('#829797'));
+        c.line(x,y+10,x+15,y+10,hex('#8e9f99'));
+        c.set(x+3,y+7,hex('#e7e4ce'));
+      }
     }
     if(id!==12) c.fillRect(x+(id===11?0:14),y+2,2,wood?8:11,accent);
   }

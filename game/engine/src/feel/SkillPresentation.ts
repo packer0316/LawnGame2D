@@ -8,12 +8,14 @@ export const CLASS_ENERGY = {
 } as const;
 
 export function skillEnergyColor(skill:SkillDef):number {
+  if(skill.id==='skill_0048')return 0x82e7ff;
   return skill.id==='skill_0032'?0x8bdfff:skill.id==='skill_0035'?0x8dffb6:skill.id==='skill_0034'?0xc7a0ff:skill.id==='skill_0046'?0xffd481:CLASS_ENERGY[skill.classId].color;
 }
 
 /** 表現層節奏：不改判定、傷害或扣注時間；連段保留流動感，末段才有重停頓。 */
 export function impactFeel(skill: SkillDef, index: number) {
   const last = index === skill.strikes.length - 1;
+  if(skill.id==='skill_0048')return {stopMs:last?105:8,pixels:last?7:2.3,durationMs:last?190:55,strength:last?1.8:.95,last};
   const repeated = skill.strikes.length > 1;
   const fast = skill.chain || (skill.strikes[index + 1]?.atMs ?? Infinity) - skill.strikes[index]!.atMs <= 100;
   const heavy = skill.id === 'skill_0006' || skill.id === 'skill_0007';

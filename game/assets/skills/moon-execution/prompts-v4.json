@@ -1,0 +1,20 @@
+{
+  "mode": "built-in image_gen",
+  "date": "2026-10-16",
+  "assets": [
+    {
+      "file": "moonblades-v4.png",
+      "prompt": "Use case: stylized-concept. Create a beautiful refined anime 2D game VFX spritesheet for a ninja assassin ultimate called Moonlit Shadow Assassination. REAL transparent alpha background. EXACTLY 4 columns x 4 rows of equal square cells, 16 isolated frames, no borders, words, grids or background. Restrained luminous SILVER WHITE and moonlight BLUE with faint lavender edge accents, sharp elegant blades, subtle soft glow. High-end polished hand-painted effects, clean negative space, not noisy. FIRST ROW, 4 frames: a delicate tilted crescent moon seal materializes, thin incomplete circular arc with just 3 floating diamond glints, then glows, then opens into two offset crescents, then fades. Crescent centered, width 65% cell, no letters/runes or geometric star. SECOND ROW, 4 frames: one graceful diagonal curved sword slash forms, crescents across, bright thin silver cutting edge and transparent indigo trailing silhouette, then separates into 4 tiny petal-shaped shards. Not a tornado, no spirals, no electrical branching, no lightning. LAST TWO ROWS, 8 continuous chronological frames: a compact silver-blue assassination hit impact blooms with two offset crossing CRESCENT blade edges and 5 to 7 elegant luminous petal-shaped shards, sharp bright center only at peak; appears, expands, blossoms, fragments, floats outward, fades until almost gone. Keep all effects centered in every cell, constant scale and 15% transparent margin. Intended to play over monsters against a darkened moonlit map, graceful and potent, a sense of silent precision and beautiful death. No characters, weapons, giant beams, explosions, smoke, overly intricate filaments, circles filled with solid color, lens flare or Z shapes.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-f70f2792-d7d2-47c3-94cc-efbab2b8295d.png",
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "file": "shadow-clone-v4.png",
+      "prompt": "Use case: stylized-concept. A production transparent game SPRITE SHEET, EXACTLY 4 columns by 2 rows, eight equal square animation cells, read left to right top to bottom. Eight chronological frames of the SAME small chibi ninja shadow clone, facing RIGHT throughout, crouched dynamic silhouette with oversized hood and hidden face, only two small pale silver eyes, midnight navy almost black outfit, short trailing scarf, very thin silver-blue short blade. A magical assassin shadow echo, ghostly midnight indigo with clean silver blue rim light, not a monster. Full body including feet in every cell, consistent scale and foot baseline at 85% cell height, ample empty cell padding. 1 begins materializing out of a few violet wisps in kneeling stance, 2 solid low crouch hand on blade sheath, 3 drawing the thin blade, 4 sharp elegant lunging slash to the right, 5 slash followthrough, 6 pulling the blade back kneeling, 7 body dissolves into a handful of pale lunar petal-shaped fragments, 8 mostly vanished only 5 drifting blue silver fragments. Fluid coherent animation, no displacement between cells. Beautiful crisp hand-painted pixel RPG style matching chibi fantasy side scroller, readable tiny silhouette, understated lunar aura. No circular rings, no large explosion, no lightning, no smoke masses, no backgrounds, no text, labels or grid. Actual transparent alpha canvas.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-09ecb3a9-4eb2-44f0-bdc4-36a0d9503639.png",
+      "columns": 4,
+      "rows": 2
+    }
+  ]
+}

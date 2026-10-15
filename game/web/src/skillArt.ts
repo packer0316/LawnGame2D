@@ -3,6 +3,7 @@ import warrior from '../../assets/ui/warrior-icons-v1.png?url';
 import mage from '../../assets/ui/mage-icons-v1.png?url';
 import archer from '../../assets/ui/archer-icons-v1.png?url';
 import assassin from '../../assets/ui/assassin-icons-v1.png?url';
+import moonExecution from '../../assets/skills/moon-execution/moonblades-v4.png?url';
 
 export const ICON_ATLASES = {
   warrior: { url: warrior, width: 1254, height: 1254, cols: 4, rows: 3, bands: [[32,386],[420,772],[790,1200]], ids: ['warrior','skill_0001','skill_0002','skill_0003','skill_0004','skill_0005','skill_0006','skill_0007','skill_0008','skill_0009','skill_0040','skill_0041'] },
@@ -21,6 +22,7 @@ export const PIXEL_ICONS = Object.fromEntries(Object.values(ICON_ATLASES).flatMa
     positionX: col * width / (atlas.width - width) * 100, positionY: top / (atlas.height - height) * 100,
   }];
 })));
+PIXEL_ICONS.skill_0048={url:moonExecution,col:1,row:0,aspect:1,sizeX:400,sizeY:400,positionX:100/3,positionY:0};
 
 export const BASIC_SKILL: Record<ClassId, string> = { warrior: 'skill_0001', mage: 'skill_0011', archer: 'skill_0021', assassin: 'skill_0031' };
 export const CLASS_DESCRIPTION: Record<ClassId, string> = {
@@ -30,6 +32,7 @@ export const CLASS_DESCRIPTION: Record<ClassId, string> = {
   assassin: '以四刃飛鏢、疾風連斬和影分身發動靈巧的連續攻勢。',
 };
 export const SKILL_DESCRIPTION: Record<string, string> = {
+  skill_0048: '赤瞳結印，一斬分月；影分身在各層怪群間現身，留下銀藍月印。收刀後引爆全圖八段月刃，化成月光碎瓣消散。',
   skill_0001: '揮劍近身斬擊；按住 Z 可銜接三段普攻。',
   skill_0002: '三連斬第二段，以反向揮劍銜接連擊。',
   skill_0003: '三連斬終段，以重斬完成連擊。',

@@ -12,6 +12,10 @@ import { AssassinStorm } from './AssassinStorm';
 import { FallingRain } from './FallingRain';
 import { firstRainSurface, type RainSegment } from './RainGeometry';
 import { SkillAudio } from './SkillAudio';
+import { MoonExecution } from './MoonExecution';
+import { loadMoonExecutionArt } from './MoonExecutionArt';
+import { MOON_SKILL } from './MoonExecutionTiming';
+import type { SheetAsset } from '../content/bundle';
 import { bladeFlipX, bladeSpinMs, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
 
 export interface FxPoint {
@@ -21,6 +25,9 @@ export interface FxPoint {
 
 /** 一個技能特效需要的資訊（世界座標）。 */
 export interface SkillFxContext {
+  bodyArt?: SheetAsset;
+  setPlayerVisible?: (visible:boolean)=>void;
+  restoreCamera?: ()=>void;
   /** 實際投射物方向；箭雨與近戰由技能方向補上。 */
   impactAngle?: number;
   classId?: ClassId;
@@ -77,6 +84,7 @@ export class SkillFx {
   private reaperBeat=0;
   private tiger:TigerSummon|null=null;
   private storm:AssassinStorm|null=null;
+  private moon:MoonExecution|null=null;
   private readonly rains = new Set<FallingRain>();
   private readonly rainWaves = new Map<string, FallingRain[]>();
   private activeDragon:Phaser.GameObjects.Sprite|null=null;
@@ -85,6 +93,7 @@ export class SkillFx {
 
   static async preload(scene: Phaser.Scene): Promise<void> {
     await loadSkillAtlases(scene);
+    await loadMoonExecutionArt(scene);
   }
 
   constructor(
@@ -99,10 +108,11 @@ export class SkillFx {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
+  get count(): number { return this.objects.size + this.kit.count + (this.moon?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
+    if(skill.id===MOON_SKILL){this.moon?.destroy();this.moon=new MoonExecution(this.scene,ctx,this.audio);return;}
     this.prepareRain(skill, ctx);
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
     if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
@@ -161,6 +171,7 @@ export class SkillFx {
 
   contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
     const feel=impactFeel(skill,index);
+    if(skill.id===MOON_SKILL){this.moon?.contact(ctx.targets,feel.last);return feel;}
     this.audio.play(skill.classId,feel.strength);
     // 每個可見的實際命中都有核心效果；只縮減附加粒子，不截掉後面的怪物。
     const visible=ctx.targets.filter(t=>t.x>=ctx.view.x-100&&t.x<=ctx.view.x+ctx.view.w+100&&t.y>=ctx.view.y-100&&t.y<=ctx.view.y+ctx.view.h+100);
@@ -314,6 +325,7 @@ export class SkillFx {
   }
 
   clear(): void {
+    this.moon?.destroy();this.moon=null;
     for (const rain of this.rains) rain.destroy();
     this.rainWaves.clear();
     this.tiger?.destroy();this.tiger=null;
@@ -425,6 +437,8 @@ export class SkillFx {
 
   /** Called before Player.step so presentation and strike positions share one fixed clock. */
   step(dt:number):void {
+    this.moon?.step(dt);
+    if(this.moon&&!this.moon.active)this.moon=null;
     for (const rain of this.rains) rain.step(dt);
     this.tiger?.step(dt);
     if(this.tiger&&!this.tiger.sprite.active)this.tiger=null;

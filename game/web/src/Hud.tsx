@@ -73,7 +73,6 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
       )}
 
       <div className="hud-top-right">
-        <button className="inventory-open-button" aria-label="開啟背包" aria-expanded={state.inventoryOpen ?? false} onClick={() => { closeAll(); command({ type: 'inventoryOpen', open: true }); }}>行囊 <small>I</small></button>
         <button className="help-toggle" aria-label="設定" title="設定（遊戲模式）" aria-expanded={settingsOpen} onClick={() => { const open = !settingsOpen; closeAll(); setSettingsOpen(open); }}><Icon name="gear" /></button>
         <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { const open = !helpOpen; closeAll(); setHelpOpen(open); }}><Icon name="help" /></button>
       </div>
@@ -127,6 +126,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
           <button className={`auto-button ${state.auto ? 'is-on' : ''}`} aria-pressed={state.auto} title="自動冒險 · A" onClick={() => command({ type: 'toggleAuto' })}><Icon name={state.auto ? 'pause' : 'play'} /><span>{state.auto ? '冒險中' : '自動冒險'}</span><small>{state.auto ? AUTO_STATUS_TEXT[state.autoStatus ?? 'search'] : '按 A 開始'}</small></button>
           <button className="auto-gear" aria-label="自動冒險設定" aria-expanded={autoOpen} onClick={() => { const open = !autoOpen; closeAll(); setAutoOpen(open); }}><Icon name="gear" /></button>
         </div>
+        <button className="inventory-open-button" aria-label="開啟背包" title="背包 · I" aria-expanded={state.inventoryOpen ?? false} onClick={() => { closeAll(); command({ type: 'inventoryOpen', open: true }); }}><Icon name="bag" /><span>背包</span><small>按 I 開啟</small></button>
       </div>
       </div>
 

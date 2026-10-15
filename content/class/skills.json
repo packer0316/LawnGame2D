@@ -724,6 +724,31 @@
       "shake": 2,
       "ultimate": true,
       "scatter": {"count": 10, "radius": 120}
+    },
+    {
+      "id": "skill_0048",
+      "name": "月斷・月下影殺",
+      "classId": "assassin",
+      "kind": "active",
+      "pose": "cast",
+      "icon": "moonExecution",
+      "strikes": [
+        {"atMs":3120,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3240,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3350,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3450,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3540,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3620,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3690,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3910,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"}
+      ],
+      "cooldownSec": 30,
+      "price": 20,
+      "fullTargets": 20,
+      "cancelFromMs": 4400,
+      "hitStopMs": 70,
+      "shake": 5,
+      "ultimate": true
     }
   ]
 }

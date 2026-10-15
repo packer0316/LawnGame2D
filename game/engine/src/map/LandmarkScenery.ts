@@ -1,13 +1,18 @@
 import type * as Phaser from 'phaser';
 import type { MapDef } from '@lawn/shared';
 import catalog from '../../../assets/landmarks/catalog.json';
+import { drawSantoriniScenery } from './SantoriniScenery';
 
 export const landmarkFor = (map: MapDef) => catalog.scenes.find(s=>s.themeId===map.theme);
+
+/** 景點的專屬背景音樂（catalog 的 bgm）；沒有專屬曲子的景點回傳 undefined */
+export const landmarkBgm = (map: MapDef): string | undefined => (landmarkFor(map) as { bgm?: string } | undefined)?.bgm;
 
 /** 稀疏地標細節只畫於足場邊緣；不產生碰撞，也不遮住戰鬥區。 */
 export function drawLandmarkScenery(g: Phaser.GameObjects.Graphics, map: MapDef): void {
   const s=landmarkFor(map);
   if(!s)return;
+  if(s.id==='gr_santorini')drawSantoriniScenery(g,map);
   const color=(hex:string)=>Number.parseInt(hex.slice(1),16);
   const stone=color(s.stone),accent=color(s.accent),surface=color(s.surface),beam=color(s.beam);
   for(const fh of map.footholds) {
@@ -39,6 +44,7 @@ export function drawLandmarkScenery(g: Phaser.GameObjects.Graphics, map: MapDef)
           g.fillStyle(0x302c2b).fillRect(x-16,y-29,33,3);
           g.fillStyle(surface).fillRect(x-11,y-3,3,3).fillRect(x+9,y-3,3,3);
         }else if(s.id==='gr_santorini') {
+          if(Math.floor(x/120)%3!==1)continue;
           g.fillStyle(0xb4785c).fillRect(x-4,y-8,8,8);g.fillStyle(surface).fillRect(x-5,y-9,10,2);
           g.lineStyle(1,0x547950).lineBetween(x,y-8,x,y-19);
           g.fillStyle(0xb64b86).fillCircle(x-3,y-17,3).fillCircle(x+3,y-15,3).fillCircle(x,y-21,3);

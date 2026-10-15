@@ -14,9 +14,12 @@ beforeAll(async () => {
 });
 
 describe('shipped map monster art pack', () => {
-  it('provides 80 distinct creatures with four complete, feet-aligned animation states', () => {
+  it('provides four distinct creatures per shipped room with complete, feet-aligned animation states', () => {
     const names = new Set<string>();
-    for (let map = 1; map <= 20; map++) {
+    // 每種場景只留 1 房（SPEC v1.2）：只檢查 rooms.json 有用到的地圖
+    const maps = original.rooms.map(room => Number(room.mapId.slice(4)));
+    expect(maps.length).toBeGreaterThan(0);
+    for (const map of maps) {
       const entries = Array.from({ length: 4 }, (_, role) => themed.monsters.get(themedMonsterId(map, role))!);
       expect(entries.every(Boolean)).toBe(true);
       expect(entries[3]!.def.hitbox.h).toBeGreaterThan(entries[0]!.def.hitbox.h * 2);
@@ -41,7 +44,7 @@ describe('shipped map monster art pack', () => {
         }
       });
     }
-    expect(names.size).toBe(80);
+    expect(names.size).toBe(maps.length * 4);
   });
 
   it('replaces all spawn/wave pools without changing their multiplier distribution or source content', async () => {

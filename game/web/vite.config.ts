@@ -33,6 +33,25 @@ function serveDir(urlPrefix: string, dir: string): Plugin {
           }
           res.setHeader('Content-Type', MIME[path.extname(file)] ?? 'application/octet-stream');
           res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Accept-Ranges', 'bytes');
+          // 背景音樂串流、循環播放會分段讀（Range）
+          const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+          if (range && (range[1] || range[2])) {
+            const start = range[1] ? Number(range[1]) : Math.max(0, stat.size - Number(range[2]));
+            const end = range[1] && range[2] ? Math.min(Number(range[2]), stat.size - 1) : stat.size - 1;
+            if (start > end || start >= stat.size) {
+              res.statusCode = 416;
+              res.setHeader('Content-Range', `bytes */${stat.size}`);
+              res.end();
+              return;
+            }
+            res.statusCode = 206;
+            res.setHeader('Content-Range', `bytes ${start}-${end}/${stat.size}`);
+            res.setHeader('Content-Length', String(end - start + 1));
+            fs.createReadStream(file, { start, end }).pipe(res);
+            return;
+          }
+          res.setHeader('Content-Length', String(stat.size));
           fs.createReadStream(file).pipe(res);
         });
       });

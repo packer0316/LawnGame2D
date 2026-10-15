@@ -34,6 +34,8 @@ export const contentPaths = {
   skills: 'class/skills.json',
   betLevels: 'class/bet-levels.json',
   monstersMath: 'math/monsters.math.json',
+  /** 背景音樂（mp3，循環播放）。 */
+  bgm: (id: string) => `bgm/${id}.mp3`,
   /** 法線貼圖：同名加 `_n`。 */
   normalMap: (imagePath: string) => imagePath.replace(/\.png$/, '_n.png'),
 } as const;

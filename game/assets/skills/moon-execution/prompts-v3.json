@@ -1,0 +1,23 @@
+{
+  "mode": "built-in image_gen",
+  "date": "2026-10-16",
+  "assets": [
+    {
+      "file": "lightning-cut-v3.png",
+      "prompt": "Use case: stylized-concept. Transparent 2D anime ninja lightning attack VFX sprite atlas. EXACT uniform 4 columns x 4 rows, 16 separate animation cells. Landscape canvas, no borders or labels. Minimal and decisive lightning, extremely clean cel-animation shapes, brilliant WHITE electrical core edged ice blue, occasional deep blue fork. Real transparent alpha background. TOP TWO ROWS (frames 0-7): 8 chronological frames of one sharp horizontal lightning dash wake pointing RIGHT. A very narrow irregular broken bolt, one tapered white speed slash with only TWO OR THREE jagged branching electric arcs. Occupy central 85% width and only 25% height of each cell; plentiful empty space. Sequence: ignition, sharp strike, slight shifting electric branches, contraction, broken fading residual flashes. Asymmetrical, angular, hand-drawn lightning. NOT a smooth ornamental beam, NOT ribbon, NOT swirling water, no ink clouds, no smoke, no feathers, no tornado, no hundreds of hairline filaments. BOTTOM TWO ROWS (frames 8-15): 8 successive frames of a COMPACT concentrated ball of white-blue lightning carried in a ninja's palm, only the VFX (NO hand). Bright jagged white core, 4-5 bold erratic blue-white electrical forks snapping outward, small tight center and large empty border. Angular spiky electricity, changing silhouettes with every frame, highly readable energetic pulsing charge, not round magic sphere, no concentric ring. Each palm charge centered same position, fits within middle 65% cell height. Crisp powerful luminous animation with sparse clean shapes, stylish high-end anime compositing. Every cell is isolated with wide transparent gutters. No people, text, symbols, letter Z, weapons, background or grids.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-6cd4ee13-18d8-4fd6-9879-56ea87908f3f.png",
+      "layout": {
+        "columns": 4,
+        "rows": 4,
+        "wakeFrames": [
+          0,
+          7
+        ],
+        "handChargeFrames": [
+          8,
+          15
+        ]
+      }
+    }
+  ]
+}
