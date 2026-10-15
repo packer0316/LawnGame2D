@@ -41,11 +41,17 @@ export type Strike = z.infer<typeof StrikeSchema>;
  * - dash：貼地衝刺 distance 像素（負數 = 往後），花 durationMs
  * - leap：跳起來，vy 往上的速度、vx 空中的水平速度（負數 = 往後）
  * - blink：瞬間移到前方 distance 像素（被牆擋住或前方沒地面就縮短）
+ * - tierLeap：看左右 range、往上 rise／往下 fall 以內哪個足場怪最多，算好拋物線跳過去（往下會穿過腳下的單向平台）；
+ *   沒有比現在這層更好的地方就原地往上跳
+ * - tierBlink：同上，但直接瞬移到那個足場的怪群中間；沒有更好的地方就往前瞬移 distance
+ * tierLeap／tierBlink 讓角色在樓層之間移動（自動冒險時不會一直停在同一層，SPEC §3.6）。
  */
 export const SkillMoveSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('dash'), atMs: z.number().min(0), distance: z.number(), durationMs: z.number().positive() }),
   z.object({ kind: z.literal('leap'), atMs: z.number().min(0), vx: z.number(), vy: z.number().positive() }),
   z.object({ kind: z.literal('blink'), atMs: z.number().min(0), distance: z.number().positive() }),
+  z.object({ kind: z.literal('tierLeap'), atMs: z.number().min(0), range: z.number().positive(), rise: z.number().positive(), fall: z.number().positive() }),
+  z.object({ kind: z.literal('tierBlink'), atMs: z.number().min(0), range: z.number().positive(), rise: z.number().positive(), fall: z.number().positive(), distance: z.number().positive() }),
 ]);
 export type SkillMove = z.infer<typeof SkillMoveSchema>;
 
@@ -97,8 +103,9 @@ export const SkillDefSchema = z.object({
   /**
    * 連鎖：第一刀照 area 找目標，之後每一刀找離上一個目標 range 內、還沒打過的最近一隻。
    * blink = 每一刀瞬移到目標背後（刺客影襲）
+   * verticalWeight = 算距離時高低差乘上這個值（< 1 = 比較常跳到上下層的怪，預設 1）
    */
-  chain: z.object({ range: z.number().positive(), blink: z.boolean().optional() }).optional(),
+  chain: z.object({ range: z.number().positive(), blink: z.boolean().optional(), verticalWeight: z.number().positive().optional() }).optional(),
   /**
    * 散射（分身飛鏢、影分身）：第一刀時在畫面內挑 count 個點（優先是怪物、彼此分開），
    * 之後每一刀打這些點 radius 內的怪

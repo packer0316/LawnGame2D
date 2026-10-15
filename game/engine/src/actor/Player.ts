@@ -53,6 +53,8 @@ interface AttackState {
   dashDone: boolean;
   /** 技能開始時的位置（path 範圍的起點） */
   origin: { x: number; y: number };
+  /** tierLeap：場景算好的空中水平速度（往目標足場的拋物線） */
+  leapVx?: number;
 }
 
 type State = { kind: 'free' } | AttackState | { kind: 'roll'; elapsed: number; dir: 1 | -1 };
@@ -196,7 +198,7 @@ export class Player {
         } else if (this.tryStartBuffered()) {
           return this.step2(world, input, this.optionsForState(), false);
         }
-      } else if (s.elapsed >= s.duration) {
+      } else if (s.elapsed >= s.duration && !this.inSkillLeap(s)) {
         this.endAttack();
       }
       if (this.state.kind === 'attack') jumpPressed = false;
@@ -228,7 +230,7 @@ export class Player {
         down: free && input.down,
         jumpPressed: free && jumpPressed,
         // 技能跳躍（旋風斬、昇龍斬）不受「放開跳躍鍵就降低高度」影響
-        jumpHeld: input.jumpHeld || (this.state.kind === 'attack' && this.state.moved && this.state.skill.move?.kind === 'leap'),
+        jumpHeld: input.jumpHeld || (this.state.kind === 'attack' && this.state.moved && (this.state.skill.move?.kind === 'leap' || this.state.skill.move?.kind === 'tierLeap')),
       },
       options,
     );
@@ -262,6 +264,7 @@ export class Player {
         return { ...base, forcedVx: (this.body.facing * move.distance) / (move.durationMs / 1000), canClimb: false };
       }
       if (move?.kind === 'leap' && s.moved && this.body.ground === null) return { ...base, forcedVx: this.body.facing * move.vx, canClimb: false };
+      if (move?.kind === 'tierLeap' && s.moved && this.body.ground === null) return { ...base, forcedVx: s.leapVx ?? 0, canClimb: false };
       const strike = s.skill.strikes[Math.min(s.nextStrike, s.skill.strikes.length - 1)]!;
       const lunging = s.skill.lunge && Math.abs(s.elapsed - strike.atMs) < 70 && s.nextStrike <= s.skill.strikes.length;
       if (this.body.ground === null) return { ...base, forcedVx: this.body.vx * 0.9, canClimb: false };
@@ -269,6 +272,28 @@ export class Player {
       return { ...base, rooted: true, canClimb: false };
     }
     return base;
+  }
+
+  /**
+   * tierLeap 的拋物線（場景依目標足場算好）：往上 vy、空中水平速度 vx；
+   * dropFh = 往下跳時要穿過的腳下平台。
+   */
+  launch(vx: number, vy: number, dropFh: number | null): void {
+    if (this.state.kind !== 'attack') return;
+    this.state.leapVx = vx;
+    this.body.vy = -vy;
+    this.body.ground = null;
+    this.body.climb = null;
+    if (Math.abs(vx) > 1) this.body.facing = vx > 0 ? 1 : -1;
+    if (dropFh !== null) {
+      this.body.dropFh = dropFh;
+      this.body.dropMs = 600;
+    }
+  }
+
+  /** 技能大跳還在空中：落地前不結束技能，拋物線才不會被切斷（最多多撐 1.5 秒）。 */
+  private inSkillLeap(s: AttackState): boolean {
+    return s.skill.move?.kind === 'tierLeap' && s.moved && this.body.ground === null && s.elapsed < s.duration + 1500;
   }
 
   private tryStartBuffered(): boolean {

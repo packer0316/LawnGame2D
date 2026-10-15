@@ -68,6 +68,12 @@
 .balance-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .hud .balance-presets button { padding: 6px 0; border-radius: 5px; font-size: 11px; font-variant-numeric: tabular-nums; background: #0c2420cc; }
 .hud .balance-presets button[aria-pressed='true'] { border-color: #d0bc79; color: #f4dfa1; }
+.test-tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.hud .test-tools button { padding: 8px 4px; border-radius: 5px; font-size: 11px; background: #0c2420cc; }
+.hud .test-tools button.danger { border-color: #f3998d55; color: var(--danger); }
+.hud .test-tools button.danger.armed { border-color: var(--danger); background: #6b2a254d; color: #ffd2cb; }
+.test-tools-note { font-size: 11px; line-height: 1.5; color: #a9bcae; }
+.test-tools-note.error { color: var(--danger); }
 .hud-bottom { position: relative; display: flex; gap: 19px; padding: 13px 16px; align-items: center; border: 1px solid #d4c89e69; border-top-color: #ecdbab8c; border-radius: 13px; background: linear-gradient(130deg, #153832f5, #102925f5 60%, #1c382cf5); box-shadow: 0 14px 50px #001c2466, inset 0 0 0 4px #c4c9a308; pointer-events: auto; }
 .class-section > .eyebrow { margin-bottom: 8px; }
 .class-select { display: flex; gap: 5px; }

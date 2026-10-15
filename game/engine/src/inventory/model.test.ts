@@ -68,3 +68,50 @@ describe('cosmetic weapon economy', () => {
     expect(parseProfile(JSON.stringify(p))).toEqual(p);
   });
 });
+
+describe('設定面板的測試工具', () => {
+  it('獲得所有武器：每款補一把、不重複，可以重複按；背包放不下就不加', () => {
+    const p = newProfile();
+    expect(inventoryAction(p, { type: 'grantAllWeapons' }, () => 0).kind).toBe('bought');
+    expect(new Set(p.inventory.items.map((w) => w.definitionId)).size).toBe(40); expect(p.inventory.items).toHaveLength(40);
+    inventoryAction(p, { type: 'grantAllWeapons' }, () => 0); expect(p.inventory.items).toHaveLength(40);
+    expect(parseProfile(JSON.stringify(p))).toEqual(p);
+    const full = newProfile();
+    while (full.inventory.items.length < BAG_CAPACITY) addWeapon(full.inventory, 'sword-1');
+    const before = JSON.stringify(full);
+    expect(inventoryAction(full, { type: 'grantAllWeapons' }, () => 0).kind).toBe('error'); expect(JSON.stringify(full)).toBe(before);
+  });
+  it('卷軸各補到指定張數：不減少原本較多的，上限 9999，壞掉的數字不會弄壞存檔', () => {
+    const p = newProfile(); p.inventory.scrolls[90] = 1500;
+    inventoryAction(p, { type: 'grantScrolls', count: 999 }, () => 0);
+    expect(p.inventory.scrolls).toEqual({ 10: 999, 60: 999, 90: 1500 });
+    inventoryAction(p, { type: 'grantScrolls', count: 1e9 }, () => 0); expect(p.inventory.scrolls[10]).toBe(9999);
+    inventoryAction(p, { type: 'grantScrolls', count: Number.NaN }, () => 0); expect(p.inventory.scrolls[10]).toBe(9999);
+    expect(parseProfile(JSON.stringify(p))).toEqual(p);
+  });
+  it('清空重置：金幣、背包、裝備、卷軸回到初始狀態', () => {
+    const p = newProfile(5);
+    inventoryAction(p, { type: 'grantAllWeapons' }, () => 0);
+    inventoryAction(p, { type: 'grantScrolls', count: 999 }, () => 0);
+    inventoryAction(p, { type: 'equip', uid: p.inventory.items[0]!.uid }, () => 0);
+    inventoryAction(p, { type: 'reset' }, () => 0);
+    expect(p).toEqual(newProfile());
+  });
+});
+
+describe('掉落物明細（畫面播放掉落用）', () => {
+  it('rollLootDrops 的物品跟拾取訊息一致，亂數順序跟 rollLoot 相同', async () => {
+    const { rollLoot, rollLootDrops, newProfile } = await import('./model');
+    const { seededRandom } = await import('@lawn/shared');
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const a = newProfile().inventory;
+      const b = newProfile().inventory;
+      const messages = rollLoot(a, seededRandom(seed));
+      const drop = rollLootDrops(b, seededRandom(seed));
+      expect(drop.messages).toEqual(messages);
+      expect(b).toEqual(a);
+      const added = drop.messages.filter((m) => !m.startsWith('背包已滿'));
+      expect(drop.items.length).toBe(added.length);
+    }
+  });
+});

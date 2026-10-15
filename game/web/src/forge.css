@@ -1,0 +1,36 @@
+.scroll-art { display: inline-block; width: 72px; height: 72px; flex-shrink: 0; background-size: 300% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+.inventory-scrolls button .scroll-art { width: 64px; height: 64px; }
+.inventory-scrolls button { overflow: hidden; padding: 7px 3px 9px; }
+.inventory-scrolls button[aria-pressed=true] .scroll-art { filter: drop-shadow(0 0 6px #f5da8370); }
+.merchant-shop .scroll-art { width: 36px; height: 36px; vertical-align: middle; margin-right: 7px; }
+.inventory-window { position: relative; }
+.inventory-window.is-forging > header, .inventory-window.is-forging > .inventory-body, .inventory-window.is-forging > footer { visibility: hidden; }
+.forge-ritual { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: auto; padding: 24px 16px; outline: none; background: radial-gradient(ellipse at 50% 56%, #384032 0%, #15292c 37%, #08171e 75%); isolation: isolate; }
+.forge-vignette { position: absolute; inset: 0; z-index: -1; pointer-events: none; box-shadow: inset 0 0 130px #0008; }
+.forge-heading { position: relative; z-index: 3; text-align: center; flex-shrink: 0; }
+.forge-heading > span { font-size: 9px; color: #c6bb93; letter-spacing: 4px; }
+.forge-heading h3 { color: #ffe9b6; font-size: clamp(23px, 3vw, 34px); font-weight: 500; letter-spacing: 5px; margin: 12px 0 7px; }
+.forge-heading p { color: #b4bda9; font-size: 12px; margin: 0; }
+.forge-stage { position: relative; width: min(460px, 68vh, 88vw); aspect-ratio: 1; flex-shrink: 0; margin: -6px 0 -12px; }
+.forge-aura { position: absolute; inset: 10%; border-radius: 50%; background: radial-gradient(ellipse, #f4de9140, #dab76c08 55%, transparent 72%); animation: forge-breathe 1.4s ease-in-out infinite alternate; }
+.forge-sequence { position: absolute; inset: 0; isolation: isolate; filter: drop-shadow(0 0 14px #eac98733); transition: opacity .3s; }
+.forge-sequence-frame { position: absolute; inset: 0; background-size: 400% 300%; background-repeat: no-repeat; mix-blend-mode: plus-lighter; will-change: opacity; }
+.forge-sequence[data-sequence=charge] { mask-image: linear-gradient(to bottom, transparent, #000 5%, #000 84%, transparent 92%); }
+.forge-weapon { position: absolute; left: 50%; top: 49%; transform: translate(-50%, -50%); filter: drop-shadow(0 0 12px #fff4cc99); transition: opacity .5s, filter .4s; }
+.forge-weapon .weapon-art.large { display: block; width: 130px; height: 210px; }
+.forge-scroll { position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%); opacity: .9; filter: drop-shadow(0 0 9px #fff6c666); }
+.forge-scroll .scroll-art { width: 52px; height: 52px; }
+.forge-caption { position: relative; z-index: 3; max-width: 480px; min-height: 46px; text-align: center; color: #d6cba9; font-size: 13px; line-height: 1.8; }
+.forge-caption p { margin: 6px 0; }
+.forge-footer { position: relative; z-index: 3; display: grid; place-items: center; min-height: 46px; margin-top: 10px; flex-shrink: 0; }
+.forge-footer > span { font-size: 10px; letter-spacing: 3px; color: #93a7a1; }
+.inventory-window .forge-footer button { padding: 11px 32px; border: 1px solid #d9bc7b; border-radius: 6px; color: #f7e1ad; background: #b7994b22; }
+.forge-success { background: radial-gradient(ellipse at 50% 56%, #5c4c2e 0%, #25322c 38%, #08171e 78%); }
+.forge-failure { background: radial-gradient(ellipse at 50% 56%, #333650 0%, #1b2434 38%, #08171e 78%); }
+.forge-failure h3 { color: #d4cfef; }
+.forge-failure .forge-aura { background: radial-gradient(ellipse, #b6acdd33, transparent 70%); }
+.forge-destroyed .forge-weapon { opacity: 0; }
+.forge-reduced .forge-aura { animation: none; }
+@keyframes forge-breathe { from { opacity: .45; transform: scale(.94); } to { opacity: .9; transform: scale(1.06); } }
+@media (max-width: 740px) { .inventory-scrolls button .scroll-art { width: 42px; height: 42px; } .forge-stage { width: min(400px, 56vh, 88vw); } .forge-heading h3 { letter-spacing: 2px; } .forge-caption { max-width: 88vw; } .forge-weapon .weapon-art.large { width: 96px; height: 156px; } }
+@media (max-height: 650px) { .forge-ritual { padding: 10px; } .forge-stage { width: min(350px, 53vh, 80vw); } .forge-heading h3 { margin-top: 5px; } .forge-weapon .weapon-art.large { width: 80px; height: 130px; } .forge-caption { font-size: 11px; } .forge-footer { margin-top: 0; } }

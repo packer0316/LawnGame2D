@@ -10,7 +10,7 @@ import {
   type SpawnZone,
 } from '@lawn/shared';
 import type { ContentBundle } from '../content/bundle';
-import { inventoryAction, newProfile, parseProfile, rollLoot, type InventoryAction, type InventoryFeedback, type InventoryProfile, type InventorySnapshot } from '../inventory/model';
+import { inventoryAction, newProfile, parseProfile, rollLootDrops, type InventoryAction, type InventoryFeedback, type InventoryProfile, type InventorySnapshot, type LootItem } from '../inventory/model';
 import type { AttackReq, AttackResult, ChangeRoomReq, GameServer, JoinReq, MonsterSpawn, ServerEvents, Snapshot } from './types';
 
 /**
@@ -132,12 +132,15 @@ export class LocalServer implements GameServer {
     this.balance -= cost;
     const outcomes = resolveStrike(strikeTargets, req.bet, this.rtp, strike.weightRule, secureRandom, costMul);
     const loot: string[] = [];
+    const lootByUid = new Map<number, LootItem[]>();
     for (const outcome of outcomes) {
       if (!outcome.killed) continue;
       this.balance += outcome.payout;
       const dead = this.monsters.get(outcome.uid);
       if (dead) this.removeMonster(dead, false);
-      loot.push(...rollLoot(this.profile.inventory, secureRandom));
+      const drop = rollLootDrops(this.profile.inventory, secureRandom);
+      loot.push(...drop.messages);
+      if (drop.items.length > 0) lootByUid.set(outcome.uid, drop.items);
     }
     this.saveBalance();
     if (loot.length) {
@@ -147,7 +150,7 @@ export class LocalServer implements GameServer {
     return {
       seq: req.seq,
       cost,
-      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout })),
+      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout, ...(lootByUid.has(uid) ? { loot: lootByUid.get(uid) } : {}) })),
       balance: this.balance,
     };
   }

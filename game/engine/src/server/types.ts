@@ -2,7 +2,7 @@
  * 遊戲與伺服器之間的介面（SPEC §5.3、§5.4）。Demo 用 LocalServer；正式版換成真伺服器時遊戲端不用改。
  */
 
-import type { InventoryAction, InventorySnapshot } from '../inventory/model';
+import type { InventoryAction, InventorySnapshot, LootItem } from '../inventory/model';
 
 export interface MonsterSpawn {
   uid: number;
@@ -49,7 +49,8 @@ export type ErrorCode = 'INSUFFICIENT_BALANCE' | 'RATE_LIMIT' | 'BET_OUT_OF_RANG
 export interface AttackResult {
   seq: number;
   cost: number;
-  results: { uid: number; killed: boolean; multiplier: number; payout: number }[];
+  /** loot = 這隻怪掉出、已放進背包的武器與卷軸（畫面播放掉落與撿取） */
+  results: { uid: number; killed: boolean; multiplier: number; payout: number; loot?: LootItem[] }[];
   balance: number;
   error?: ErrorCode;
 }

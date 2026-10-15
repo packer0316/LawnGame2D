@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { GameCommand, GameMode, HudState } from '@lawn/engine';
+import { useEffect, useState } from 'react';
+import type { GameCommand, GameMode, HudState, InventoryAction } from '@lawn/engine';
 import { Icon } from './Icons';
 
 const MODES: { id: GameMode; label: string; detail: string }[] = [
@@ -28,7 +28,46 @@ export function SettingsPanel({ state, command, onClose }: { state: HudState; co
         ))}
       </div>
       <BalanceSetter balance={state.balance} command={command} />
+      <TestTools state={state} command={command} />
     </div>
+  );
+}
+
+/** 測試工具：獲得所有武器、卷軸各 999、清空重置（要按兩次確認）。結果顯示背包回傳的訊息。 */
+function TestTools({ state, command }: { state: HudState; command: (cmd: GameCommand) => void }) {
+  const [armed, setArmed] = useState(false);
+  /** 按下按鈕時的訊息編號：比它新的才是這裡按出來的結果 */
+  const [since, setSince] = useState<number | null>(null);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = setTimeout(() => setArmed(false), 3000);
+    return () => clearTimeout(timer);
+  }, [armed]);
+  const feedback = state.inventory?.feedback;
+  const run = (action: InventoryAction) => {
+    setSince(feedback?.id ?? 0);
+    command({ type: 'inventory', action });
+  };
+  return (
+    <>
+      <span className="settings-label">測試工具</span>
+      <div className="test-tools">
+        <button onClick={() => run({ type: 'grantAllWeapons' })}>獲得所有武器</button>
+        <button onClick={() => run({ type: 'grantScrolls', count: 999 })}>卷軸各 999</button>
+        <button
+          className={`danger ${armed ? 'armed' : ''}`}
+          onClick={() => {
+            if (!armed) return setArmed(true);
+            setArmed(false);
+            run({ type: 'reset' });
+          }}
+        >
+          {armed ? '再按一次確定' : '清空重置'}
+        </button>
+      </div>
+      {armed && <small className="test-tools-note">金幣回到 100,000，背包只留四把初始武器、卸下裝備、卷軸各 3 張，無法復原。</small>}
+      {!armed && since !== null && feedback && feedback.id > since && <small className={`test-tools-note ${feedback.kind === 'error' ? 'error' : ''}`}>{feedback.message}</small>}
+    </>
   );
 }
 

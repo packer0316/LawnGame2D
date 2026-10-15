@@ -53,9 +53,6 @@ export function App() {
       const bar = document.querySelector('.hud-bottom-stack');
       const top = bar ? bar.getBoundingClientRect().top : window.innerHeight;
       handleRef.current?.setViewInsets({ bottom: Math.max(0, window.innerHeight - top + 6) });
-      // 金幣飛向持有金幣
-      const balance = document.querySelector('.bet-balance')?.getBoundingClientRect();
-      if (balance) handleRef.current?.setHudAnchors({ balance: { x: balance.left + balance.width / 2, y: balance.top + balance.height / 2 } });
     };
     const observer = new ResizeObserver(update);
     observer.observe(document.body);

@@ -42,7 +42,7 @@ export function expectedTargets(skill: SkillDef, area: Area, maxTargets: number,
         break;
       case 'path': {
         const move = skill.move;
-        const travel = move?.kind === 'dash' ? Math.abs(move.distance) : move?.kind === 'blink' ? move.distance : 0;
+        const travel = move?.kind === 'dash' ? Math.abs(move.distance) : move?.kind === 'blink' || move?.kind === 'tierBlink' ? move.distance : 0;
         count = density.perPixel * (travel + (area.w ?? 0)) * tiersCovered(area.h ?? 60);
         break;
       }

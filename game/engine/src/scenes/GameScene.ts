@@ -26,6 +26,7 @@ import type { InventorySnapshot } from '../inventory/model';
 import type { ContentBundle } from '../content/bundle';
 import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
+import { Pickups } from '../feel/Pickups';
 import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
 import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
 import { impactFeel } from '../feel/SkillPresentation';
@@ -44,6 +45,8 @@ const AUTO_RESUME_MS = 3000;
 const AUTO_CONFIG_KEY = 'lawn.autoConfig';
 const MODE_KEY = 'lawn.mode';
 const HOTBAR_SLOTS = 8;
+/** 換層位移（昇龍斬、瞬移術）落點跟角色至少差這麼多，才會斜上斜下 */
+const TIER_MIN_DX = 160;
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
@@ -115,8 +118,8 @@ export class GameScene extends Phaser.Scene {
   private unsubscribes: (() => void)[] = [];
   private readonly damageStacks = new Map<number, { count: number; at: number }>();
   private playerLight: Phaser.GameObjects.Light | null = null;
-  /** 持有金幣在畫面上的位置（裝置像素）：撿到的金幣飛過去 */
-  private balanceAnchor: { x: number; y: number } | null = null;
+  /** 掉落物：金幣、武器、卷軸（落地漂浮後吸到玩家身上） */
+  private pickups!: Pickups;
   /** HUD 底欄佔用的高度（裝置像素），遊戲畫面畫在它上方 */
   private insetBottom = 0;
   /** 場景已銷毀：非同步載入回來後一律忽略 */
@@ -151,7 +154,9 @@ export class GameScene extends Phaser.Scene {
     this.keys = new InputState(window);
     this.keys.onManualInput = () => this.pauseAutoForManual();
     this.fx = new FxLayer(this, this.bundle);
-    this.fx.coinTarget = () => this.coinTarget();
+    this.pickups = new Pickups(this, this.bundle);
+    this.pickups.target = () => ({ x: this.player?.body.x ?? 0, y: (this.player?.body.y ?? 0) - 26 });
+    this.pickups.onCollect = (x, y, kind) => this.fx.spawn('hit_spark', x, y, { additive: true, scale: kind === 'item' ? 1.4 : 0.7 });
     this.skillFx = new SkillFx(this, this.bundle, this.fx, () => this.opts.lighting !== false);
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
@@ -236,6 +241,7 @@ export class GameScene extends Phaser.Scene {
     for (const p of this.projectiles) p.sprite.destroy();
     this.projectiles = [];
     this.fx.destroy();
+    this.pickups.clear();
     this.skillFx.clear();
 
     this.world = new FootholdWorld(map);
@@ -304,24 +310,6 @@ export class GameScene extends Phaser.Scene {
     const camera = this.cameras.main;
     camera.setViewport(0, 0, this.scale.width, height);
     camera.setZoom(height / INTERNAL_HEIGHT);
-  }
-
-  setBalanceAnchor(anchor: { x: number; y: number }): void {
-    this.balanceAnchor = anchor;
-  }
-
-  /**
-   * 金幣飛去的地方（世界座標）：持有金幣在底欄裡，畫面只畫到底欄上方，
-   * 所以飛到畫面底邊、正對著持有金幣的位置；還不知道位置時飛向畫面右上角。
-   */
-  private coinTarget(): { x: number; y: number } {
-    const camera = this.cameras.main;
-    const view = camera.worldView;
-    const anchor = this.balanceAnchor;
-    if (!anchor) return { x: view.right - 40, y: view.y + 30 };
-    const screenX = Phaser.Math.Clamp(anchor.x, camera.x, camera.x + camera.width);
-    const screenY = Math.min(anchor.y, camera.y + camera.height - 4);
-    return { x: view.x + (screenX - camera.x) / camera.zoom, y: view.y + (screenY - camera.y) / camera.zoom };
   }
 
   /** HUD 佔用的底部高度（裝置像素）。 */
@@ -401,6 +389,7 @@ export class GameScene extends Phaser.Scene {
       if(animDt>0)this.skillFx.projectileTrail(p.skill,p.sprite,p.angle);
     }
     this.fx.update(animDt === 0 ? 0 : frameMs, this.hitStopMs > 0);
+    this.pickups.update(animDt === 0 ? 0 : frameMs, this.hitStopMs > 0);
     this.mapView?.update(frameMs, this.cameras.main);
 
     this.hudElapsed += frameMs;
@@ -537,9 +526,15 @@ export class GameScene extends Phaser.Scene {
         this.keys?.clear();
         this.pauseAutoForManual();
         break;
-      case 'inventory':
-        if (this.ready) this.server.manageInventory(cmd.action, this.mode === 'dev');
+      case 'inventory': {
+        if (!this.ready) break;
+        const before = this.serverBalance;
+        // 'balance' 事件是同步送出的，manageInventory 回來時 serverBalance 已經是新值
+        this.server.manageInventory(cmd.action, this.mode === 'dev');
+        // 清空重置會把金幣改回初始值：掛機的累計輸／贏基準跟著平移（同 setBalance）
+        if (cmd.action.type === 'reset') this.autoSession.startBalance += this.serverBalance - before;
         break;
+      }
       case 'stepBet': {
         const levels = this.betLevels();
         const current = levels.indexOf(this.bet);
@@ -726,9 +721,22 @@ export class GameScene extends Phaser.Scene {
       const frame = this.avatar.motionFrame;
       if (frame) this.skillFx.afterimage(frame, this.player.body.x, this.player.body.y, this.player.body.facing);
     };
-    if (move.kind === 'blink') {
+    // 換層位移：上下兩層內怪最多的足場（SPEC §3.3），斜著過去
+    const dest = move.kind === 'tierLeap' || move.kind === 'tierBlink' ? this.pickTierDestination(move.range, move.rise, move.fall) : null;
+    if (move.kind === 'tierLeap') {
+      this.fx.spawn('dust', body.x, body.y - 8, { flipX: body.facing === 1 });
+      if (dest) this.launchTo(dest);
+      else this.player.launch(body.facing * 230, 430, null); // 附近沒有更好的層：往前斜跳
+      ghost();
+      this.time.addEvent({ delay: 55, repeat: 8, callback: ghost });
+      return;
+    }
+    if (move.kind === 'blink' || move.kind === 'tierBlink') {
       const before = { x: body.x, y: body.y };
-      for (let distance = move.distance; distance >= 40; distance *= 0.7) {
+      if (dest) {
+        Object.assign(body, { x: dest.x, y: dest.y, ground: dest.fh, climb: null, vx: 0, vy: 0, facing: dest.x >= before.x ? 1 : -1 });
+      }
+      for (let distance = move.distance; !dest && distance >= 40; distance *= 0.7) {
         const wanted = Phaser.Math.Clamp(body.x + body.facing * distance, PHYSICS.halfWidth, this.world.width - PHYSICS.halfWidth);
         const x = this.world.blockByWalls(body.x, wanted, body.y - PHYSICS.height, body.y - 2, PHYSICS.halfWidth);
         const ground = this.world.groundBelow(x, body.y - 40);
@@ -738,8 +746,9 @@ export class GameScene extends Phaser.Scene {
       }
       const frame = this.avatar.motionFrame;
       if (frame) {
-        for (let i = 0; i < 3; i += 1) {
-          const t = i / 3;
+        const steps = dest ? 5 : 3;
+        for (let i = 0; i < steps; i += 1) {
+          const t = i / steps;
           this.skillFx.afterimage(frame, before.x + (body.x - before.x) * t, before.y + (body.y - before.y) * t, body.facing, 0xc59bff, 0.35 + t * 0.2);
         }
       }
@@ -751,6 +760,63 @@ export class GameScene extends Phaser.Scene {
     const every = move.kind === 'dash' ? 25 : 55;
     ghost();
     this.time.addEvent({ delay: every, repeat: Math.max(0, Math.floor(span / every) - 1), callback: ghost });
+  }
+
+  /**
+   * 換層位移的落點：左右 range、往上 rise／往下 fall 以內，依足場分組數怪，別層的怪多加權（要讓角色換層）。
+   * 落點在那群怪中間，但跟角色至少差 TIER_MIN_DX，才會斜上斜下、不會直上直下。
+   * 最好的地方就是現在這層時回傳 null。
+   */
+  private pickTierDestination(range: number, rise: number, fall: number): { x: number; y: number; fh: number } | null {
+    const body = this.player.body;
+    const groups = new Map<number, { xs: number[]; dy: number }>();
+    for (const m of this.monsters.values()) {
+      if (!m.alive || Math.abs(m.x - body.x) > range) continue;
+      const fh = m.foothold ?? this.world.groundBelow(m.x, m.y - 2)?.fh;
+      if (fh === undefined || fh === null) continue;
+      const fy = this.world.footholdY(fh, m.x) ?? m.y;
+      const dy = body.y - fy; // 正 = 在上面
+      if (dy > rise || -dy > fall) continue;
+      const group = groups.get(fh) ?? { xs: [], dy };
+      group.xs.push(m.x);
+      groups.set(fh, group);
+    }
+    let best: { fh: number; score: number; xs: number[]; dy: number } | null = null;
+    for (const [fh, g] of groups) {
+      const otherTier = Math.abs(g.dy) > 40;
+      const score = g.xs.length * (otherTier ? 1.5 : 1);
+      if (!best || score > best.score) best = { fh, score, xs: g.xs, dy: g.dy };
+    }
+    if (!best || Math.abs(best.dy) <= 40) return null;
+    const xs = [...best.xs].sort((a, b) => a - b);
+    const range2 = this.world.footholdRange(best.fh);
+    if (!range2) return null;
+    const lo = range2.x1 + PHYSICS.halfWidth + 4;
+    const hi = range2.x2 - PHYSICS.halfWidth - 4;
+    let x = Phaser.Math.Clamp(xs[Math.floor(xs.length / 2)]!, lo, hi);
+    // 斜上斜下：跟角色至少差 TIER_MIN_DX，往怪群那一側（沒有就往面向）推
+    if (Math.abs(x - body.x) < TIER_MIN_DX) {
+      const dir: 1 | -1 = x === body.x ? body.facing : x > body.x ? 1 : -1;
+      const pushed = body.x + dir * TIER_MIN_DX;
+      const other = body.x - dir * TIER_MIN_DX;
+      if (pushed >= lo && pushed <= hi) x = pushed;
+      else if (other >= lo && other <= hi) x = other;
+      else return null;
+    }
+    const y = this.world.footholdY(best.fh, x);
+    return y === null ? null : { x, y, fh: best.fh };
+  }
+
+  /** 拋物線跳到 dest：頂點比起點與終點都高一點，往下跳時穿過腳下的單向平台。 */
+  private launchTo(dest: { x: number; y: number; fh: number }): void {
+    const body = this.player.body;
+    const g = PHYSICS.gravity;
+    const rise = body.y - dest.y; // 正 = 往上
+    const apex = Math.max(48, rise + 48);
+    const vy = Math.sqrt(2 * g * apex);
+    const time = vy / g + Math.sqrt((2 * (apex - rise)) / g);
+    const vx = Phaser.Math.Clamp((dest.x - body.x) / time, -700, 700);
+    this.player.launch(vx, vy, rise < -8 ? body.ground : null);
   }
 
   /** 演出時點（隕石開始落下、迴旋刃飛出）。 */
@@ -845,8 +911,11 @@ export class GameScene extends Phaser.Scene {
       for (const m of this.monsters.values()) {
         if (!m.alive || state.hit.has(m.spawn.uid)) continue;
         const c = m.center();
-        const d = Math.hypot(c.x - state.last.x, c.y - state.last.y);
-        if (d <= chain.range && d < best) {
+        // 高低差乘上 verticalWeight（< 1 = 比較常跳到上下層）；正上方／正下方的扣分，瞬移是斜的
+        const dx = Math.abs(c.x - state.last.x);
+        const dy = Math.abs(c.y - state.last.y);
+        const d = Math.hypot(dx, dy * (chain.verticalWeight ?? 1)) + (dy > 40 && dx < 60 ? 90 : 0);
+        if (Math.hypot(dx, dy) <= chain.range * 1.4 && d <= chain.range && d < best) {
           best = d;
           target = m;
         }
@@ -1164,7 +1233,8 @@ export class GameScene extends Phaser.Scene {
       const floor = monster.y;
       const coins = Math.min(30, monster.def.fx.coinCount + Math.floor(outcome.multiplier / 10));
       monster.kill(() => {
-        this.fx.coins(c.x, c.y, coins, floor);
+        this.pickups.coins(c.x, c.y, coins, floor);
+        for (const item of outcome.loot ?? []) this.pickups.item(item, c.x, c.y, floor);
         this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' });
       });
       this.onPayout(outcome.payout, outcome.multiplier, c);
@@ -1262,6 +1332,7 @@ export class GameScene extends Phaser.Scene {
       fps: Math.round(this.game.loop.actualFps),
       monsters: this.monsters.size,
       fx: this.fx.count,
+      pickups: this.pickups.count,
       skillFx: this.skillFx.count,
       lights: this.lights.getLightCount(),
       x: Math.round(this.player?.body.x ?? 0),

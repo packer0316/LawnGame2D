@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { BAG_CAPACITY, MERCHANT_ART, SCROLL_RATES, SCROLL_RULES, UPGRADE_SLOTS, WEAPONS, WEAPON_ART, WEAPON_BY_ID, WEAPON_KINDS, sellValue, type GameCommand, type HudState, type ScrollRate, type WeaponDefinition, type WeaponKind } from '@lawn/engine';
 import './inventory.css';
+import { ForgeRitual, ScrollArt } from './ForgeRitual';
+import { preloadForgeArt } from './forgeArt';
 
 function WeaponArt({ weapon, large = false }: { weapon: WeaponDefinition; large?: boolean }) {
   return <span role="img" aria-label={weapon.name} className={`weapon-art ${large ? 'large' : ''}`} style={{ backgroundImage: `url("${WEAPON_ART[weapon.kind]}")`, backgroundPosition: `${weapon.frame % 5 * 25}% ${Math.floor(weapon.frame / 5) * 100}%` }} />;
@@ -19,7 +21,9 @@ function Merchant({ snapshot }: { snapshot: NonNullable<HudState['inventory']> }
   return <div className="merchant-stage"><div className="merchant-halo" /><div role="img" aria-label="武器商人鐵鬚布洛姆" data-frame={frame} className="merchant-sprite" style={{ backgroundImage: `url("${MERCHANT_ART}")`, backgroundPosition: `${frame % 4 / 3 * 100}% ${Math.floor(frame / 4) * 100}%` }} /><div className="merchant-plinth" /></div>;
 }
 export function InventoryPanel({ state, command }: { state: HudState; command: (cmd: GameCommand) => void }) {
-  const snapshot = state.inventory!, bag = snapshot.inventory;
+  const [ritual, setRitual] = useState<{ snapshot: NonNullable<HudState['inventory']>; uid: string; weapon: WeaponDefinition; rate: ScrollRate }>();
+  const forging = useRef(false);
+  const snapshot = ritual?.snapshot ?? state.inventory!, bag = snapshot.inventory;
   const [tab, setTab] = useState<'bag' | 'catalog'>('bag');
   const [filter, setFilter] = useState<WeaponKind | 'all'>('all');
   const [selected, setSelected] = useState(bag.items[0]?.uid ?? '');
@@ -27,10 +31,11 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
   const [rate, setRate] = useState<ScrollRate>(60);
   const [confirmSell, setConfirmSell] = useState(false);
   const dialog = useRef<HTMLElement>(null);
-  const close = () => command({ type: 'inventoryOpen', open: false });
+  const close = () => { if (!forging.current) command({ type: 'inventoryOpen', open: false }); };
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     dialog.current?.querySelector<HTMLButtonElement>('.inventory-close')?.focus();
+    void preloadForgeArt().catch(() => {});
     return () => previous?.focus();
   }, []);
   useEffect(() => { setConfirmSell(false); }, [selected, tab, snapshot.feedback?.id]);
@@ -38,19 +43,34 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
   const def = tab === 'catalog' ? WEAPON_BY_ID.get(catalogId) : owned ? WEAPON_BY_ID.get(owned.definitionId) : undefined;
   const equipped = owned && def && bag.equipped[def.classId] === owned.uid;
   const rule = SCROLL_RULES[rate];
+  const startRitual = () => {
+    if (forging.current || !owned || !def || !owned.slotsLeft || !bag.scrolls[rate]) return;
+    forging.current = true;
+    setRitual({ snapshot, uid: owned.uid, weapon: def, rate });
+  };
+  const dismissRitual = () => {
+    forging.current = false; setRitual(undefined);
+    requestAnimationFrame(() => {
+      const upgrade = dialog.current?.querySelector<HTMLButtonElement>('.upgrade:not(:disabled)');
+      (upgrade ?? dialog.current?.querySelector<HTMLButtonElement>('.inventory-close'))?.focus();
+    });
+  };
+  const feedback = state.inventory?.feedback;
+  const result = ritual && feedback?.id !== ritual.snapshot.feedback?.id && feedback && ['success', 'failed', 'destroyed', 'error'].includes(feedback.kind) ? feedback : undefined;
   const grid = (tab === 'bag' ? bag.items.map((item) => ({ key: item.uid, def: WEAPON_BY_ID.get(item.definitionId)!, item })) : WEAPONS.map((def) => ({ key: def.id, def, item: undefined }))).filter(({ def }) => filter === 'all' || def.kind === filter);
   return <div className="inventory-scrim" onPointerDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-    <section className="inventory-window" role="dialog" aria-modal="true" aria-labelledby="inventory-title" ref={dialog} onKeyDown={(e) => {
+    <section className={`inventory-window ${ritual ? 'is-forging' : ''}`} role="dialog" aria-modal="true" aria-label={ritual ? '武器卷軸刻印' : undefined} aria-labelledby={ritual ? undefined : 'inventory-title'} ref={dialog} onKeyDown={(e) => {
       e.stopPropagation();
       if (e.key === 'Escape' || e.code === 'KeyI') close();
       if (e.key === 'Tab') {
-        const controls = [...dialog.current!.querySelectorAll<HTMLElement>('button:not(:disabled)')];
+        const controls = [...dialog.current!.querySelectorAll<HTMLElement>('button:not(:disabled)')].filter(el => !el.closest('[inert]'));
+        if (!controls.length) { e.preventDefault(); return; }
         if (e.shiftKey && document.activeElement === controls[0]) { e.preventDefault(); controls.at(-1)?.focus(); }
         else if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus(); }
       }
     }}>
-      <header className="inventory-header"><div><span className="inventory-kicker">THE WAYFARER’S COLLECTION</span><h2 id="inventory-title">行囊與武器工坊</h2><p>收藏你的風格，讓每把武器留下故事。</p></div><div className="inventory-wallet"><small>持有金幣</small><strong>◈ {state.balance.toLocaleString()}</strong></div><button className="inventory-close" aria-label="關閉背包" onClick={close}>×</button></header>
-      <div className="inventory-body">
+      <header className="inventory-header" inert={!!ritual}><div><span className="inventory-kicker">THE WAYFARER’S COLLECTION</span><h2 id="inventory-title">行囊與武器工坊</h2><p>收藏你的風格，讓每把武器留下故事。</p></div><div className="inventory-wallet"><small>持有金幣</small><strong>◈ {state.balance.toLocaleString()}</strong></div><button className="inventory-close" aria-label="關閉背包" onClick={close}>×</button></header>
+      <div className="inventory-body" inert={!!ritual}>
         <section className="inventory-collection" aria-label="武器收藏">
           <div className="inventory-tabs"><button aria-pressed={tab === 'bag'} onClick={() => setTab('bag')}>我的行囊 <small>{bag.items.length}/{BAG_CAPACITY}</small></button><button aria-pressed={tab === 'catalog'} onClick={() => setTab('catalog')}>外觀圖鑑 <small>40 款</small></button></div>
           <nav className="inventory-filters" aria-label="武器種類"><button aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>全部</button>{(Object.keys(WEAPON_KINDS) as WeaponKind[]).map((kind) => <button key={kind} aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{WEAPON_KINDS[kind].name}</button>)}</nav>
@@ -69,19 +89,21 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
               <div className="inventory-slots"><span>強化機會 <b>{owned.slotsLeft} / {UPGRADE_SLOTS}</b></span><div>{Array.from({ length: UPGRADE_SLOTS }, (_, i) => <i key={i} className={i < owned.slotsLeft ? 'available' : ''} />)}</div></div>
               <button className="inventory-primary" onClick={() => command({ type: 'inventory', action: equipped ? { type: 'unequip', classId: def.classId } : { type: 'equip', uid: owned.uid } })}>{equipped ? '卸下外觀' : `裝備至${state.classes.find((c) => c.id === def.classId)?.name ?? ''}`}</button>
               <div className="inventory-scroll-heading"><h4>武器卷軸</h4><small>成功只提升回收價</small></div>
-              <div className="inventory-scrolls">{SCROLL_RATES.map((r) => <button key={r} className={`scroll-${r}`} aria-pressed={rate === r} onClick={() => setRate(r)}><span className="scroll-symbol">▤</span><strong>{r}%</strong><small>持有 {bag.scrolls[r]}</small></button>)}</div>
+              <div className="inventory-scrolls">{SCROLL_RATES.map((r) => <button key={r} className={`scroll-${r}`} aria-pressed={rate === r} onClick={() => setRate(r)}><ScrollArt rate={r} /><strong>{r}%</strong><small>持有 {bag.scrolls[r]}</small></button>)}</div>
               <p className="inventory-risk">成功增值 <b>+{rule.bonus.toLocaleString()}</b> · 失敗後 <b>{rule.breakOnFailure * 100}%</b> 損毀<br /><small>每次消耗 1 張卷軸與 1 次機會；本次總損毀率 {Number(((1 - rule.success) * rule.breakOnFailure * 100).toFixed(1))}%。</small></p>
-              <button className="inventory-primary upgrade" disabled={!owned.slotsLeft || !bag.scrolls[rate]} onClick={() => command({ type: 'inventory', action: { type: 'upgrade', uid: owned.uid, rate } })}>使用 {rate}% 卷軸</button>
+              <button className="inventory-primary upgrade" disabled={!owned.slotsLeft || !bag.scrolls[rate]} onClick={startRitual}>使用 {rate}% 卷軸</button>
             </> : <div className="inventory-catalog-note"><strong>外觀圖鑑</strong><p>每個系列的性能相同。透過冒險收集後，可在「我的行囊」換裝、強化或出售。</p></div>}
           </> : <div className="inventory-empty"><h3>{snapshot.feedback?.kind === 'destroyed' ? '武器已損毀' : '挑選一把武器'}</h3><p>從左側行囊選取武器，查看外觀與強化資訊。</p></div>}
         </section>
         <aside className="inventory-merchant"><span className="inventory-kicker">WEAPON MERCHANT</span><h3>鐵鬚・布洛姆</h3><p className="merchant-subtitle">鑑價、收購與旅人的老朋友</p><Merchant snapshot={snapshot} /><div className="merchant-dialogue" aria-live="polite" data-kind={snapshot.feedback?.kind ?? 'idle'} key={snapshot.feedback?.id ?? 0}>{snapshot.feedback?.message ?? '好武器值得珍藏。若想換個風格，我也樂意出個好價錢。'}</div>
           {snapshot.storageError && <p role="alert" className="inventory-storage-error">目前無法保存進度，請保持此頁開啟並檢查瀏覽器儲存空間。</p>}
           <div className="merchant-trade"><h4>武器收購</h4><p>{equipped && tab === 'bag' ? '裝備中的武器請先卸下。' : '出售後武器會離開行囊，金幣立即入帳。'}</p>{confirmSell && owned && tab === 'bag' ? <div className="merchant-confirm"><span>確定交出 {def?.name}？</span><button onClick={() => command({ type: 'inventory', action: { type: 'sell', uid: owned.uid } })}>確認出售 · {sellValue(owned).toLocaleString()}</button><button onClick={() => setConfirmSell(false)}>保留</button></div> : <button className="inventory-sell" disabled={tab !== 'bag' || !owned || !!equipped} onClick={() => setConfirmSell(true)}>出售武器 {owned && tab === 'bag' ? `· ◈ ${sellValue(owned).toLocaleString()}` : ''}</button>}</div>
-          <div className="merchant-shop"><h4>補給卷軸</h4>{SCROLL_RATES.map((r) => <div key={r}><span>{r}% 卷軸 <small>×{bag.scrolls[r]}</small></span><button disabled={state.balance < SCROLL_RULES[r].price || bag.scrolls[r] >= 9999} aria-label={`購買 ${r}% 卷軸`} onClick={() => command({ type: 'inventory', action: { type: 'buyScroll', rate: r } })}>◈ {SCROLL_RULES[r].price}</button></div>)}</div>
+          <div className="merchant-shop"><h4>補給卷軸</h4>{SCROLL_RATES.map((r) => <div key={r}><span><ScrollArt rate={r} />{r}% 卷軸 <small>×{bag.scrolls[r]}</small></span><button disabled={state.balance < SCROLL_RULES[r].price || bag.scrolls[r] >= 9999} aria-label={`購買 ${r}% 卷軸`} onClick={() => command({ type: 'inventory', action: { type: 'buyScroll', rate: r } })}>◈ {SCROLL_RULES[r].price}</button></div>)}</div>
         </aside>
       </div>
-      <footer className="inventory-bottom"><span>裝備只改變外觀 · 各職業分開保存換裝</span><span>ESC 關閉 · DEMO 工坊</span></footer>
+      <footer className="inventory-bottom" inert={!!ritual}><span>裝備只改變外觀 · 各職業分開保存換裝</span><span>ESC 關閉 · DEMO 工坊</span></footer>
+      {ritual && <ForgeRitual weaponName={ritual.weapon.name} weaponArt={<WeaponArt weapon={ritual.weapon} large />} rate={ritual.rate} result={result}
+        onCommit={() => command({ type: 'inventory', action: { type: 'upgrade', uid: ritual.uid, rate: ritual.rate } })} onDismiss={dismissRitual} />}
     </section>
   </div>;
 }

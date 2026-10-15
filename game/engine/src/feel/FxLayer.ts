@@ -20,26 +20,12 @@ interface NumberItem {
   baseY: number;
 }
 
-interface CoinItem {
-  sprite: Phaser.GameObjects.Sprite;
-  animator: SheetAnimator;
-  vx: number;
-  vy: number;
-  floorY: number;
-  ageMs: number;
-  flyFrom: { x: number; y: number } | null;
-  flyMs: number;
-}
 
-/** 特效、傷害數字、金幣（SPEC §4.6）。頓幀時 frozen = true，全部停住。 */
+/** 特效與傷害數字（SPEC §4.6；金幣、武器、卷軸的掉落在 Pickups）。頓幀時 frozen = true，全部停住。 */
 export class FxLayer {
   private fx: FxItem[] = [];
   private numbers: NumberItem[] = [];
-  private coinItems: CoinItem[] = [];
   private elapsed = 0;
-  /** 金幣飛去的目標（世界座標，通常是畫面右上角） */
-  coinTarget: () => { x: number; y: number } = () => ({ x: 0, y: 0 });
-  onCoinCollected: (() => void) | null = null;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -87,30 +73,9 @@ export class FxLayer {
     this.numbers.push({ text, ageMs: 0, baseY: text.y });
   }
 
-  /** 金幣噴出 → 落地彈跳 → 飛向餘額。 */
-  coins(x: number, y: number, count: number, floorY: number): void {
-    const asset = this.bundle.fx.get('coin');
-    if (!asset) return;
-    for (let i = 0; i < count; i += 1) {
-      const animator = new SheetAnimator(asset.sheet);
-      animator.play('play', { loop: true });
-      animator.seek(i % 6);
-      const sprite = this.scene.add.sprite(x, y, asset.path, frameName(null, animator.frame)).setDepth(DEPTH.fx + 1);
-      this.coinItems.push({
-        sprite,
-        animator,
-        vx: (Math.random() - 0.5) * 140,
-        vy: -170 - Math.random() * 90,
-        floorY,
-        ageMs: -i * 25,
-        flyFrom: null,
-        flyMs: 0,
-      });
-    }
-  }
 
   get count(): number {
-    return this.fx.length + this.numbers.length + this.coinItems.length;
+    return this.fx.length + this.numbers.length;
   }
 
   update(dtMs: number, frozen: boolean): void {
@@ -142,49 +107,12 @@ export class FxLayer {
       }
       return true;
     });
-
-    const target = this.coinTarget();
-    this.coinItems = this.coinItems.filter((coin) => {
-      coin.ageMs += dt;
-      coin.animator.update(dt);
-      coin.sprite.setFrame(frameName(null, coin.animator.frame));
-      if (coin.ageMs < 0) {
-        coin.sprite.setVisible(false);
-        return true;
-      }
-      coin.sprite.setVisible(true);
-      if (coin.flyFrom) {
-        coin.flyMs += dt;
-        const k = Math.min(1, coin.flyMs / 380);
-        const ease = k * k * (3 - 2 * k);
-        coin.sprite.setPosition(coin.flyFrom.x + (target.x - coin.flyFrom.x) * ease, coin.flyFrom.y + (target.y - coin.flyFrom.y) * ease - Math.sin(k * Math.PI) * 30);
-        if (k >= 1) {
-          coin.sprite.destroy();
-          this.onCoinCollected?.();
-          return false;
-        }
-        return true;
-      }
-      const s = dt / 1000;
-      coin.vy += 700 * s;
-      coin.sprite.x += coin.vx * s;
-      coin.sprite.y += coin.vy * s;
-      if (coin.sprite.y > coin.floorY - 6 && coin.vy > 0) {
-        coin.sprite.y = coin.floorY - 6;
-        coin.vy = -coin.vy * 0.35;
-        coin.vx *= 0.6;
-      }
-      if (coin.ageMs > 520) coin.flyFrom = { x: coin.sprite.x, y: coin.sprite.y };
-      return true;
-    });
   }
 
   destroy(): void {
     for (const item of this.fx) item.sprite.destroy();
     for (const item of this.numbers) item.text.destroy();
-    for (const coin of this.coinItems) coin.sprite.destroy();
     this.fx = [];
     this.numbers = [];
-    this.coinItems = [];
   }
 }

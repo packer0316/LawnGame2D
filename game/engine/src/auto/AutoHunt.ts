@@ -80,12 +80,19 @@ function reachOf(area: Area): number {
 /** 技能打得到多遠：第一刀的範圍，加上往前的衝刺／瞬移距離。 */
 function skillReach(skill: SkillDef): number {
   const move = skill.move;
-  const travel = move?.kind === 'dash' ? Math.max(0, move.distance) : move?.kind === 'blink' ? move.distance : move?.kind === 'leap' ? Math.max(0, move.vx) * 0.6 : 0;
+  const travel =
+    move?.kind === 'dash' ? Math.max(0, move.distance)
+    : move?.kind === 'blink' || move?.kind === 'tierBlink' ? move.distance
+    : move?.kind === 'leap' ? Math.max(0, move.vx) * 0.6
+    : move?.kind === 'tierLeap' ? move.range * 0.5
+    : 0;
   return reachOf(skill.strikes[0]!.area) + travel;
 }
 
 /** 換目標的門檻：新的打怪點分數要超過目前目標的幾倍才換（避免兩群差不多時來回跑）。 */
 const SWITCH_RATIO = 1.25;
+/** 在同一層待超過這麼久，換層技能好了就主動換層（毫秒） */
+const TIER_STAY_MS = 8000;
 /** 到了打怪點之後大約要花多久出手、清怪（秒）；分數的分母加上這段，近的單隻怪才不會永遠贏過遠一點的一群。 */
 const ENGAGE_SEC = 1.2;
 /** 「附近」的範圍：同一足場這個距離內的怪，打完眼前這群可以接著打，算一部分價值。 */
@@ -180,6 +187,9 @@ export class AutoHunt {
   /** 已決定前往下一房 */
   private leaving = false;
   private clock = 0;
+  /** 主動換層：現在站的足場、從什麼時候開始站在這一層 */
+  private tierGround: number | null = null;
+  private tierSince = 0;
   private readonly blacklist = new Map<number, number>();
   /** 沒有進行中的邊卻掛在繩上：往哪個方向爬下來 */
   private looseClimb: { up: boolean; lastY: number; stillMs: number } | null = null;
@@ -251,9 +261,22 @@ export class AutoHunt {
       return IDLE;
     }
 
+    // 主動換層：別層的怪差不多多、或在同一層待太久，就用換層技能斜著過去
+    const proactive = this.proactiveHop(ctx);
+    if (proactive) {
+      this.status = 'travel';
+      return input(proactive.press);
+    }
+
     const goal = this.footholdOf(ctx, this.target);
     if (goal === null) return this.giveUp(this.target);
     if (body.ground !== goal) {
+      // 目標在別層：有換層技能（昇龍斬、瞬移術、影襲）就直接斜著過去，不用走去爬梯子
+      const hop = this.tierSkill(ctx, this.target);
+      if (hop) {
+        this.status = 'travel';
+        return input(hop.press);
+      }
       // 跟選怪用同一套「以時間計」的路線：選的時候估多遠，就照那條路走
       const edge = this.routes(ctx).get(goal)?.first;
       if (!edge) return this.giveUp(this.target);
@@ -263,6 +286,59 @@ export class AutoHunt {
     }
     this.status = 'attack';
     return this.engage(ctx, dt);
+  }
+
+  /**
+   * 主動換層（使用者：不要一直停在同一層）：換層技能冷卻好時，數技能範圍內每層的怪，
+   * 別層至少 2 隻、而且不少於這層的 8 成，或在同一層已經待超過 TIER_STAY_MS，就換過去。
+   */
+  private proactiveHop(ctx: AutoContext): AutoSkill | null {
+    const body = ctx.player.body;
+    if (body.ground === null) return null;
+    if (body.ground !== this.tierGround) {
+      this.tierGround = body.ground;
+      this.tierSince = this.clock;
+    }
+    for (const entry of ctx.skills) {
+      if (!entry.ready) continue;
+      const move = entry.skill.move;
+      const tier = move?.kind === 'tierLeap' || move?.kind === 'tierBlink' ? { range: move.range, rise: move.rise, fall: move.fall } : entry.skill.chain?.blink ? { range: entry.skill.chain.range, rise: entry.skill.chain.range, fall: entry.skill.chain.range } : null;
+      if (!tier) continue;
+      let here = 0;
+      const there = new Map<number, number>();
+      for (const m of ctx.monsters) {
+        if (!m.alive || Math.abs(m.x - body.x) > tier.range) continue;
+        const dy = body.y - m.y;
+        if (Math.abs(dy) <= 40) here += 1;
+        else if (dy <= tier.rise && -dy <= tier.fall) {
+          const fh = this.footholdOf(ctx, m) ?? -1;
+          there.set(fh, (there.get(fh) ?? 0) + 1);
+        }
+      }
+      const best = Math.max(0, ...there.values());
+      const stayed = this.clock - this.tierSince > TIER_STAY_MS;
+      if (best >= 2 && (best >= here * 0.8 || stayed)) return entry;
+    }
+    return null;
+  }
+
+  /**
+   * 能把角色帶到目標那一層的技能：tierLeap／tierBlink（範圍內）或會瞬移的連鎖技能。
+   * 只在高低差超過 40px 時用；冷卻好了才算。
+   */
+  private tierSkill(ctx: AutoContext, target: MonsterActor): AutoSkill | null {
+    const body = ctx.player.body;
+    const dx = Math.abs(target.x - body.x);
+    const dy = body.y - target.y; // 正 = 目標在上面
+    if (Math.abs(dy) <= 40) return null;
+    for (const entry of ctx.skills) {
+      if (!entry.ready) continue;
+      const move = entry.skill.move;
+      if ((move?.kind === 'tierLeap' || move?.kind === 'tierBlink') && dx <= move.range && dy <= move.rise && -dy <= move.fall) return entry;
+      const chain = entry.skill.chain;
+      if (chain?.blink && Math.hypot(dx, dy) <= reachOf(entry.skill.strikes[0]!.area)) return entry;
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------------------

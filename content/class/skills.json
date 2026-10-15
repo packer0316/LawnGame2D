@@ -160,7 +160,7 @@
       "cancelFromMs": 630,
       "hitStopMs": 50,
       "shake": 3,
-      "move": {"kind": "leap", "atMs": 300, "vx": 80, "vy": 560}
+      "move": {"kind": "tierLeap", "atMs": 300, "range": 600, "rise": 380, "fall": 380}
     },
     {
       "id": "skill_0009",
@@ -300,12 +300,12 @@
         {"atMs": 260, "area": {"shape": "path", "h": 100, "w": 60}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arcane"}
       ],
       "cooldownSec": 3,
-      "price": 2,
-      "fullTargets": 3,
+      "price": 3,
+      "fullTargets": 4,
       "cancelFromMs": 380,
       "hitStopMs": 40,
       "shake": 2,
-      "move": {"kind": "blink", "atMs": 250, "distance": 320}
+      "move": {"kind": "tierBlink", "atMs": 250, "range": 640, "rise": 380, "fall": 380, "distance": 420}
     },
     {
       "id": "skill_0015",
@@ -628,7 +628,7 @@
       "cancelFromMs": 900,
       "hitStopMs": 40,
       "shake": 2,
-      "chain": {"range": 380, "blink": true}
+      "chain": {"range": 480, "blink": true, "verticalWeight": 0.5}
     },
     {
       "id": "skill_0034",

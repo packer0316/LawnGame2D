@@ -6,7 +6,9 @@ export interface InventoryState { items: WeaponInstance[]; equipped: Partial<Rec
 export interface InventoryProfile { version: 1; balance: number; inventory: InventoryState }
 export interface InventoryFeedback { id: number; kind: 'equipped' | 'success' | 'failed' | 'destroyed' | 'sold' | 'bought' | 'drop' | 'error'; message: string }
 export interface InventorySnapshot { inventory: InventoryState; feedback?: InventoryFeedback; storageError?: boolean }
-export type InventoryAction = { type: 'equip'; uid: string } | { type: 'unequip'; classId: ClassId } | { type: 'sell'; uid: string } | { type: 'upgrade'; uid: string; rate: ScrollRate } | { type: 'buyScroll'; rate: ScrollRate } | { type: 'demoCollection' };
+export type InventoryAction = { type: 'equip'; uid: string } | { type: 'unequip'; classId: ClassId } | { type: 'sell'; uid: string } | { type: 'upgrade'; uid: string; rate: ScrollRate } | { type: 'buyScroll'; rate: ScrollRate } | { type: 'demoCollection' } | TestToolAction;
+/** 設定面板的測試工具：不看模式、不限次數。 */
+export type TestToolAction = { type: 'grantAllWeapons' } | { type: 'grantScrolls'; count: number } | { type: 'reset' };
 export const sellValue = (w: WeaponInstance): number => BASE_SELL_VALUE + w.bonusValue;
 export function addWeapon(state: InventoryState, definitionId: string): WeaponInstance | undefined {
   if (state.items.length >= BAG_CAPACITY || !WEAPON_BY_ID.has(definitionId)) return;
@@ -52,6 +54,24 @@ export function inventoryAction(profile: InventoryProfile, action: InventoryActi
     s.demoGranted = true;
     return result('bought', '已收下 40 款展示收藏與三種卷軸各 20 張。');
   }
+  if (action.type === 'grantAllWeapons') {
+    const missing = WEAPONS.filter((d) => !s.items.some((w) => w.definitionId === d.id));
+    if (missing.length === 0) return result('bought', '40 款武器都已經在背包裡。');
+    if (s.items.length + missing.length > BAG_CAPACITY) return result('error', `背包空間不足（還缺 ${missing.length} 款），請先出售武器。`);
+    for (const d of missing) addWeapon(s, d.id);
+    return result('bought', `已補上 ${missing.length} 款武器，40 款全數到齊。`);
+  }
+  if (action.type === 'grantScrolls') {
+    const count = Number.isFinite(action.count) ? Math.max(0, Math.min(9999, Math.floor(action.count))) : 0;
+    for (const r of SCROLL_RATES) s.scrolls[r] = Math.max(s.scrolls[r], count);
+    return result('bought', `三種卷軸各補到 ${count.toLocaleString()} 張。`);
+  }
+  if (action.type === 'reset') {
+    const fresh = newProfile();
+    profile.balance = fresh.balance;
+    profile.inventory = fresh.inventory;
+    return result('bought', `已清空重置：金幣 ${fresh.balance.toLocaleString()}，背包、裝備與卷軸回到初始狀態。`);
+  }
   if (action.type === 'buyScroll') {
     const rule = SCROLL_RULES[action.rate];
     if (!rule || profile.balance < rule.price || s.scrolls[action.rate] >= 9999) return result('error', '金幣不足或卷軸已達上限。');
@@ -90,17 +110,25 @@ export function inventoryAction(profile: InventoryProfile, action: InventoryActi
   }
   return result('failed', '強化失敗，武器保留；消耗 1 次機會與 1 張卷軸。');
 }
-/** 額外掉落骰與戰鬥 resolveStrike 分開；不回饋任何戰鬥數值。 */
-export function rollLoot(state: InventoryState, random: () => number): string[] {
+/** 真的放進背包的掉落物（畫面用：從哪隻怪身上掉出來、再飛到玩家身上）。 */
+export type LootItem = { kind: 'weapon'; definitionId: string } | { kind: 'scroll'; rate: ScrollRate };
+
+/** 額外掉落骰與戰鬥 resolveStrike 分開；不回饋任何戰鬥數值。回傳拾取訊息與放進背包的物品。 */
+export function rollLootDrops(state: InventoryState, random: () => number): { messages: string[]; items: LootItem[] } {
   const messages: string[] = [];
+  const items: LootItem[] = [];
   if (random() < DROP_RULES.weapon) {
     const def = WEAPONS[Math.min(WEAPONS.length - 1, Math.floor(random() * WEAPONS.length))]!;
-    if (addWeapon(state, def.id)) messages.push(def.name);
+    if (addWeapon(state, def.id)) { messages.push(def.name); items.push({ kind: 'weapon', definitionId: def.id }); }
     else messages.push('背包已滿，未能拾取武器');
   }
   if (random() < DROP_RULES.scroll) {
     const rate = SCROLL_RATES[Math.min(2, Math.floor(random() * 3))]!;
-    if (state.scrolls[rate] < 9999) { state.scrolls[rate]++; messages.push(`${rate}% 武器卷軸`); }
+    if (state.scrolls[rate] < 9999) { state.scrolls[rate]++; messages.push(`${rate}% 武器卷軸`); items.push({ kind: 'scroll', rate }); }
   }
-  return messages;
+  return { messages, items };
+}
+
+export function rollLoot(state: InventoryState, random: () => number): string[] {
+  return rollLootDrops(state, random).messages;
 }
