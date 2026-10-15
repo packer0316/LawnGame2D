@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "id": "fuma-v3",
+      "prompt": "A single spectacular fantasy FUMA SHURIKEN weapon sprite for a premium 2D side-scrolling RPG. Orthographic face-on view of a giant four-bladed folding windmill shuriken, four long swept-back curved angular blades, blackened obsidian steel interiors, razor sharp silver bevels, crimson red engraved runes and thin crimson energy outlining the cutting edges, intricate circular bronze central hub with hollow center. Menacing elegant mechanical weapon, iconic readable pinwheel silhouette, balanced four-way rotation, premium hand-painted game art, extremely crisp at small size. Entire object centered with 12 percent clear padding on all sides, square canvas, no perspective tilt. TRANSPARENT BACKGROUND, no text, no scenery, no character, no floor shadow, no extra weapons. Do not make a small throwing star. Solid metal body and clear negative space between the four blades, delicate detached red sparks only."
+    },
+    {
+      "id": "archer-arrows-v3",
+      "prompt": "Production sprite asset sheet for premium fantasy side scrolling RPG, TRANSPARENT BACKGROUND. TWO ROWS and ONE COLUMN, identical rectangular cells, very wide landscape canvas aspect 2:1. Each row contains ONE long horizontal magical ARROW pointing LEFT, entire arrow contained in its own half with generous transparent padding, no overlap. Top row: divine ivory GOLD LIGHT ARROW with large ornate spear shaped golden arrowhead on LEFT, thick luminous shaft, angular feather-shaped fletching at RIGHT, pale jade inset gem, delicate gold particles and luminous edge filigree. Bottom row: PHOENIX FIRE ARROW, large copper orange broadhead pointing LEFT, thick red gold luminous shaft, flaming phoenix feather fletching at RIGHT, elegant curling ember tail. Crisp premium hand painted game art, detailed tangible metallic weapon cores, powerful chunky silhouettes visible when scaled to 100 pixels long. Both arrows same center horizontal axis per row, arrowhead at left, tail at right. No circles, no bows, no characters, no labels, no borders, no backgrounds."
+    },
+    {
+      "id": "holy-sword-v3",
+      "prompt": "Single colossal ornate HOLY GREATSWORD sprite for premium hand painted 2D fantasy RPG, TRANSPARENT BACKGROUND, tall portrait canvas. Sword perfectly vertical point DOWN, pommel at TOP, orthographic face-on with bilateral symmetry. Broad heavy ivory silver blade with gold inset central fuller, sharp bevels and elaborate engraved runes, large sweeping golden crossguard and sapphire inset, layered metal facets, thick blade NOT a needle or beam, tapered spear-like tip. Rich polished metal catching celestial golden edge glow, restrained floating gold sparks, visible complete outline and 12 percent clear transparent padding around sword. No hand, no person, no scenery, no text. Epic descending sword rain weapon asset. Detailed fantasy weapon art, heavy confident silhouette, point downward."
+    }
+  ]
+}

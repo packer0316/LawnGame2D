@@ -19,10 +19,10 @@ describe('技能表現節奏',()=>{
     }
     expect(JSON.stringify(skills)).toBe(before);
   });
-  it('快速連鎖每段最多 10ms，單發拔刀保留重擊重量',()=>{
+  it('快速連鎖每段最多 10ms，拔刀終結段保留重擊重量',()=>{
     const chain=skills.find(s=>s.name==='連鎖閃電')!;
     expect(impactFeel(chain,0).stopMs).toBeLessThanOrEqual(10);
     const iaido=skills.find(s=>s.name==='拔刀斬')!;
-    expect(impactFeel(iaido,0).stopMs).toBeGreaterThanOrEqual(100);
+    expect(impactFeel(iaido,iaido.strikes.length-1).stopMs).toBeGreaterThanOrEqual(100);
   });
 });

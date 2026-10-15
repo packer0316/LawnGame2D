@@ -3,8 +3,8 @@ import type { SkillDef } from '@lawn/shared';
 export const CLASS_ENERGY = {
   warrior: { color: 0x7cdbff, core: 0xf5fcff, shadow: 0x162b45 },
   mage: { color: 0xb58aff, core: 0xf3eaff, shadow: 0x231132 },
-  archer: { color: 0x7ff2c3, core: 0xfff5cc, shadow: 0x113c35 },
-  assassin: { color: 0xc18aff, core: 0xe8d9ff, shadow: 0x24113d },
+  archer: { color: 0xffcc62, core: 0xfff5cc, shadow: 0x392917 },
+  assassin: { color: 0xff4567, core: 0xffd6e1, shadow: 0x2e0d1b },
 } as const;
 
 /** 表現層節奏：不改判定、傷害或扣注時間；連段保留流動感，末段才有重停頓。 */

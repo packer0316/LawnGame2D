@@ -61,8 +61,10 @@
       "icon": "whirl",
       "strikes": [
         {"atMs": 170, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"},
-        {"atMs": 330, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"},
-        {"atMs": 490, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"}
+        {"atMs": 260, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"},
+        {"atMs": 350, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"},
+        {"atMs": 440, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"},
+        {"atMs": 550, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"}
       ],
       "cooldownSec": 5,
       "cancelFromMs": 640,
@@ -79,10 +81,12 @@
       "motion": {"tag": "draw_slash"},
       "icon": "iaido",
       "strikes": [
-        {"atMs": 580, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"}
+        {"atMs": 580, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"},
+        {"atMs": 710, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"},
+        {"atMs": 880, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"}
       ],
       "cooldownSec": 7,
-      "cancelFromMs": 660,
+      "cancelFromMs": 970,
       "hitStopMs": 130,
       "shake": 5,
       "move": {"kind": "dash", "atMs": 390, "distance": 380, "durationMs": 100}
@@ -133,10 +137,11 @@
       "icon": "rising",
       "strikes": [
         {"atMs": 340, "area": {"shape": "circle", "r": 120}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "rising"},
-        {"atMs": 470, "area": {"shape": "circle", "r": 120}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "rising"}
+        {"atMs": 440, "area": {"shape": "circle", "r": 120}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "rising"},
+        {"atMs": 540, "area": {"shape": "circle", "r": 120}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "rising"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 600,
+      "cancelFromMs": 630,
       "hitStopMs": 50,
       "shake": 3,
       "move": {"kind": "leap", "atMs": 300, "vx": 80, "vy": 560}
@@ -151,11 +156,13 @@
       "icon": "wave",
       "strikes": [
         {"atMs": 275, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 10}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 345, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 210}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 415, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 410}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"}
+        {"atMs": 345, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 140}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 415, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 270}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 485, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 400}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 555, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 530}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"}
       ],
       "cooldownSec": 3,
-      "cancelFromMs": 460,
+      "cancelFromMs": 645,
       "hitStopMs": 40,
       "shake": 2
     },
@@ -169,16 +176,18 @@
       "icon": "holy",
       "strikes": [
         {"atMs": 660, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"},
-        {"atMs": 860, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"},
-        {"atMs": 1060, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"}
+        {"atMs": 840, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"},
+        {"atMs": 1020, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"},
+        {"atMs": 1200, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"},
+        {"atMs": 1380, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"}
       ],
       "cooldownSec": 20,
-      "cancelFromMs": 1200,
+      "cancelFromMs": 1470,
       "hitStopMs": 30,
       "shake": 3,
       "ultimate": true,
       "dropWeight": 0.3,
-      "cues": [{"atMs": 400, "fx": "holyWave"}, {"atMs": 600, "fx": "holyWave"}, {"atMs": 800, "fx": "holyWave"}]
+      "cues": [{"atMs": 400, "fx": "holyWave"}, {"atMs": 600, "fx": "holyWave"}, {"atMs": 800, "fx": "holyWave"}, {"atMs": 1000, "fx": "holyWave"}, {"atMs": 1200, "fx": "holyWave"}]
     },
     {
       "id": "skill_0041",
@@ -227,10 +236,12 @@
       "icon": "bolt",
       "strikes": [
         {"atMs": 380, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"},
-        {"atMs": 520, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"}
+        {"atMs": 500, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"},
+        {"atMs": 620, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"},
+        {"atMs": 800, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"}
       ],
       "cooldownSec": 4,
-      "cancelFromMs": 600,
+      "cancelFromMs": 890,
       "hitStopMs": 60,
       "shake": 3
     },
@@ -277,10 +288,12 @@
       "motion": {"tag": "mage_staff_burst", "speed": 1.2},
       "icon": "nova",
       "strikes": [
-        {"atMs": 365, "area": {"shape": "circle", "r": 220}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "nova"}
+        {"atMs": 365, "area": {"shape": "circle", "r": 220}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "nova"},
+        {"atMs": 510, "area": {"shape": "circle", "r": 220}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "nova"},
+        {"atMs": 680, "area": {"shape": "circle", "r": 220}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "nova"}
       ],
       "cooldownSec": 7,
-      "cancelFromMs": 560,
+      "cancelFromMs": 770,
       "hitStopMs": 70,
       "shake": 3
     },
@@ -339,10 +352,14 @@
       "icon": "reaper",
       "strikes": [
         {"atMs": 1100, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 1400, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "darkBurst"}
+        {"atMs": 1340, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
+        {"atMs": 1580, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
+        {"atMs": 1820, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
+        {"atMs": 2060, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
+        {"atMs": 2400, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "darkBurst"}
       ],
       "cooldownSec": 30,
-      "cancelFromMs": 1480,
+      "cancelFromMs": 2490,
       "hitStopMs": 90,
       "shake": 6,
       "ultimate": true,
@@ -373,10 +390,12 @@
       "motion": {"tag": "archer_aimed_shot"},
       "icon": "pierce",
       "strikes": [
-        {"atMs": 545, "area": {"shape": "line", "w": 800, "h": 50}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "streak"}
+        {"atMs": 545, "area": {"shape": "line", "w": 800, "h": 50}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "streak"},
+        {"atMs": 670, "area": {"shape": "line", "w": 800, "h": 50}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "streak"},
+        {"atMs": 815, "area": {"shape": "line", "w": 800, "h": 50}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "streak"}
       ],
       "cooldownSec": 4,
-      "cancelFromMs": 680,
+      "cancelFromMs": 905,
       "hitStopMs": 60,
       "shake": 3,
       "move": {"kind": "dash", "atMs": 545, "distance": -60, "durationMs": 120}
@@ -429,10 +448,12 @@
       "motion": {"tag": "archer_aimed_shot", "speed": 1.5},
       "icon": "flip",
       "strikes": [
-        {"atMs": 365, "area": {"shape": "sector", "r": 380}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arrowFan"}
+        {"atMs": 365, "area": {"shape": "sector", "r": 380}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arrowFan"},
+        {"atMs": 500, "area": {"shape": "sector", "r": 380}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arrowFan"},
+        {"atMs": 635, "area": {"shape": "sector", "r": 380}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arrowFan"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 480,
+      "cancelFromMs": 725,
       "hitStopMs": 40,
       "shake": 2,
       "move": {"kind": "leap", "atMs": 60, "vx": -320, "vy": 380}
@@ -524,11 +545,13 @@
       "icon": "fan",
       "strikes": [
         {"atMs": 140, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 420, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 700, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"}
+        {"atMs": 290, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 440, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 590, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 740, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 760,
+      "cancelFromMs": 830,
       "hitStopMs": 25,
       "shake": 1
     },
@@ -582,11 +605,13 @@
       "strikes": [
         {"atMs": 330, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
         {"atMs": 410, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 560, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 640, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"}
+        {"atMs": 490, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 560, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 640, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 720, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 700,
+      "cancelFromMs": 810,
       "hitStopMs": 25,
       "shake": 1,
       "cues": [{"atMs": 271, "fx": "boomerang"}]

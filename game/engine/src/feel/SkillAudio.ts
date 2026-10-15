@@ -28,6 +28,7 @@ export class SkillAudio {
     if(!charge&&now-this.lastHit<.055)return;
     if(!charge)this.lastHit=now;
     const volume=Math.min(1,this.scene.sound.volume)*Math.min(1.5,power);
+    if(volume<=0)return;
     const duration=charge?.2:.1+power*.055;
     const oscillator=c.createOscillator(),gain=c.createGain();
     oscillator.type=classId==='assassin'?'triangle':'sine';

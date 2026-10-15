@@ -23,6 +23,8 @@ import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
 import { SkillDrops } from '../feel/SkillDrops';
 import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
+import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
+import { impactFeel } from '../feel/SkillPresentation';
 import { loadSkillIconTextures } from '../ui/skillIcons';
 import type { GameCommand, GameMode, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
@@ -387,7 +389,10 @@ export class GameScene extends Phaser.Scene {
         this.monsters.delete(uid);
       }
     }
-    for (const p of this.projectiles) p.sprite.setPosition(Math.round(p.x), Math.round(p.y));
+    for (const p of this.projectiles) {
+      p.sprite.setPosition(Math.round(p.x), Math.round(p.y));
+      if(animDt>0)this.skillFx.projectileTrail(p.skill,p.sprite,p.angle);
+    }
     this.fx.update(animDt === 0 ? 0 : frameMs, this.hitStopMs > 0);
     this.drops.update(animDt === 0 ? 0 : frameMs);
     this.mapView?.update(frameMs, this.cameras.main);
@@ -775,6 +780,7 @@ export class GameScene extends Phaser.Scene {
     const view = this.cameras.main.worldView;
     return {
       view: { x: view.x, y: view.y, w: view.width, h: view.height },
+      classId: skill.classId,
       bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
       points: this.scatter?.skillId === skill.id ? this.scatter.points : [],
       groundAt: (x, fromY) => this.world.groundBelow(x, fromY)?.y ?? null,
@@ -807,7 +813,8 @@ export class GameScene extends Phaser.Scene {
     const dir = body.facing;
     const tint = TIER_TINT[this.betTier] ?? 0xffffff;
     const fxId = skill.slashFx ?? skill.fx;
-    if (fxId) {
+    if(skill.classId==='warrior'&&skill.kind==='basic')this.skillFx.basicMelee(skill,this.fxContext(skill,strike.area,[],null,strike.atMs));
+    else if (fxId) {
       const offset = skill.slashFx ? 22 : 30;
       this.fx.spawn(fxId, body.x + dir * offset, body.y - 26, { flipX: dir === 1, tint, additive: true, rainbow: this.betTier >= 5 });
     }
@@ -934,9 +941,9 @@ export class GameScene extends Phaser.Scene {
       const c = target.center();
       angle = Math.atan2(c.y - y, c.x - x);
     }
-    const sprite = this.add.sprite(x, y, asset.path, '0').setDepth(DEPTH.fx).setScale(spec.scale ?? 1);
-    sprite.setTint(spec.tint ?? TIER_TINT[this.betTier] ?? 0xffffff);
-    if (spec.tint !== undefined) sprite.setBlendMode(Phaser.BlendModes.ADD);
+    const classSprite=createClassProjectile(this,skill,x,y);
+    const sprite=classSprite??this.add.sprite(x,y,asset.path,'0').setDepth(DEPTH.fx).setScale(spec.scale??1);
+    if(!classSprite){sprite.setTint(spec.tint??TIER_TINT[this.betTier]??0xffffff);if(spec.tint!==undefined)sprite.setBlendMode(Phaser.BlendModes.ADD);}
     orientProjectile(sprite, angle);
     this.projectiles.push({
       sprite,
@@ -1021,10 +1028,9 @@ export class GameScene extends Phaser.Scene {
             .slice(0, strike.maxTargets)
             .map(({ m }) => m);
           this.applyHits(p.skill, p.strike, near);
-          this.skillFx.explosion(hx, hy + 12, 1.3, 0xffa040);
+          this.skillFx.phoenixBurst(hx,hy,1.4);
         } else {
           this.applyHits(p.skill, p.strike, [hit]);
-          this.fx.spawn('hit_spark', hx, hy, { additive: true });
         }
       }
       if (hit || p.remaining <= 0) {
@@ -1116,7 +1122,7 @@ export class GameScene extends Phaser.Scene {
     const [minDamage, maxDamage] = classDef.damage;
     const body = this.player.body;
     for (const m of targets) {
-      m.onHit(body.x);
+      m.onHit(body.x,impactFeel(skill,index).strength);
       m.pending += 1;
       const c = m.center();
       const crit = Math.random() < 0.15;
@@ -1127,7 +1133,6 @@ export class GameScene extends Phaser.Scene {
       const stack = last && now - last.at < 450 ? (last.count + 1) % 6 : 0;
       this.damageStacks.set(m.spawn.uid, { count: stack, at: now });
       this.fx.damage(c.x, m.hitbox().y - 2, damage, { crit, stack });
-      this.fx.spawn('hit_spark', c.x + (Math.random() - 0.5) * 8, c.y + (Math.random() - 0.5) * 8, { additive: true, tint: TIER_TINT[this.betTier] });
     }
     const feel=this.skillFx.contact(skill,index,this.fxContext(skill,skill.strikes[index]!.area,targets,null,skill.strikes[index]!.atMs));
     this.hitStopMs = Math.max(this.hitStopMs, feel.stopMs);
@@ -1262,6 +1267,7 @@ export class GameScene extends Phaser.Scene {
       fps: Math.round(this.game.loop.actualFps),
       monsters: this.monsters.size,
       fx: this.fx.count,
+      skillFx: this.skillFx.count,
       lights: this.lights.getLightCount(),
       x: Math.round(this.player?.body.x ?? 0),
       y: Math.round(this.player?.body.y ?? 0),
@@ -1340,8 +1346,7 @@ function segmentHitsRect(rect: Rect, x1: number, y1: number, x2: number, y2: num
 
 /** 投射物素材面向左：往右半邊飛時水平翻轉，避免上下顛倒。 */
 function orientProjectile(sprite: Phaser.GameObjects.Sprite, angle: number): void {
-  if (Math.cos(angle) >= 0) sprite.setFlipX(true).setRotation(angle);
-  else sprite.setFlipX(false).setRotation(angle - Math.PI);
+  orientSkillWeapon(sprite,angle);
 }
 
 function loadAutoConfig(): AutoConfig {

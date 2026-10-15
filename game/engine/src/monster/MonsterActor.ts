@@ -31,6 +31,8 @@ export class MonsterActor {
   private modeMs = 0;
   private hitMs = 0;
   private flashMs = 0;
+  private recoilMs = 0;
+  private recoilPower = 1;
   private knockDir: 1 | -1 = 1;
   private fadeMs = -1;
   private dieFadeMs: number;
@@ -162,7 +164,11 @@ export class MonsterActor {
     if (this.state === 'gone') return;
     this.animator.update(dtMs);
     this.sprite.setFrame(frameName(null, this.animator.frame));
-    this.sprite.setPosition(Math.round(this.x), Math.round(this.y));
+    this.recoilMs=Math.max(0,this.recoilMs-dtMs);
+    const envelope=this.recoilMs/230;
+    const compression=Math.sin((1-envelope)*Math.PI*3)*envelope*this.recoilPower;
+    this.sprite.setPosition(Math.round(this.x+this.knockDir*envelope*7*this.recoilPower),Math.round(this.y-envelope*4*this.recoilPower));
+    this.sprite.setScale(1-compression*.12,1+compression*.09).setAngle(this.knockDir*envelope*6*this.recoilPower);
     this.shadow?.setPosition(Math.round(this.x), Math.round(this.y) - 1).setVisible(this.alive);
     this.sprite.setFlipX(this.facing === 1);
 
@@ -201,9 +207,11 @@ export class MonsterActor {
   }
 
   /** 被砍中（還不知道有沒有死）：閃白、擊退、受擊動作、血條遞減。 */
-  onHit(fromX: number): void {
+  onHit(fromX: number,power=1): void {
     if (!this.alive) return;
     this.flashMs = 50;
+    this.recoilMs=230;
+    this.recoilPower=Math.min(1.8,Math.max(.6,power));
     this.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.knockDir = this.x >= fromX ? 1 : -1;
     this.facing = this.knockDir === 1 ? -1 : 1;

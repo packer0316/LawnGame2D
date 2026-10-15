@@ -75,6 +75,8 @@ interface Pose {
   /** 角度：0 = 垂下、90 = 往前平舉、180 = 舉高、負值 = 往後 */
   frontArm: number;
   weapon: number;
+  /** 長柄武器（劍、法杖）的角度；沒有時用 weapon。依原畫手的方向決定，劍身要跟握拳的前臂垂直 */
+  held?: number;
 }
 
 const pick = <T,>(list: readonly T[], i: number): T => list[Math.min(i, list.length - 1)]!;
@@ -152,6 +154,13 @@ function rigOf(pose: Pose): Rig {
 const POSES = Array.from({ length: FRAME_COUNT }, (_, f) => poseOf(f));
 const ALL_FRAMES = Array.from({ length: FRAME_COUNT }, (_, f) => f);
 
+/**
+ * 原畫跑步姿勢的握劍角度（0 = 朝下、90 = 朝前、180 = 朝上）。原畫跑步時拳頭在胸前往前伸、前臂接近水平，
+ * 劍身要跟前臂垂直，所以朝上略往前傾；姿勢 2 的拳頭較低、前臂往前下，劍身跟著往前倒一些。
+ * 舊骨架的角度是順著手臂算的，會變成劍跟前臂平行。
+ */
+const HERO_RUN_HELD: Partial<Record<number, number>> = { 1: 160, 2: 138, 3: 160 };
+
 /** 骨架算出的點位，但手改用原畫標記的握點（HERO_HANDS），武器才會握在畫出來的手上。 */
 const RIGS = POSES.map((pose, f) => {
   const rig = rigOf(pose);
@@ -159,6 +168,7 @@ const RIGS = POSES.map((pose, f) => {
   const place = heroPlacement(tag.name, i);
   const hand = HERO_HANDS[place.pose];
   if (hand) rig.frontHand = [Math.round(place.x + hand.x * place.w), Math.round(place.y + hand.y * place.h)];
+  if (tag.name === 'run' && HERO_RUN_HELD[place.pose] !== undefined) pose.held = HERO_RUN_HELD[place.pose];
   return rig;
 });
 
@@ -173,18 +183,19 @@ const STEEL = [hex('#f4f7fb'), hex('#c9d2df'), hex('#8e9bb0')];
 function drawWeapon(kind: ClassId): Draw {
   return (c, rig, pose) => {
     const [hx, hy] = rig.frontHand;
+    const held = pose.held ?? pose.weapon;
     if (kind === 'warrior') {
-      const tip = armEnd([hx, hy], pose.weapon, 22);
-      const guardA = armEnd([hx, hy], pose.weapon + 90, 3);
-      const guardB = armEnd([hx, hy], pose.weapon - 90, 3);
+      const tip = armEnd([hx, hy], held, 22);
+      const guardA = armEnd([hx, hy], held + 90, 3);
+      const guardB = armEnd([hx, hy], held - 90, 3);
       c.line(hx, hy, ...tip, STEEL[1]!, 3);
       c.line(hx, hy, ...tip, STEEL[0]!, 1);
       c.line(...guardA, ...guardB, hex('#b8862f'), 2);
       c.fillEllipse(hx, hy, 2, 2, hex('#70d5ce'));
-      c.line(...armEnd([hx, hy], pose.weapon + 180, 3), hx, hy, hex('#5b3a22'), 2);
+      c.line(...armEnd([hx, hy], held + 180, 3), hx, hy, hex('#5b3a22'), 2);
     } else if (kind === 'mage') {
-      const top = armEnd([hx, hy], pose.weapon, 16);
-      const bottom = armEnd([hx, hy], pose.weapon + 180, 12);
+      const top = armEnd([hx, hy], held, 16);
+      const bottom = armEnd([hx, hy], held + 180, 12);
       c.line(...bottom, ...top, hex('#7a5232'), 2);
       c.fillEllipse(top[0], top[1], 3, 3, hex('#b06cff'));
       c.fillPolygon(
