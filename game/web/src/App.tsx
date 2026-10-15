@@ -17,7 +17,7 @@ async function pickContentBase(params: URLSearchParams): Promise<string> {
 /**
  * 網址參數（開發與量測用）：
  * ?room=2 起始房間、?class=mage 職業、?mobs=3 生怪倍率、?lights=0 關閉光照、?debug=1 顯示碰撞、?content=dev|real、
- * ?mode=dev|real 遊戲模式、?drop=1 技能方塊掉落機率（測試用）
+ * ?mode=dev|real 遊戲模式
  */
 export function App() {
   const stageRef = useRef<HTMLDivElement>(null);
@@ -35,7 +35,6 @@ export function App() {
         ...(params.get('class') ? { classId: params.get('class') as ClassId } : {}),
         lighting: params.get('lights') !== '0',
         spawnScale: Number(params.get('mobs') ?? 1),
-        ...(params.get('drop') ? { dropChance: Number(params.get('drop')) } : {}),
         showColliders: params.get('debug') === '1',
         onHud: setHud,
       });

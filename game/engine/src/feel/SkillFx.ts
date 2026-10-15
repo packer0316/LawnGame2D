@@ -9,6 +9,8 @@ import { CLASS_ENERGY, skillEnergyColor, impactFeel, VFX_BUDGET } from './SkillP
 import { atlasKey, BURST_DURATION, loadSkillAtlases, type SkillAtlasName } from './SkillAtlas';
 import { TigerSummon } from './TigerSummon';
 import { AssassinStorm } from './AssassinStorm';
+import { FallingRain } from './FallingRain';
+import { firstRainSurface, type RainSegment } from './RainGeometry';
 import { SkillAudio } from './SkillAudio';
 import { bladeFlipX, bladeSpinMs, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
 
@@ -19,6 +21,8 @@ export interface FxPoint {
 
 /** 一個技能特效需要的資訊（世界座標）。 */
 export interface SkillFxContext {
+  /** 實際投射物方向；箭雨與近戰由技能方向補上。 */
+  impactAngle?: number;
   classId?: ClassId;
   /** 角色腳底 */
   x: number;
@@ -44,6 +48,7 @@ export interface SkillFxContext {
   points: FxPoint[];
   /** x 處從 fromY 往下第一個地面的高度 */
   groundAt: (x: number, fromY: number) => number | null;
+  rainTerrain?: readonly RainSegment[];
   /** 角色目前的整體動畫幀（殘影、分身用） */
   frame: { key: string; frame: string } | null;
   /** 到這個技能最後一刀還有多久（持續型特效用） */
@@ -72,6 +77,8 @@ export class SkillFx {
   private reaperBeat=0;
   private tiger:TigerSummon|null=null;
   private storm:AssassinStorm|null=null;
+  private readonly rains = new Set<FallingRain>();
+  private readonly rainWaves = new Map<string, FallingRain[]>();
   private activeDragon:Phaser.GameObjects.Sprite|null=null;
   private comboLabel:Phaser.GameObjects.Text|null=null;
   private readonly trailTimes = new WeakMap<Phaser.GameObjects.Sprite,number>();
@@ -93,10 +100,11 @@ export class SkillFx {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count; }
+  get count(): number { return this.objects.size + this.kit.count + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
+    this.prepareRain(skill, ctx);
     this.comboLabel?.destroy();this.comboLabel=null;
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
     if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
@@ -135,9 +143,16 @@ export class SkillFx {
 
   projectileTrail(skill: SkillDef,sprite: Phaser.GameObjects.Sprite,angle:number):void {
     const now=this.scene.time.now;
-    if(now-(this.trailTimes.get(sprite)??-Infinity)<(skill.classId==='assassin'?90:32))return;
+    if(now-(this.trailTimes.get(sprite)??-Infinity)<(skill.classId==='assassin'?90:skill.classId==='archer'?55:32))return;
     this.trailTimes.set(sprite,now);
     this.kit.trail(sprite.x,sprite.y,CLASS_ENERGY[skill.classId].color,angle,skill.classId==='mage');
+    if(skill.classId==='archer'){
+      const ghost=this.track(this.scene.add.sprite(sprite.x,sprite.y,sprite.texture.key,sprite.frame.name))
+        .setDepth(DEPTH.fx-1).setDisplaySize(sprite.displayWidth*.9,sprite.displayHeight*.9).setAlpha(.16);
+      orientSkillWeapon(ghost,angle);
+      this.fade(ghost,110);
+      this.kit.burst(sprite.x,sprite.y,skill.projectile?.explode?0xffad59:0x9eeedc,.18,2,angle+Math.PI);
+    }
     if(skill.classId==='assassin'){
       const wind=this.gfx(sprite.x,sprite.y);
       drawBladeArc(wind,30,angle-.9,angle+1.2,0xff6880,2);
@@ -149,8 +164,15 @@ export class SkillFx {
   contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
     const feel=impactFeel(skill,index);
     this.audio.play(skill.classId,feel.strength);
-    for(const t of ctx.targets.filter(t=>t.x>=ctx.view.x-80&&t.x<=ctx.view.x+ctx.view.w+80).slice(0,feel.last?10:5)){
-      if(['skill_0031','skill_0032','skill_0035','skill_0046'].includes(skill.id))this.goldContact(t);
+    // 每個可見的實際命中都有核心效果；只縮減附加粒子，不截掉後面的怪物。
+    const visible=ctx.targets.filter(t=>t.x>=ctx.view.x-100&&t.x<=ctx.view.x+ctx.view.w+100&&t.y>=ctx.view.y-100&&t.y<=ctx.view.y+ctx.view.h+100);
+    for(const [targetIndex,t] of visible.entries()){
+      if(skill.classId==='archer'){
+        const rain=skill.id==='skill_0023'||skill.id==='skill_0044';
+        const angle=ctx.impactAngle??(rain?Math.PI/2:ctx.facing===1?0:Math.PI);
+        this.archerContact(t,angle,feel.strength,!!skill.projectile?.explode||skill.id==='skill_0045',targetIndex<4);
+      }
+      else if(['skill_0031','skill_0032','skill_0035','skill_0046'].includes(skill.id))this.goldContact(t,true);
       else if(skill.classId==='assassin')this.kit.burst(t.x,t.y,skillEnergyColor(skill),feel.strength,6);
       else this.kit.classImpact(skill.classId,t.x,t.y,feel.strength);
     }
@@ -302,6 +324,8 @@ export class SkillFx {
   }
 
   clear(): void {
+    for (const rain of this.rains) rain.destroy();
+    this.rainWaves.clear();
     this.tiger?.destroy();this.tiger=null;
     this.storm?.destroy();this.storm=null;
     this.goldContacts=[];
@@ -374,7 +398,7 @@ export class SkillFx {
       const arrow=this.track(createSkillWeapon(this.scene,'arrow',start,ctx.y-CHEST,230));
       orientSkillWeapon(arrow,ctx.facing===1?0:Math.PI);
       this.scene.tweens.add({targets:arrow,x:start+ctx.facing*(ctx.area?.w??500),duration:170,onComplete:()=>this.fade(arrow,120)});
-      for(const t of ctx.targets)this.kit.classImpact('archer',t.x,t.y,1.1);
+      // 實際命中由 contact() 統一畫，避免穿透箭重複堆兩層受擊光。
       return;
     }
     const area=ctx.area;
@@ -411,6 +435,7 @@ export class SkillFx {
 
   /** Called before Player.step so presentation and strike positions share one fixed clock. */
   step(dt:number):void {
+    for (const rain of this.rains) rain.step(dt);
     this.tiger?.step(dt);
     if(this.tiger&&!this.tiger.sprite.active)this.tiger=null;
     this.storm?.step(dt);
@@ -506,7 +531,7 @@ export class SkillFx {
     const y = ctx.y - 34;
     this.kit.burst(x,y,0x8eeec5,.8,14,-Math.PI/2);
     const arrow = this.fxSprite('arrow', x, y);
-    arrow?.setRotation(Math.PI / 2).setDisplaySize(156,39);
+    if(arrow){orientSkillWeapon(arrow,-Math.PI/2);arrow.setDisplaySize(156,39);}
     if (arrow) this.fade(arrow, 260, { y: y - 300 });
     const g = this.gfx(0, 0);
     g.fillStyle(0xffffff, 0.8).fillRect(x - 1, y - 300, 2, 300);
@@ -516,19 +541,54 @@ export class SkillFx {
   /** 箭雨：範圍內的箭從天而降，落在各處地面（density 越大越密）。 */
   private arrowRain(ctx: SkillFxContext, area: Rect | null, density: number): void {
     if (!area) return;
-    const count = Math.min(30, Math.round((area.w / 65) * density));
-    for (let i = 0; i < count; i += 1) {
-      const x = area.x + rand(0, area.w);
-      const land = (ctx.groundAt(x, area.y + rand(0, area.h * 0.5)) ?? Math.min(area.y + area.h, ctx.y)) - rand(2, 14);
-      const top = Math.max(area.y, land - 260) - 40;
-      const arrow = this.fxSprite('arrow', x, top);
-      if (!arrow) continue;
-      arrow.setRotation(-Math.PI / 2).setAlpha(0).setDisplaySize(density>1?195:155,density>1?49:39);
-      const tail=this.gfx(x,top);
-      tail.fillStyle(0xffcf6c,.3).fillTriangle(-5,-110,5,-110,0,0);
-      this.scene.tweens.add({targets:tail,y:land,alpha:0,duration:190,ease:'Quad.In',onComplete:()=>tail.destroy()});
-      this.scene.tweens.add({ targets: arrow, alpha: 1, y: land, duration: 150, delay: rand(0, 100), ease: 'Quad.In', onComplete: () => { if(i%4===0)this.kit.burst(x,land,0xbaf7ce,.35,3,-Math.PI/2); this.fade(arrow, 160); } });
+    this.fallingRain(ctx, area, 'arrow', Math.min(26, Math.max(1, Math.round(area.w / 100 * density))));
+  }
+
+  /** Pre-roll each wave so the scheduled strike is arrival, never the launch. */
+  private prepareRain(skill: SkillDef, ctx: SkillFxContext): void {
+    for (const [index, strike] of skill.strikes.entries()) {
+      if (!['swordRain', 'arrowRain', 'screenArrowRain'].includes(strike.fx ?? '')) continue;
+      const kind = strike.fx === 'swordRain' ? 'sword' : 'arrow';
+      const area = strike.fx === 'arrowRain' ? ctx.area : ctx.view;
+      if (!area) continue;
+      const count = kind === 'sword' ? Math.min(22, Math.max(1, Math.round(area.w / 115)))
+        : Math.min(26, Math.max(1, Math.round(area.w / 100 * (strike.fx === 'screenArrowRain' ? 1.6 : 1))));
+      this.rainWaves.set(`${skill.id}:${index}`, this.fallingRain(ctx, area, kind, count, strike.atMs));
     }
+  }
+
+  /** Called immediately before applyHits; all ground and monster impacts start together. */
+  landRain(skill: SkillDef, index: number): boolean {
+    const key = `${skill.id}:${index}`, wave = this.rainWaves.get(key);
+    if (!wave) return false;
+    for (const rain of wave) rain.land();
+    this.rainWaves.delete(key);
+    return true;
+  }
+
+  private fallingRain(ctx: SkillFxContext, area: Rect, kind: 'sword' | 'arrow', count: number, impactAtMs?: number): FallingRain[] {
+    const wave: FallingRain[] = [];
+    const left = Math.max(area.x, ctx.bounds.x), right = Math.min(area.x + area.w, ctx.bounds.x + ctx.bounds.w);
+    if (right <= left) return wave;
+    const top = Math.max(ctx.bounds.y - 120, Math.min(ctx.view.y, area.y) - 100);
+    for (let i = 0; i < count; i++) {
+      // Stratified spacing keeps a readable curtain without stacks of identical weapons.
+      const x = left + (i + rand(.15, .85)) / count * (right - left);
+      const fallback = ctx.rainTerrain ? null : ctx.groundAt(x, top);
+      const surface = ctx.rainTerrain ? firstRainSurface(ctx.rainTerrain, x, top) : fallback === null ? null : { y: fallback, slope: 0 };
+      // Bounded even when several strikes or dev casts overlap.
+      if (this.rains.size >= 128) this.rains.values().next().value?.destroy();
+      const rain = new FallingRain(this.scene, { kind, x, top, surface,
+        exitY: ctx.view.y + ctx.view.h + 300,
+        height: kind === 'sword' ? rand(224, 260) : rand(166, 196),
+        delay: rand(0, kind === 'sword' ? 210 : 160),
+        embedRatio: kind === 'sword' ? rand(.34, .49) : rand(.42, .57),
+        impactAtMs,
+      }, () => this.rains.delete(rain));
+      this.rains.add(rain);
+      wave.push(rain);
+    }
+    return wave;
   }
 
   /** 扇形散射：箭或飛刃從胸前向前張開（距離 = 判定半徑）。 */
@@ -575,10 +635,18 @@ export class SkillFx {
     this.kit.burst(p.x,p.y,color,power,5);
   }
 
-  private goldContact(p:FxPoint):void {
+  private archerContact(p:FxPoint,angle:number,power:number,fire=false,particles=true):void {
+    this.sequence(fire?'archerFireHit':'archerHit',p.x,p.y,126+power*32).setRotation(angle).setDepth(DEPTH.fx+2);
+    if(particles){
+      this.kit.glow(p.x,p.y,fire?0xffc076:0xfff0b6,48+power*18,90,.65);
+      this.kit.burst(p.x,p.y,fire?0xffa451:0x9ce8d8,.35+power*.15,4,angle);
+    }
+  }
+
+  private goldContact(p:FxPoint,confirmedHit=false):void {
     const now=this.scene.time.now;
     this.goldContacts=this.goldContacts.filter(hit=>now-hit.at<90);
-    if(this.goldContacts.some(hit=>Math.hypot(hit.x-p.x,hit.y-p.y)<28))return;
+    if(!confirmedHit&&this.goldContacts.some(hit=>Math.hypot(hit.x-p.x,hit.y-p.y)<28))return;
     this.goldContacts.push({...p,at:now});
     this.sequence('goldHit',p.x,p.y,140).setAngle(rand(-20,20));
   }
@@ -665,29 +733,7 @@ export class SkillFx {
 
   /** 天劍降臨：巨劍從天而降插滿整張地圖的地面。 */
   private swordRain(ctx: SkillFxContext): void {
-    const area = ctx.view;
-    const count = Math.min(40, Math.round(area.w / 90));
-    for (let i = 0; i < count; i += 1) {
-      const x = area.x + ((i + Math.random()) / count) * area.w;
-      const land = ctx.groundAt(x, area.y + rand(0, area.h * 0.7)) ?? ctx.y;
-      const sword = this.track(this.scene.add.sprite(x,land-420,'skill-holy-sword')).setOrigin(.5,.98).setDepth(DEPTH.fx).setDisplaySize(140,260);
-      sword.setAlpha(0);
-      this.scene.tweens.add({
-        targets: sword,
-        y: land,
-        alpha: 1,
-        duration: 140,
-        delay: rand(0, 180),
-        ease: 'Quad.In',
-        onComplete: () => {
-          this.kit.burst(x,land-10,0xffcc82,1.2,10,-Math.PI/2);
-          this.kit.smoke(x,land,0x62616c,.9);
-          this.ring(x, land - 4, 6, 50, 0xfff1c8, 3, 260, 0.35);
-          if (i % 3 === 0) this.oneShots.spawn('dust', x, land - 6, { scale: 1.4 });
-          this.fade(sword, 260, {}, 260);
-        },
-      });
-    }
+    this.fallingRain(ctx, ctx.view, 'sword', Math.min(22, Math.max(1, Math.round(ctx.view.w / 115))));
     this.targetCuts(ctx, 0xfff1c8);
   }
 
@@ -776,7 +822,8 @@ export class SkillFx {
       const arrow = this.fxSprite('arrow', x, y);
       if (!arrow) continue;
       const a = -Math.PI / 2 + (i - 5) * 0.12;
-      arrow.setRotation(a + Math.PI).setDisplaySize(175,44);
+      orientSkillWeapon(arrow,a);
+      arrow.setDisplaySize(175,44);
       this.fade(arrow, 260, { x: x + Math.cos(a) * 460, y: y + Math.sin(a) * 460 }, i * 15);
     }
     this.skyFlash(0xfff1c8);

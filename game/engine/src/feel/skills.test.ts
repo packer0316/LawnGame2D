@@ -40,6 +40,17 @@ describe('技能資料', () => {
     }
   });
 
+  it('技能押注倍數：普攻 1、技能 1–20、大絕招 20，滿價隻數至少 1', () => {
+    for (const skill of skills) {
+      const price = skill.price ?? 1;
+      if (skill.kind === 'basic') expect(price, skill.id).toBe(1);
+      expect(price, skill.id).toBeGreaterThanOrEqual(1);
+      expect(price, skill.id).toBeLessThanOrEqual(20);
+      if (skill.ultimate) expect(price, skill.id).toBe(20);
+      expect(skill.fullTargets ?? 1, skill.id).toBeGreaterThanOrEqual(1);
+    }
+  });
+
   it('判定時間由小到大，位移與演出時點落在技能期間內', () => {
     for (const skill of skills) {
       const times = skill.strikes.map((s) => s.atMs);

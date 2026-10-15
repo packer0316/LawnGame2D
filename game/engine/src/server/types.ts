@@ -2,6 +2,8 @@
  * 遊戲與伺服器之間的介面（SPEC §5.3、§5.4）。Demo 用 LocalServer；正式版換成真伺服器時遊戲端不用改。
  */
 
+import type { InventoryAction, InventorySnapshot } from '../inventory/model';
+
 export interface MonsterSpawn {
   uid: number;
   typeId: string;
@@ -38,6 +40,8 @@ export interface AttackReq {
   bet: number;
   /** 命中的怪物；空陣列不會送出（揮空不扣款） */
   targets: number[];
+  /** 開發模式：技能每一刀固定 1 倍（不套用技能押注倍數，SPEC §3.1） */
+  flat?: boolean;
 }
 
 export type ErrorCode = 'INSUFFICIENT_BALANCE' | 'RATE_LIMIT' | 'BET_OUT_OF_RANGE' | 'ROOM_CHANGE_COOLDOWN' | 'UNKNOWN_SKILL';
@@ -45,8 +49,7 @@ export type ErrorCode = 'INSUFFICIENT_BALANCE' | 'RATE_LIMIT' | 'BET_OUT_OF_RANG
 export interface AttackResult {
   seq: number;
   cost: number;
-  /** drop：擊殺時掉落的技能方塊（實際模式撿起來放進技能列，用一次就沒了） */
-  results: { uid: number; killed: boolean; multiplier: number; payout: number; drop?: { skillId: string } }[];
+  results: { uid: number; killed: boolean; multiplier: number; payout: number }[];
   balance: number;
   error?: ErrorCode;
 }
@@ -57,6 +60,7 @@ export interface ChangeRoomReq {
 }
 
 export interface ServerEvents {
+  inventory: InventorySnapshot;
   monsterSpawn: MonsterSpawn;
   monsterRemove: { uid: number };
   balance: { balance: number };
@@ -65,9 +69,13 @@ export interface ServerEvents {
 }
 
 export interface GameServer {
+  inventorySnapshot(): InventorySnapshot;
+  manageInventory(action: InventoryAction, allowDemo?: boolean): InventorySnapshot;
   join(req: JoinReq): Promise<Snapshot>;
   attack(req: AttackReq): Promise<AttackResult>;
   changeRoom(req: ChangeRoomReq): Promise<Snapshot>;
+  /** 測試用：直接設定持有金幣（設定面板）。回傳實際設定的值。 */
+  setBalance(balance: number): number;
   on<K extends keyof ServerEvents>(event: K, handler: (data: ServerEvents[K]) => void): () => void;
   dispose(): void;
 }

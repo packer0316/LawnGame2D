@@ -74,12 +74,10 @@ export interface PlayerHooks {
   onSkillStart?(skill: SkillDef): boolean;
   onRoll?(): void;
   /**
-   * 技能列第 slot 格現在是什麼技能（null = 空的或還不能用）。consumable = 用一次就沒了、不看冷卻（實際模式的掉落技能）。
-   * 沒有提供時照 classDef.skills（開發模式）。
+   * 技能列第 slot 格現在能放的技能（null = 空格或還沒解鎖，SPEC §3.3）。
+   * 沒有提供時照 classDef.skills。
    */
-  resolveSlot?(slot: number): { skillId: string; consumable: boolean } | null;
-  /** 消耗型技能列格子已經放出去 */
-  onSlotUsed?(slot: number): void;
+  resolveSlot?(slot: number): string | null;
   onJump?(air: boolean): void;
   onLand?(impact: number): void;
 }
@@ -291,7 +289,6 @@ export class Player {
     }
 
     let skillId: string;
-    let consumable = false;
     if (buffered.action === 'secondary') {
       if (!this.classDef.secondary) {
         this.buffer = null;
@@ -303,20 +300,15 @@ export class Player {
         (this.state.kind === 'attack' && this.state.skill.comboNext) || (this.combo && this.combo.until >= this.nowMs ? this.combo.next : null);
       skillId = chaining || this.classDef.basic;
     } else {
-      const slot = this.hooks.resolveSlot
-        ? this.hooks.resolveSlot(buffered.slot)
-        : this.classDef.skills[buffered.slot]
-          ? { skillId: this.classDef.skills[buffered.slot]!, consumable: false }
-          : null;
-      if (!slot) {
+      const slotSkill = this.hooks.resolveSlot ? this.hooks.resolveSlot(buffered.slot) : (this.classDef.skills[buffered.slot] ?? null);
+      if (!slotSkill) {
         this.buffer = null;
         return false;
       }
-      skillId = slot.skillId;
-      consumable = slot.consumable;
+      skillId = slotSkill;
     }
     const skill = this.skills.get(skillId);
-    if (!skill || (!consumable && (this.cooldowns.get(skillId) ?? 0) > 0)) return false;
+    if (!skill || (this.cooldowns.get(skillId) ?? 0) > 0) return false;
     if (this.hooks.onSkillStart && !this.hooks.onSkillStart(skill)) {
       this.buffer = null;
       return false;
@@ -330,8 +322,7 @@ export class Player {
     const moveEnd = skill.move?.kind === 'dash' ? skill.move.atMs + skill.move.durationMs : 0;
     const duration = Math.max(actionMs, lastStrike + 80, skill.cancelFromMs, moveEnd);
     this.state = { kind: 'attack', skill, elapsed: 0, nextStrike: 0, nextCue: 0, duration, moved: false, dashDone: false, origin: { x: this.body.x, y: this.body.y } };
-    if (consumable) this.hooks.onSlotUsed?.(buffered.slot);
-    else if (skill.cooldownSec > 0) this.cooldowns.set(skill.id, skill.cooldownSec * 1000);
+    if (skill.cooldownSec > 0) this.cooldowns.set(skill.id, skill.cooldownSec * 1000);
     this.combo = null;
     if (!usingMotion) {
       this.avatar.stopMotion();

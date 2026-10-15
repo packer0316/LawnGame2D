@@ -25,8 +25,6 @@ export interface CreateGameOptions {
   lighting?: boolean;
   /** 測試用：生怪數量倍率。 */
   spawnScale?: number;
-  /** 測試用：技能方塊掉落機率（0–1） */
-  dropChance?: number;
   /** 顯示足場、牆、天花板、繩梯、生怪區。 */
   showColliders?: boolean;
 }
@@ -88,7 +86,6 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
       ...(options.mode ? { mode: options.mode } : {}),
       lighting: options.lighting ?? true,
       spawnScale: options.spawnScale ?? 1,
-      ...(options.dropChance !== undefined ? { dropChance: options.dropChance } : {}),
       showColliders: options.showColliders ?? false,
       ...(options.onHud ? { onHud: options.onHud } : {}),
       ...(options.onExit ? { onExit: options.onExit } : {}),

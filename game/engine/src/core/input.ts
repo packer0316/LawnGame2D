@@ -23,6 +23,7 @@ export type Action =
 /** 正在 HUD 的輸入框打字：不當成遊戲按鍵。 */
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
+  if (target.closest('[role="dialog"]')) return true;
   if (target instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'range'].includes(target.type);
   return target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
 }
@@ -120,6 +121,8 @@ export class InputState {
     const right = this.held.has('right');
     return left === right ? 0 : left ? -1 : 1;
   }
+
+  clear(): void { this.held.clear(); this.pressed.clear(); }
 
   dispose(): void {
     this.target.removeEventListener('keydown', this.onKeyDown);

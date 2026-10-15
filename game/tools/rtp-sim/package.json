@@ -5,7 +5,8 @@
   "type": "module",
   "description": "RTP 蒙地卡羅模擬：驗證一刀一注的返還率（SPEC §9 M3）",
   "scripts": {
-    "sim": "tsx src/main.ts"
+    "sim": "tsx src/main.ts",
+    "prices": "tsx src/prices.ts"
   },
   "dependencies": {
     "@lawn/shared": "*"

@@ -1,0 +1,10 @@
+import swords from '../../../assets/inventory/swords-v1.png?url';
+import staffs from '../../../assets/inventory/staffs-v1.png?url';
+import bows from '../../../assets/inventory/bows-v1.png?url';
+import claws from '../../../assets/inventory/claws-v1.png?url';
+import merchant from '../../../assets/inventory/merchant-sequence-v1.png?url';
+import scabbards from '../../../assets/inventory/scabbards-v1.png?url';
+import type { WeaponKind } from './catalog';
+export const WEAPON_ART: Record<WeaponKind, string> = { sword: swords, staff: staffs, bow: bows, claw: claws };
+export const MERCHANT_ART = merchant;
+export const SCABBARD_ART = scabbards;

@@ -9,6 +9,9 @@ export { SKILL_ACTIONS } from './core/input';
 export { SKILL_ICONS } from './ui/skillIcons';
 export type { GameServer, MonsterSpawn, Snapshot, AttackReq, AttackResult } from './server/types';
 export { LocalServer } from './server/LocalServer';
+export * from './inventory/catalog';
+export * from './inventory/model';
+export { WEAPON_ART, MERCHANT_ART } from './inventory/art';
 export { loadContentBundle, type ContentBundle } from './content/bundle';
 export type {
   AvatarPreviewHandle,

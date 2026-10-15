@@ -1,6 +1,8 @@
 import {
+  DEFAULT_RTP,
   FootholdWorld,
   resolveStrike,
+  strikeCostMultiplier,
   rollMultiplier,
   seededRandom,
   type MapDef,
@@ -8,6 +10,7 @@ import {
   type SpawnZone,
 } from '@lawn/shared';
 import type { ContentBundle } from '../content/bundle';
+import { inventoryAction, newProfile, parseProfile, rollLoot, type InventoryAction, type InventoryFeedback, type InventoryProfile, type InventorySnapshot } from '../inventory/model';
 import type { AttackReq, AttackResult, ChangeRoomReq, GameServer, JoinReq, MonsterSpawn, ServerEvents, Snapshot } from './types';
 
 /**
@@ -22,14 +25,10 @@ export interface LocalServerOptions {
   /** 測試用：每個生怪區的數量上限倍率 */
   spawnScale?: number;
   storageKey?: string;
-  /** 測試用：技能方塊掉落機率改成固定值（例如 1 = 每殺必掉） */
-  dropChance?: number;
 }
 
 const MAX_STRIKES_PER_SECOND = 24;
 
-/** 擊殺時掉落技能方塊的機率（依怪物等級，SPEC §3.3）。掉落是免費的，使用時每刀照常扣注，不影響 RTP。 */
-export const SKILL_DROP_CHANCE: Record<string, number> = { normal: 0.05, elite: 0.25, special: 0.35, boss: 1 };
 
 function secureRandom(): number {
   const buffer = new Uint32Array(1);
@@ -43,6 +42,10 @@ interface LiveMonster {
 }
 
 export class LocalServer implements GameServer {
+  private profile: InventoryProfile;
+  private inventoryFeedback: InventoryFeedback | undefined;
+  private inventoryRevision = 0;
+  private storageError = false;
   private balance: number;
   private room: RoomDef | null = null;
   private map: MapDef | null = null;
@@ -59,18 +62,19 @@ export class LocalServer implements GameServer {
   private readonly latency: [number, number];
   private readonly spawnScale: number;
   private readonly storageKey: string;
-  private readonly dropChance: number | undefined;
 
   constructor(
     private readonly bundle: ContentBundle,
     options: LocalServerOptions = {},
   ) {
-    this.rtp = options.rtp ?? 0.96;
+    this.rtp = options.rtp ?? DEFAULT_RTP;
     this.latency = options.latencyMs ?? [30, 100];
     this.spawnScale = options.spawnScale ?? 1;
     this.storageKey = options.storageKey ?? 'lawn.balance';
-    this.dropChance = options.dropChance;
     this.balance = this.loadBalance(options.startingBalance ?? 100_000);
+    this.profile = this.loadProfile() ?? newProfile(this.balance);
+    this.balance = this.profile.balance;
+    this.saveBalance();
     this.timer = setInterval(() => this.tick(), 250);
   }
 
@@ -108,7 +112,6 @@ export class LocalServer implements GameServer {
     const strike = skill?.strikes[req.strike];
     if (!skill || !strike) return fail('UNKNOWN_SKILL');
     if (!this.room || req.bet < this.room.betRange[0] || req.bet > this.room.betRange[1]) return fail('BET_OUT_OF_RANGE');
-    if (this.balance < req.bet) return fail('INSUFFICIENT_BALANCE');
     const now = performance.now();
     this.strikeTimes = this.strikeTimes.filter((t) => now - t < 1000);
     if (this.strikeTimes.length >= MAX_STRIKES_PER_SECOND) return fail('RATE_LIMIT');
@@ -121,50 +124,59 @@ export class LocalServer implements GameServer {
       .filter((m): m is LiveMonster => m !== undefined);
     if (targets.length === 0) return { seq: req.seq, cost: 0, results: [], balance: this.balance };
 
-    this.balance -= req.bet;
-    const outcomes = resolveStrike(
-      targets.map((m) => ({ uid: m.spawn.uid, multiplier: m.spawn.multiplier })),
-      req.bet,
-      this.rtp,
-      strike.weightRule,
-      secureRandom,
-    );
-    const drops = new Map<number, string>();
+    // 技能押注倍數（SPEC §3.1）：這一刀扣 押注 × c，擊殺機率也乘上 c
+    const strikeTargets = targets.map((m) => ({ uid: m.spawn.uid, multiplier: m.spawn.multiplier }));
+    const costMul = strikeCostMultiplier(skill, req.strike, strikeTargets, this.rtp, { flat: req.flat ?? false });
+    const cost = Math.round(req.bet * costMul * 100) / 100;
+    if (this.balance < cost) return fail('INSUFFICIENT_BALANCE');
+    this.balance -= cost;
+    const outcomes = resolveStrike(strikeTargets, req.bet, this.rtp, strike.weightRule, secureRandom, costMul);
+    const loot: string[] = [];
     for (const outcome of outcomes) {
       if (!outcome.killed) continue;
       this.balance += outcome.payout;
       const dead = this.monsters.get(outcome.uid);
-      if (!dead) continue;
-      const drop = this.rollDrop(dead, skill.classId);
-      if (drop) drops.set(outcome.uid, drop);
-      this.removeMonster(dead, false);
+      if (dead) this.removeMonster(dead, false);
+      loot.push(...rollLoot(this.profile.inventory, secureRandom));
     }
     this.saveBalance();
+    if (loot.length) {
+      this.inventoryFeedback = { id: ++this.inventoryRevision, kind: 'drop', message: `拾取：${loot.join('、')}` };
+      this.emit('inventory', this.inventorySnapshot());
+    }
     return {
       seq: req.seq,
-      cost: req.bet,
-      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout, ...(drops.has(uid) ? { drop: { skillId: drops.get(uid)! } } : {}) })),
+      cost,
+      results: outcomes.map(({ uid, killed, multiplier, payout }) => ({ uid, killed, multiplier, payout })),
       balance: this.balance,
     };
-  }
-
-  /** 掉落：該職業的大技能（技能列，不含常駐小技能）隨機一個。 */
-  private rollDrop(monster: LiveMonster, classId: string): string | null {
-    const tier = this.bundle.monsters.get(monster.spawn.typeId)?.math?.tier ?? 'normal';
-    if (secureRandom() >= (this.dropChance ?? SKILL_DROP_CHANCE[tier] ?? 0)) return null;
-    const classDef = [...this.bundle.classes.values()].find((c) => c.id === classId);
-    const pool = (classDef?.skills ?? [])
-      .filter((id) => id !== classDef?.secondary)
-      .map((id) => ({ id, weight: this.bundle.skills.get(id)?.dropWeight ?? 1 }))
-      .filter((entry) => entry.weight > 0);
-    const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
-    let pick = secureRandom() * total;
-    return pool.find((entry) => (pick -= entry.weight) < 0)?.id ?? pool.at(-1)?.id ?? null;
   }
 
   dispose(): void {
     clearInterval(this.timer);
     this.handlers.clear();
+  }
+
+  inventorySnapshot(): InventorySnapshot {
+    return { inventory: structuredClone(this.profile.inventory), ...(this.inventoryFeedback ? { feedback: { ...this.inventoryFeedback } } : {}), storageError: this.storageError };
+  }
+
+  manageInventory(action: InventoryAction, allowDemo = false): InventorySnapshot {
+    this.profile.balance = this.balance;
+    this.inventoryFeedback = { ...inventoryAction(this.profile, action, secureRandom, allowDemo), id: ++this.inventoryRevision };
+    this.balance = this.profile.balance;
+    this.saveBalance();
+    this.emit('balance', { balance: this.balance });
+    const snapshot = this.inventorySnapshot();
+    this.emit('inventory', snapshot);
+    return snapshot;
+  }
+
+  setBalance(balance: number): number {
+    this.balance = Number.isFinite(balance) ? Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(balance))) : this.balance;
+    this.saveBalance();
+    this.emit('balance', { balance: this.balance });
+    return this.balance;
   }
 
   // -------------------------------------------------------------------------
@@ -254,8 +266,9 @@ export class LocalServer implements GameServer {
 
   private loadBalance(fallback: number): number {
     try {
-      const stored = Number(localStorage.getItem(this.storageKey));
-      return Number.isFinite(stored) && stored > 0 ? stored : fallback;
+      const raw = localStorage.getItem(this.storageKey);
+      const stored = Number(raw);
+      return raw !== null && Number.isSafeInteger(stored) && stored >= 0 ? stored : fallback;
     } catch {
       return fallback;
     }
@@ -263,9 +276,16 @@ export class LocalServer implements GameServer {
 
   private saveBalance(): void {
     try {
-      localStorage.setItem(this.storageKey, String(this.balance));
+      this.profile.balance = this.balance;
+      localStorage.setItem(`${this.storageKey}.profile.v1`, JSON.stringify(this.profile));
+      this.storageError = false;
     } catch {
-      // 無痕模式等情況無法存，忽略
+      this.storageError = true;
     }
+  }
+
+  private loadProfile(): InventoryProfile | null {
+    try { return parseProfile(localStorage.getItem(`${this.storageKey}.profile.v1`)); }
+    catch { return null; }
   }
 }

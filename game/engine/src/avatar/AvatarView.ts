@@ -13,6 +13,9 @@ import {
 import type { SheetAsset } from '../content/bundle';
 import { SheetAnimator, frameName } from '../render/sheets';
 import { HERO_MOTIONS_KEY, heroMotionsSheet } from './motions';
+import { motionDuration } from './motions';
+import type { WeaponDefinition } from '../inventory/catalog';
+import { weaponRig } from '../inventory/weaponRig';
 
 /** 角色需要的內容：人物 sheet 與武器部件。 */
 export interface AvatarContent {
@@ -38,6 +41,11 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private readonly motionSprite: Phaser.GameObjects.Sprite;
   private readonly motionAnimator = new SheetAnimator(heroMotionsSheet);
   private motionOn = false;
+  private cosmetic: WeaponDefinition | null = null;
+  private readonly cosmeticSprite: Phaser.GameObjects.Sprite;
+  /** body 合圖沒有獨立前手時，重畫握柄處的手掌，保留手指遮擋。 */
+  private readonly gripOccluder: Phaser.GameObjects.Sprite;
+  private readonly scabbardSprite: Phaser.GameObjects.Sprite;
 
   constructor(
     scene: Phaser.Scene,
@@ -53,6 +61,12 @@ export class AvatarView extends Phaser.GameObjects.Container {
     }
     this.motionSprite = scene.add.sprite(-AVATAR_CANVAS.footX, -AVATAR_CANVAS.footY, '__MISSING').setOrigin(0, 0).setVisible(false);
     this.add(this.motionSprite);
+    this.cosmeticSprite = scene.add.sprite(0, 0, '__MISSING').setVisible(false);
+    this.add(this.cosmeticSprite);
+    this.gripOccluder = scene.add.sprite(-AVATAR_CANVAS.footX, -AVATAR_CANVAS.footY, '__MISSING').setOrigin(0, 0).setVisible(false);
+    this.add(this.gripOccluder);
+    this.scabbardSprite = scene.add.sprite(0, 0, '__MISSING').setVisible(false);
+    this.add(this.scabbardSprite);
     this.animator.play('stand');
   }
 
@@ -63,6 +77,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 目前畫面上的整體動畫幀（殘影用）；沒有在播時為 null。 */
   get motionFrame(): { key: string; frame: string } | null {
+    if (this.motionOn && this.cosmetic) return { key: this.content.base.path, frame: frameName('body', this.animator.frame) };
     return this.motionOn ? { key: HERO_MOTIONS_KEY, frame: frameName(null, this.motionAnimator.frame) } : null;
   }
 
@@ -71,6 +86,16 @@ export class AvatarView extends Phaser.GameObjects.Container {
     if (!this.scene.textures.exists(HERO_MOTIONS_KEY) || !this.motionAnimator.play(tag, { restart: true, loop: options.loop ?? false })) return false;
     this.motionAnimator.speed = options.speed ?? 1;
     this.motionOn = true;
+    if (this.cosmetic) {
+      const kind = this.cosmetic.kind;
+      const pose = kind === 'staff' ? 'cast' : kind === 'bow' ? 'shoot' : kind === 'claw' ? (tag.includes('slash') ? 'swing2' : 'throw') : tag.includes('rising') ? 'swing2' : tag.includes('heavy') ? 'swing3' : 'swing1';
+      this.animator.play(this.content.base.sheet.tags.has(pose) ? pose : 'swing1', { restart: true, loop: options.loop ?? false });
+      const info = this.content.base.sheet.tags.get(this.animator.tag)!;
+      let duration = 0;
+      for (let i = info.from; i <= info.to; i++) duration += this.animator.duration(i);
+      // 保持原技能時鐘，僅讓可換裝的紙娃娃姿勢配合該時長。
+      this.animator.speed = duration / Math.max(1, motionDuration(tag)) * (options.speed ?? 1);
+    }
     this.dirty = true;
     this.refresh();
     return true;
@@ -79,6 +104,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
   stopMotion(): void {
     if (!this.motionOn) return;
     this.motionOn = false;
+    this.animator.speed = 1;
     this.dirty = true;
     this.refresh();
   }
@@ -89,6 +115,17 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   setFacing(facing: 1 | -1): this {
     this.scaleX = facing === 1 ? -1 : 1;
+    return this;
+  }
+
+  setCosmeticWeapon(definition: WeaponDefinition | null): this {
+    if (this.cosmetic?.id === definition?.id) return this;
+    this.cosmetic = definition;
+    this.cosmeticSprite.setVisible(!!definition);
+    this.gripOccluder.setVisible(false);
+    this.scabbardSprite.setVisible(false);
+    this.dirty = true;
+    this.refresh();
     return this;
   }
 
@@ -118,6 +155,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
   tick(dtMs: number): void {
     if (this.motionOn) {
       this.motionAnimator.update(dtMs);
+      if (this.cosmetic) { this.animator.update(dtMs); this.refresh(); return; }
       this.motionSprite.setFrame(frameName(null, this.motionAnimator.frame));
       return;
     }
@@ -127,7 +165,8 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 依目前幀擺好每個圖層。 */
   refresh(): void {
-    if (this.motionOn) {
+    if (this.motionOn && !this.cosmetic) {
+      this.gripOccluder.setVisible(false);
       for (const sprite of this.sprites.values()) sprite.setVisible(false);
       this.motionSprite.setTexture(HERO_MOTIONS_KEY, frameName(null, this.motionAnimator.frame)).setVisible(true);
       this.dirty = true; // 回到紙娃娃時重畫
@@ -144,7 +183,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
       const sprite = this.sprites.get(layer)!;
       const op = byLayer.get(layer);
       const key = op ? this.textureKeys.get(op.source) : undefined;
-      if (!op || !key) {
+      if (!op || !key || (this.cosmetic && (layer === 'weapon' || layer === 'weapon_back'))) {
         sprite.setVisible(false);
         continue;
       }
@@ -152,17 +191,53 @@ export class AvatarView extends Phaser.GameObjects.Container {
       sprite.setPosition(-AVATAR_CANVAS.footX + op.dx, -AVATAR_CANVAS.footY + op.dy);
       sprite.setVisible(true);
     }
+    if (this.cosmetic) {
+      const def = this.cosmetic;
+      const hand = this.content.base.sheet.slicePivotAt('hand', f) ?? { x: 48, y: 97 };
+      const rig = weaponRig(def.kind, this.animator.tag, this.animator.index, this.animator.length);
+      const size = rig.sheathed ? 44 : { sword: 68, staff: 90, bow: 72, claw: 24 }[def.kind];
+      const grip = { sword: .79, staff: .72, bow: .5, claw: .80 }[def.kind];
+      const torso = this.content.base.sheet.slicePivotAt('torso', f) ?? { x: 64, y: 106 };
+      const hip = { x: torso.x + 3, y: torso.y - 5 };
+      const attach = rig.sheathed ? hip : hand;
+      this.cosmeticSprite.setTexture(`wardrobe-${def.kind}`, def.frame).setOrigin(.5, grip)
+        .setDisplaySize(size * .6, size).setPosition(attach.x - AVATAR_CANVAS.footX, attach.y - AVATAR_CANVAS.footY).setAngle(rig.angle).setVisible(true);
+      this.cosmeticSprite.setCrop();
+      this.scabbardSprite.setVisible(def.kind === 'sword');
+      if (def.kind === 'sword') {
+        // 收劍只露護手與握柄，劍身進入真正的劍鞘；拔劍後空鞘仍留在腰間。
+        const source = this.cosmeticSprite.frame;
+        if (rig.sheathed) this.cosmeticSprite.setCrop(0, source.realHeight * .67, source.realWidth, source.realHeight * .33);
+        const mouthOffset = (.79 - .67) * 44 / Math.SQRT2;
+        this.scabbardSprite.setTexture('wardrobe-scabbard', def.frame).setOrigin(.5, .95).setDisplaySize(14.4, 24).setAngle(135)
+          .setPosition(hip.x - AVATAR_CANVAS.footX + mouthOffset, hip.y - AVATAR_CANVAS.footY + mouthOffset);
+        const beltLayer = this.getIndex(this.sprites.get('arm_front')!);
+        this.moveTo(this.scabbardSprite, beltLayer - (this.getIndex(this.scabbardSprite) < beltLayer ? 1 : 0));
+      }
+      // 整個容器翻面，手與武器一起鏡射；不能依世界朝向硬交換前後手。
+      const anchor = this.sprites.get(rig.plane === 'back' ? 'body' : 'arm_front')!;
+      const anchorIndex = this.getIndex(anchor), weaponIndex = this.getIndex(this.cosmeticSprite);
+      this.moveTo(this.cosmeticSprite, anchorIndex - (weaponIndex < anchorIndex ? 1 : 0));
+      const hasFrontArm = this.content.base.sheet.frame('arm_front', f) !== undefined;
+      const coverGrip = rig.plane === 'front' && !hasFrontArm && def.kind !== 'claw' && !rig.sheathed;
+      this.gripOccluder.setVisible(coverGrip);
+      if (coverGrip) {
+        this.gripOccluder.setTexture(this.content.base.path, frameName('body', f))
+          .setCrop(hand.x - 4, hand.y - 4, 8, 9);
+        this.bringToTop(this.gripOccluder);
+      }
+    }
   }
 
   /** 受擊閃白等效果：套到所有圖層。 */
   setFill(color: number | null): void {
-    for (const sprite of [...this.sprites.values(), this.motionSprite]) {
+    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite]) {
       if (color === null) sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.MULTIPLY);
       else sprite.setTint(color).setTintMode(Phaser.TintModes.FILL);
     }
   }
 
   setLit(enabled: boolean): void {
-    for (const sprite of [...this.sprites.values(), this.motionSprite]) sprite.setLighting(enabled);
+    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite]) sprite.setLighting(enabled);
   }
 }

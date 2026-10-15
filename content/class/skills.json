@@ -11,6 +11,8 @@
         {"atMs": 110, "area": {"shape": "rect", "w": 90, "h": 60, "offsetX": -10}, "maxTargets": 3, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 170,
       "comboNext": "skill_0002",
       "lunge": 60,
@@ -28,6 +30,8 @@
         {"atMs": 110, "area": {"shape": "rect", "w": 90, "h": 60, "offsetX": -10}, "maxTargets": 3, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 170,
       "comboNext": "skill_0003",
       "lunge": 60,
@@ -45,6 +49,8 @@
         {"atMs": 120, "area": {"shape": "rect", "w": 120, "h": 70, "offsetX": -10}, "maxTargets": 5, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 200,
       "lunge": 110,
       "hitStopMs": 50,
@@ -67,6 +73,8 @@
         {"atMs": 550, "area": {"shape": "circle", "r": 130}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "whirl"}
       ],
       "cooldownSec": 5,
+      "price": 9,
+      "fullTargets": 5,
       "cancelFromMs": 640,
       "hitStopMs": 40,
       "shake": 2,
@@ -86,6 +94,8 @@
         {"atMs": 880, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"}
       ],
       "cooldownSec": 6,
+      "price": 5,
+      "fullTargets": 4,
       "cancelFromMs": 970,
       "hitStopMs": 130,
       "shake": 5,
@@ -106,6 +116,8 @@
         {"atMs": 1480, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 450}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"}
       ],
       "cooldownSec": 7,
+      "price": 3,
+      "fullTargets": 1,
       "cancelFromMs": 1850,
       "hitStopMs": 100,
       "shake": 4
@@ -122,6 +134,8 @@
         {"atMs": 780, "area": {"shape": "path", "h": 80, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "streak"}
       ],
       "cooldownSec": 4,
+      "price": 2,
+      "fullTargets": 3,
       "cancelFromMs": 1280,
       "hitStopMs": 100,
       "shake": 3,
@@ -141,6 +155,8 @@
         {"atMs": 540, "area": {"shape": "circle", "r": 120}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "rising"}
       ],
       "cooldownSec": 5,
+      "price": 6,
+      "fullTargets": 4,
       "cancelFromMs": 630,
       "hitStopMs": 50,
       "shake": 3,
@@ -162,6 +178,8 @@
         {"atMs": 2200, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 530}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"}
       ],
       "cooldownSec": 3,
+      "price": 5,
+      "fullTargets": 2,
       "cancelFromMs": 3050,
       "hitStopMs": 0,
       "shake": 2
@@ -182,11 +200,12 @@
         {"atMs": 1380, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "holyHit"}
       ],
       "cooldownSec": 20,
+      "price": 20,
+      "fullTargets": 25,
       "cancelFromMs": 1470,
       "hitStopMs": 30,
       "shake": 3,
       "ultimate": true,
-      "dropWeight": 0.3,
       "cues": [{"atMs": 400, "fx": "holyWave"}, {"atMs": 600, "fx": "holyWave"}, {"atMs": 800, "fx": "holyWave"}, {"atMs": 1000, "fx": "holyWave"}, {"atMs": 1200, "fx": "holyWave"}]
     },
     {
@@ -203,11 +222,12 @@
         {"atMs": 1000, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "swordRain"}
       ],
       "cooldownSec": 25,
+      "price": 20,
+      "fullTargets": 25,
       "cancelFromMs": 1080,
       "hitStopMs": 60,
       "shake": 5,
       "ultimate": true,
-      "dropWeight": 0.3,
       "cues": [{"atMs": 440, "fx": "skyFlash"}]
     },
     {
@@ -220,6 +240,8 @@
         {"atMs": 200, "area": {"shape": "line", "w": 350, "h": 28}, "maxTargets": 1, "pierce": false, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 300,
       "projectile": {"fx": "magic_bolt", "speed": 520, "aim": {"coneDeg": 35, "range": 380, "turnDegPerSec": 540}},
       "hitStopMs": 30,
@@ -241,6 +263,8 @@
         {"atMs": 800, "area": {"shape": "rect", "w": 420, "h": 260, "offsetX": 20}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "lightning"}
       ],
       "cooldownSec": 4,
+      "price": 9,
+      "fullTargets": 6,
       "cancelFromMs": 890,
       "hitStopMs": 60,
       "shake": 3
@@ -257,6 +281,8 @@
         {"atMs": 760, "area": {"shape": "rect", "w": 520, "h": 320, "offsetX": 80}, "maxTargets": 15, "pierce": true, "weightRule": "even", "fx": "impact"}
       ],
       "cooldownSec": 12,
+      "price": 6,
+      "fullTargets": 14,
       "cancelFromMs": 780,
       "hitStopMs": 120,
       "shake": 6,
@@ -274,6 +300,8 @@
         {"atMs": 260, "area": {"shape": "path", "h": 100, "w": 60}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arcane"}
       ],
       "cooldownSec": 3,
+      "price": 2,
+      "fullTargets": 3,
       "cancelFromMs": 380,
       "hitStopMs": 40,
       "shake": 2,
@@ -293,6 +321,8 @@
         {"atMs": 680, "area": {"shape": "circle", "r": 220}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "nova"}
       ],
       "cooldownSec": 7,
+      "price": 12,
+      "fullTargets": 12,
       "cancelFromMs": 770,
       "hitStopMs": 70,
       "shake": 3
@@ -315,6 +345,8 @@
         {"atMs": 680, "area": {"shape": "line", "w": 480, "h": 80}, "maxTargets": 1, "pierce": false, "weightRule": "even", "fx": "chainBolt"}
       ],
       "cooldownSec": 6,
+      "price": 4,
+      "fullTargets": 1,
       "cancelFromMs": 760,
       "hitStopMs": 30,
       "shake": 1,
@@ -335,11 +367,12 @@
         {"atMs": 1200, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "meteorShower"}
       ],
       "cooldownSec": 25,
+      "price": 20,
+      "fullTargets": 25,
       "cancelFromMs": 1280,
       "hitStopMs": 50,
       "shake": 4,
       "ultimate": true,
-      "dropWeight": 0.3,
       "cues": [{"atMs": 430, "fx": "skyFlash"}]
     },
     {
@@ -359,11 +392,12 @@
         {"atMs": 2400, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "darkBurst"}
       ],
       "cooldownSec": 30,
+      "price": 20,
+      "fullTargets": 30,
       "cancelFromMs": 2490,
       "hitStopMs": 90,
       "shake": 6,
       "ultimate": true,
-      "dropWeight": 0.3,
       "cues": [{"atMs": 410, "fx": "summonCircle"}, {"atMs": 700, "fx": "reaper"}]
     },
     {
@@ -376,6 +410,8 @@
         {"atMs": 210, "area": {"shape": "line", "w": 450, "h": 24}, "maxTargets": 1, "pierce": false, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 280,
       "projectile": {"fx": "arrow", "speed": 760, "aim": {"coneDeg": 25, "range": 470, "turnDegPerSec": 0}},
       "hitStopMs": 30,
@@ -395,6 +431,8 @@
         {"atMs": 815, "area": {"shape": "line", "w": 800, "h": 50}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "streak"}
       ],
       "cooldownSec": 4,
+      "price": 8,
+      "fullTargets": 7,
       "cancelFromMs": 905,
       "hitStopMs": 60,
       "shake": 3,
@@ -414,6 +452,8 @@
         {"atMs": 920, "area": {"shape": "rect", "w": 420, "h": 300, "offsetX": 100}, "maxTargets": 12, "pierce": true, "weightRule": "even", "fx": "arrowRain"}
       ],
       "cooldownSec": 8,
+      "price": 9,
+      "fullTargets": 7,
       "cancelFromMs": 700,
       "hitStopMs": 30,
       "shake": 2,
@@ -434,6 +474,8 @@
         {"atMs": 640, "area": {"shape": "line", "w": 600, "h": 24}, "maxTargets": 1, "pierce": false, "weightRule": "even"}
       ],
       "cooldownSec": 3,
+      "price": 2,
+      "fullTargets": 1,
       "cancelFromMs": 700,
       "hitStopMs": 20,
       "shake": 1,
@@ -453,6 +495,8 @@
         {"atMs": 635, "area": {"shape": "sector", "r": 380}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "arrowFan"}
       ],
       "cooldownSec": 5,
+      "price": 9,
+      "fullTargets": 8,
       "cancelFromMs": 725,
       "hitStopMs": 40,
       "shake": 2,
@@ -470,6 +514,8 @@
         {"atMs": 420, "area": {"shape": "line", "w": 640, "h": 24}, "maxTargets": 12, "pierce": false, "weightRule": "even"}
       ],
       "cooldownSec": 6,
+      "price": 2,
+      "fullTargets": 3,
       "cancelFromMs": 520,
       "hitStopMs": 70,
       "shake": 4,
@@ -490,11 +536,12 @@
         {"atMs": 1250, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "screenArrowRain"}
       ],
       "cooldownSec": 20,
+      "price": 20,
+      "fullTargets": 25,
       "cancelFromMs": 1330,
       "hitStopMs": 30,
       "shake": 2,
       "ultimate": true,
-      "dropWeight": 0.3,
       "move": {"kind": "leap", "atMs": 100, "vx": 0, "vy": 320},
       "cues": [{"atMs": 280, "fx": "arrowVolley"}]
     },
@@ -512,11 +559,12 @@
         {"atMs": 900, "area": {"shape": "map"}, "maxTargets": 25, "pierce": true, "weightRule": "even", "fx": "cometBurst"}
       ],
       "cooldownSec": 20,
+      "price": 20,
+      "fullTargets": 25,
       "cancelFromMs": 940,
       "hitStopMs": 50,
       "shake": 4,
       "ultimate": true,
-      "dropWeight": 0.3,
       "move": {"kind": "dash", "atMs": 540, "distance": -60, "durationMs": 140},
       "cues": [{"atMs": 540, "fx": "comet"}]
     },
@@ -530,6 +578,8 @@
         {"atMs": 100, "area": {"shape": "line", "w": 300, "h": 24}, "maxTargets": 1, "pierce": false, "weightRule": "even"}
       ],
       "cooldownSec": 0,
+      "price": 1,
+      "fullTargets": 1,
       "cancelFromMs": 150,
       "projectile": {"fx": "shuriken", "speed": 680, "aim": {"coneDeg": 35, "range": 320, "turnDegPerSec": 300}},
       "hitStopMs": 25,
@@ -551,6 +601,8 @@
         {"atMs": 2040, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"}
       ],
       "cooldownSec": 5,
+      "price": 11,
+      "fullTargets": 6,
       "cancelFromMs": 2460,
       "hitStopMs": 35,
       "shake": 1
@@ -571,6 +623,8 @@
         {"atMs": 860, "area": {"shape": "circle", "r": 60}, "maxTargets": 1, "pierce": false, "weightRule": "even", "fx": "shadowSlash"}
       ],
       "cooldownSec": 8,
+      "price": 3,
+      "fullTargets": 1,
       "cancelFromMs": 900,
       "hitStopMs": 40,
       "shake": 2,
@@ -589,6 +643,8 @@
         {"atMs": 300, "area": {"shape": "path", "h": 140, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "pathSlash"}
       ],
       "cooldownSec": 4,
+      "price": 4,
+      "fullTargets": 4,
       "cancelFromMs": 460,
       "hitStopMs": 40,
       "shake": 2,
@@ -611,6 +667,8 @@
         {"atMs": 1640, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 5,
+      "price": 5,
+      "fullTargets": 2,
       "cancelFromMs": 1900,
       "hitStopMs": 25,
       "shake": 1,
@@ -633,11 +691,12 @@
         {"atMs": 1780, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"}
       ],
       "cooldownSec": 20,
+      "price": 20,
+      "fullTargets": 19,
       "cancelFromMs": 2450,
       "hitStopMs": 25,
       "shake": 2,
       "ultimate": true,
-      "dropWeight": 0.3,
       "scatter": {"count": 10, "radius": 110}
     },
     {
@@ -658,11 +717,12 @@
         {"atMs": 1250, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "cloneSlash"}
       ],
       "cooldownSec": 25,
+      "price": 20,
+      "fullTargets": 20,
       "cancelFromMs": 1330,
       "hitStopMs": 30,
       "shake": 2,
       "ultimate": true,
-      "dropWeight": 0.3,
       "scatter": {"count": 10, "radius": 120}
     }
   ]

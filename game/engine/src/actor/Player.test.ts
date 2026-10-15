@@ -37,19 +37,13 @@ describe('技能列與常駐小技能', () => {
     expect(player.attacking).toBeNull();
   });
 
-  it('實際模式：消耗型格子放出去就通知用掉，而且不看冷卻', () => {
-    const used: number[] = [];
-    const player = makePlayer({
-      resolveSlot: (slot) => (slot <= 1 ? { skillId: 'skill_0006', consumable: true } : null),
-      onSlotUsed: (slot) => used.push(slot),
-    });
-    player.step(world, { ...IDLE, skill: 0 });
-    expect(player.attacking?.id).toBe('skill_0006');
-    settle(player);
-    // 同一個技能在另一格：消耗型不受冷卻限制
+  it('場景回傳 null 的格子按了沒反應，有技能的照常放', () => {
+    // resolveSlot 由場景決定這一格現在放什麼技能
+    const player = makePlayer({ resolveSlot: (slot) => (slot === 0 ? warrior.skills[0]! : null) });
     player.step(world, { ...IDLE, skill: 1 });
-    expect(player.attacking?.id).toBe('skill_0006');
-    expect(used).toEqual([0, 1]);
+    expect(player.attacking).toBeNull();
+    player.step(world, { ...IDLE, skill: 0 });
+    expect(player.attacking?.id).toBe(warrior.skills[0]);
   });
 
   it('空的格子按了沒反應', () => {

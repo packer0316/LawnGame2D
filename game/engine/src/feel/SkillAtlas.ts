@@ -16,10 +16,16 @@ import assassinFourblade from '../../../assets/skills/assassin-fourblade-v8.png?
 import razor from '../../../assets/skills/razor-sequence-v7.png?url';
 import rend from '../../../assets/skills/rend-sequence-v7.png?url';
 import goldHit from '../../../assets/skills/gold-hit-sequence-v7.png?url';
+import archerHit from '../../../assets/skills/archer-hit-sequence-v9.png?url';
+import archerFireHit from '../../../assets/skills/archer-fire-hit-sequence-v9.png?url';
+import swordFall from '../../../assets/skills/sword-fall-sequence-v10.png?url';
+import swordGround from '../../../assets/skills/sword-ground-sequence-v10.png?url';
+import arrowFall from '../../../assets/skills/arrow-fall-sequence-v10.png?url';
+import arrowGround from '../../../assets/skills/arrow-ground-sequence-v10.png?url';
 
-export type SkillAtlasName = 'reaper' | 'blade' | 'fire' | 'arcane' | 'shadow' | 'earth' | 'dragon' | 'lightning' | 'soul' | 'thrust' | 'tiger' | 'razor' | 'rend' | 'goldHit';
-const SHEETS = { reaper, blade, fire, arcane, shadow, earth, dragon, lightning, soul, thrust, tiger, razor, rend, goldHit };
-export const BURST_DURATION:Record<Exclude<SkillAtlasName,'reaper'|'tiger'>,number>={blade:320,fire:440,arcane:320,shadow:320,earth:960,dragon:720,lightning:360,soul:460,thrust:880,razor:440,rend:360,goldHit:200};
+export type SkillAtlasName = 'reaper' | 'blade' | 'fire' | 'arcane' | 'shadow' | 'earth' | 'dragon' | 'lightning' | 'soul' | 'thrust' | 'tiger' | 'razor' | 'rend' | 'goldHit' | 'archerHit' | 'archerFireHit' | 'swordFall' | 'swordGround' | 'arrowFall' | 'arrowGround';
+const SHEETS = { reaper, blade, fire, arcane, shadow, earth, dragon, lightning, soul, thrust, tiger, razor, rend, goldHit, archerHit, archerFireHit, swordFall, swordGround, arrowFall, arrowGround };
+export const BURST_DURATION:Record<Exclude<SkillAtlasName,'reaper'|'tiger'>,number>={blade:320,fire:440,arcane:320,shadow:320,earth:960,dragon:720,lightning:360,soul:460,thrust:880,razor:440,rend:360,goldHit:200,archerHit:240,archerFireHit:280,swordFall:440,swordGround:590,arrowFall:330,arrowGround:400};
 export const atlasKey = (name: SkillAtlasName): string => `skill-sequence-${name}`;
 
 /** Raster frames retain their shared cell origin; never trim each pose independently. */

@@ -104,10 +104,14 @@ export const SkillDefSchema = z.object({
    * 之後每一刀打這些點 radius 內的怪
    */
   scatter: z.object({ count: z.number().int().positive(), radius: z.number().positive() }).optional(),
-  /** 大絕招：HUD 金框；實際模式掉落權重較低 */
+  /** 大絕招：HUD 金框 */
   ultimate: z.boolean().optional(),
-  /** 實際模式的掉落權重（預設 1） */
-  dropWeight: z.number().min(0).optional(),
+  /**
+   * 技能押注倍數（SPEC §3.1）：放一次、每一刀都打滿時共扣 押注 × price（1–20，普攻 1）。
+   * fullTargets = 每一刀打到幾隻才算滿價，打得少按比例少扣。數值由 tools/rtp-sim 的 prices 計算。
+   */
+  price: z.number().min(1).max(20).optional(),
+  fullTargets: z.number().int().min(1).optional(),
   hitStopMs: z.number().min(0),
   shake: z.number().min(0),
   fx: z.string().optional(),

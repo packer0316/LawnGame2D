@@ -2,7 +2,9 @@ import * as Phaser from 'phaser';
 import {
   FootholdWorld,
   PHYSICS,
+  DEFAULT_RTP,
   buildNavGraph,
+  strikeCostMultiplier,
   type Area,
   type AvatarLoadout,
   type ClassId,
@@ -18,14 +20,15 @@ import { Player, type PlayerInput } from '../actor/Player';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
 import { loadHeroMotions, motionDuration } from '../avatar/motions';
+import { loadInventoryArt } from '../inventory/loadArt';
+import { WEAPON_BY_ID } from '../inventory/catalog';
+import type { InventorySnapshot } from '../inventory/model';
 import type { ContentBundle } from '../content/bundle';
 import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
-import { SkillDrops } from '../feel/SkillDrops';
 import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
 import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
 import { impactFeel } from '../feel/SkillPresentation';
-import { loadSkillIconTextures } from '../ui/skillIcons';
 import type { GameCommand, GameMode, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
 import { MonsterActor } from '../monster/MonsterActor';
@@ -41,8 +44,6 @@ const AUTO_RESUME_MS = 3000;
 const AUTO_CONFIG_KEY = 'lawn.autoConfig';
 const MODE_KEY = 'lawn.mode';
 const HOTBAR_SLOTS = 8;
-/** 技能方塊從地上飛進技能列的時間；飛到之前那一格還不能用 */
-const PICKUP_FLIGHT_MS = 650;
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
@@ -52,8 +53,6 @@ export interface GameSceneOptions {
   mode?: GameMode;
   lighting?: boolean;
   spawnScale?: number;
-  /** 測試用：技能方塊掉落機率 */
-  dropChance?: number;
   showColliders?: boolean;
   onHud?: (state: HudState) => void;
   onExit?: () => void;
@@ -98,6 +97,8 @@ export class GameScene extends Phaser.Scene {
   private switching = false;
   private seq = 0;
   private serverBalance = 0;
+  private inventoryOpen = false;
+  private inventoryState: InventorySnapshot | undefined;
   private pendingCost = 0;
   private betIndex = 0;
   private roomId = 1;
@@ -128,10 +129,6 @@ export class GameScene extends Phaser.Scene {
   private autoSession = { startBalance: 0, startedAt: 0 };
   private skillFx!: SkillFx;
   private mode: GameMode = 'real';
-  /** 實際模式的技能列（每個職業各一排）：掉落的技能與飛到的時間 */
-  private readonly realSlots = new Map<ClassId, ({ skillId: string; readyAt: number } | null)[]>();
-  private drops!: SkillDrops;
-  private pickups: HudState['pickups'] = [];
   /** 散射技能（分身飛鏢、影分身）：這次施放挑好的點 */
   private scatter: { skillId: string; points: FxPoint[] } | null = null;
   /** 連鎖技能：這次施放已經打過的怪與上一個點 */
@@ -156,8 +153,6 @@ export class GameScene extends Phaser.Scene {
     this.fx = new FxLayer(this, this.bundle);
     this.fx.coinTarget = () => this.coinTarget();
     this.skillFx = new SkillFx(this, this.bundle, this.fx, () => this.opts.lighting !== false);
-    this.drops = new SkillDrops(this);
-    this.drops.onCollect = (cube) => this.collectDrop(cube);
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
@@ -176,11 +171,19 @@ export class GameScene extends Phaser.Scene {
       ...bundle.fx.values(),
     ]);
     await loadHeroMotions(this);
+    await loadInventoryArt(this);
     await SkillFx.preload(this);
-    await loadSkillIconTextures(this, [...bundle.skills.values()].flatMap((skill) => (skill.icon ? [skill.icon] : [])));
     if (this.dead) return;
-    this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1, ...(this.opts.dropChance !== undefined ? { dropChance: this.opts.dropChance } : {}) });
+    this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1 });
+    this.inventoryState = this.server.inventorySnapshot();
     this.unsubscribes.push(
+      this.server.on('balance', ({ balance }) => { this.serverBalance = balance; }),
+      this.server.on('inventory', (snapshot) => {
+        this.inventoryState = snapshot;
+        this.applyLoadout();
+        if (snapshot.feedback?.kind === 'drop') this.showToast(snapshot.feedback.message);
+        this.emitHud({});
+      }),
       this.server.on('monsterSpawn', (spawn) => this.spawnMonster(spawn)),
       this.server.on('monsterRemove', ({ uid }) => this.monsters.get(uid)?.destroy()),
     );
@@ -203,7 +206,6 @@ export class GameScene extends Phaser.Scene {
         onSkillStart: (skill) => this.onSkillStart(skill),
         onRoll: () => this.onRoll(),
         resolveSlot: (slot) => this.resolveSlot(slot),
-        onSlotUsed: (slot) => this.useSlot(slot),
         onLand: (impact) => this.onLand(impact),
       },
     );
@@ -228,7 +230,6 @@ export class GameScene extends Phaser.Scene {
     await MapView.preload(this, this.bundle.source, map, theme);
     if (this.dead) return;
 
-    this.drops.collectAll();
     this.mapView?.destroy();
     for (const monster of this.monsters.values()) monster.destroy();
     this.monsters.clear();
@@ -346,6 +347,12 @@ export class GameScene extends Phaser.Scene {
 
   override update(_time: number, delta: number): void {
     if (!this.ready || this.switching) return;
+    if (this.inventoryOpen) {
+      this.keys.clear();
+      this.hudElapsed += delta;
+      if (this.hudElapsed >= 100) { this.hudElapsed = 0; this.emitHud({}); }
+      return;
+    }
     const frameMs = Math.min(delta, 100);
     this.handleCommandsFromKeys();
 
@@ -394,7 +401,6 @@ export class GameScene extends Phaser.Scene {
       if(animDt>0)this.skillFx.projectileTrail(p.skill,p.sprite,p.angle);
     }
     this.fx.update(animDt === 0 ? 0 : frameMs, this.hitStopMs > 0);
-    this.drops.update(animDt === 0 ? 0 : frameMs);
     this.mapView?.update(frameMs, this.cameras.main);
 
     this.hudElapsed += frameMs;
@@ -406,6 +412,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private fixedStep(): void {
+    if (this.inventoryOpen) { this.keys.clear(); return; }
     const k = this.keys;
     const manual: PlayerInput = {
       x: k.axisX(),
@@ -431,7 +438,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private get autoDriving(): boolean {
-    return this.autoOn && performance.now() >= this.autoPausedUntil;
+    return !this.inventoryOpen && this.autoOn && performance.now() >= this.autoPausedUntil;
   }
 
   private stepAuto(): PlayerInput {
@@ -452,9 +459,9 @@ export class GameScene extends Phaser.Scene {
     const classDef = this.bundle.classes.get(this.classId)!;
     const list: AutoSkill[] = [];
     for (let slot = 0; slot < HOTBAR_SLOTS; slot += 1) {
-      const entry = this.resolveSlot(slot);
-      const skill = entry && this.bundle.skills.get(entry.skillId);
-      if (skill) list.push({ skill, press: { skill: slot }, ready: entry.consumable || this.player.canUse(skill.id) });
+      const id = this.resolveSlot(slot);
+      const skill = id ? this.bundle.skills.get(id) : undefined;
+      if (skill) list.push({ skill, press: { skill: slot }, ready: this.player.canUse(skill.id) });
     }
     const secondary = classDef.secondary ? this.bundle.skills.get(classDef.secondary) : undefined;
     if (secondary) list.push({ skill: secondary, press: { secondary: true }, ready: this.player.canUse(secondary.id) });
@@ -462,67 +469,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------------------------------------------------------------------------
-  // 技能列：開發模式固定、實際模式靠掉落（SPEC §3.3）
+  // 技能列與技能押注倍數（SPEC §3.1、§3.3）
   // ---------------------------------------------------------------------------
 
-  private slotsOf(classId: ClassId): ({ skillId: string; readyAt: number } | null)[] {
-    let slots = this.realSlots.get(classId);
-    if (!slots) {
-      slots = Array.from({ length: HOTBAR_SLOTS }, () => null);
-      this.realSlots.set(classId, slots);
-    }
-    return slots;
+  private resolveSlot(slot: number): string | null {
+    return this.bundle.classes.get(this.classId)?.skills[slot] ?? null;
   }
 
-  private resolveSlot(slot: number): { skillId: string; consumable: boolean } | null {
-    if (this.mode === 'dev') {
-      const id = this.bundle.classes.get(this.classId)?.skills[slot];
-      return id ? { skillId: id, consumable: false } : null;
-    }
-    const item = this.slotsOf(this.classId)[slot];
-    if (!item || performance.now() < item.readyAt) return null;
-    return { skillId: item.skillId, consumable: true };
-  }
-
-  private useSlot(slot: number): void {
-    if (this.mode !== 'real') return;
-    this.slotsOf(this.classId)[slot] = null;
-    this.emitHud({});
-  }
-
-  /** 技能方塊展示完：放進該職業技能列的第一個空格，HUD 播放飛進去的動畫。 */
-  private collectDrop(cube: { id: number; skillId: string; x: number; y: number }): void {
-    const skill = this.bundle.skills.get(cube.skillId);
-    if (!skill) return;
-    const slots = this.slotsOf(skill.classId);
-    const slot = slots.indexOf(null);
-    if (slot < 0) {
-      this.showToast('技能欄已滿');
-      return;
-    }
-    const now = performance.now();
-    slots[slot] = { skillId: skill.id, readyAt: now + PICKUP_FLIGHT_MS };
-    if (skill.classId !== this.classId) {
-      this.showToast(`撿到 ${skill.name}（${this.bundle.classes.get(skill.classId)?.name ?? ''}）`);
-      return;
-    }
-    const screen = this.worldToScreen(cube.x, cube.y);
-    this.pickups = [...this.pickups.filter((p) => this.pickupAge(p.id) < 2000), { id: cube.id, slot, icon: skill.icon ?? 'spark', name: skill.name, x: screen.x, y: screen.y, flightMs: PICKUP_FLIGHT_MS }];
-    this.pickupTimes.set(cube.id, now);
-    this.emitHud({});
-  }
-
-  private readonly pickupTimes = new Map<number, number>();
-
-  private pickupAge(id: number): number {
-    return performance.now() - (this.pickupTimes.get(id) ?? 0);
+  /** 技能放一次（每一刀都打滿）的押注倍數；開發模式一律每刀 1 倍。 */
+  private skillPrice(skillId: string): number {
+    if (this.mode === 'dev') return 1;
+    return this.bundle.skills.get(skillId)?.price ?? 1;
   }
 
   private setMode(mode: GameMode): void {
     if (mode === this.mode) return;
     this.mode = mode;
     saveMode(mode);
-    this.showToast(mode === 'dev' ? '開發模式：技能列固定，可直接施放' : '實際模式：技能列靠打怪掉落');
+    this.showToast(mode === 'dev' ? '開發模式：技能每刀只算 1 倍（測試用）' : '實際模式：技能依價格扣押注倍數');
   }
 
   private pauseAutoForManual(): void {
@@ -568,6 +532,14 @@ export class GameScene extends Phaser.Scene {
   /** HUD 與快捷鍵的操作。 */
   command(cmd: GameCommand): void {
     switch (cmd.type) {
+      case 'inventoryOpen':
+        this.inventoryOpen = cmd.open;
+        this.keys?.clear();
+        this.pauseAutoForManual();
+        break;
+      case 'inventory':
+        if (this.ready) this.server.manageInventory(cmd.action, this.mode === 'dev');
+        break;
       case 'stepBet': {
         const levels = this.betLevels();
         const current = levels.indexOf(this.bet);
@@ -595,6 +567,13 @@ export class GameScene extends Phaser.Scene {
       case 'setMode':
         this.setMode(cmd.mode);
         break;
+      case 'setBalance': {
+        // 掛機的累計輸／贏以開始時的餘額計算：跟著平移，改金錢不會被當成輸贏而觸發停止
+        const before = this.serverBalance;
+        this.serverBalance = this.server.setBalance(cmd.balance);
+        this.autoSession.startBalance += this.serverBalance - before;
+        break;
+      }
       case 'setAutoConfig':
         this.auto.config = structuredClone(cmd.config);
         saveAutoConfig(this.auto.config);
@@ -649,6 +628,9 @@ export class GameScene extends Phaser.Scene {
   private applyLoadout(): void {
     const classDef = this.bundle.classes.get(this.classId)!;
     this.avatar.setLoadout({ weapon: classDef.weapon });
+    const state = this.inventoryState?.inventory;
+    const item = state?.items.find((w) => w.uid === state.equipped[this.classId]);
+    this.avatar.setCosmeticWeapon(item ? WEAPON_BY_ID.get(item.definitionId) ?? null : null);
   }
 
   private poseDuration(tag: string): number {
@@ -786,6 +768,7 @@ export class GameScene extends Phaser.Scene {
       bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
       points: this.scatter?.skillId === skill.id ? this.scatter.points : [],
       groundAt: (x, fromY) => this.world.groundBelow(x, fromY)?.y ?? null,
+      rainTerrain: this.world.segments,
       playerAt:()=>({x:this.player.body.x,y:this.player.body.y-26}),
       targetsAt:(x,y,radius)=>[...this.monsters.values()].filter(m=>m.alive&&circleRect(x,y,radius,m.hitbox()))
         .map(m=>m.center()).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)),
@@ -840,7 +823,9 @@ export class GameScene extends Phaser.Scene {
         .slice(0,strike.maxTargets):[];
     }
     else targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
-    if (strike.fx) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
+    // Rain is launched during wind-up. Its landing and applyHits share this exact step.
+    const rainLanded = this.skillFx.landRain(skill, index);
+    if (strike.fx && !rainLanded) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
     this.applyHits(skill, index, targets);
   }
 
@@ -1039,10 +1024,10 @@ export class GameScene extends Phaser.Scene {
             .sort((a, b) => a.d - b.d)
             .slice(0, strike.maxTargets)
             .map(({ m }) => m);
-          this.applyHits(p.skill, p.strike, near);
+          this.applyHits(p.skill, p.strike, near, p.angle);
           this.skillFx.phoenixBurst(hx,hy,1.4);
         } else {
-          this.applyHits(p.skill, p.strike, [hit]);
+          this.applyHits(p.skill, p.strike, [hit], p.angle);
         }
       }
       if (hit || p.remaining <= 0) {
@@ -1122,10 +1107,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** 命中：立刻播演出，再把這一刀送去判定（揮空不扣款）。 */
-  private applyHits(skill: SkillDef, index: number, targets: MonsterActor[]): void {
+  private applyHits(skill: SkillDef, index: number, targets: MonsterActor[], impactAngle?: number): void {
     if (targets.length === 0) return;
     const bet = this.bet;
-    if (this.displayBalance < bet) {
+    // 技能押注倍數（SPEC §3.1）：跟伺服器用同一個公式先預扣，結果回來再對帳
+    const flat = this.mode === 'dev';
+    const costMul = strikeCostMultiplier(skill, index, targets.map((m) => ({ uid: m.spawn.uid, multiplier: m.spawn.multiplier })), DEFAULT_RTP, { flat });
+    const cost = Math.round(bet * costMul * 100) / 100;
+    if (this.displayBalance < cost) {
       if (this.autoOn) this.setAuto(false, '餘額不足');
       else this.showToast('餘額不足，請降低押注');
       return;
@@ -1146,22 +1135,23 @@ export class GameScene extends Phaser.Scene {
       this.damageStacks.set(m.spawn.uid, { count: stack, at: now });
       this.fx.damage(c.x, m.hitbox().y - 2, damage, { crit, stack });
     }
-    const feel=this.skillFx.contact(skill,index,this.fxContext(skill,skill.strikes[index]!.area,targets,null,skill.strikes[index]!.atMs));
+    const feel=this.skillFx.contact(skill,index,{...this.fxContext(skill,skill.strikes[index]!.area,targets,null,skill.strikes[index]!.atMs),impactAngle});
     this.hitStopMs = Math.max(this.hitStopMs, feel.stopMs);
     if (feel.pixels > 0) this.cameras.main.shake(feel.durationMs,new Phaser.Math.Vector2(feel.pixels/this.cameras.main.worldView.width,feel.pixels*.45/this.cameras.main.worldView.height));
 
     const seq = ++this.seq;
-    this.pendingCost += bet;
+    this.pendingCost += cost;
     this.server
-      .attack({ seq, skillId: skill.id, strike: index, bet, targets: targets.map((m) => m.spawn.uid) })
-      .then((result) => this.onAttackResult(result, bet))
+      .attack({ seq, skillId: skill.id, strike: index, bet, targets: targets.map((m) => m.spawn.uid), flat })
+      .then((result) => this.onAttackResult(result, cost))
       .catch(() => {
-        this.pendingCost -= bet;
+        this.pendingCost -= cost;
       });
   }
 
-  private onAttackResult(result: AttackResult, bet: number): void {
-    this.pendingCost -= bet;
+  /** reserved = 出手時預扣的金額（押注 × 技能押注倍數）。 */
+  private onAttackResult(result: AttackResult, reserved: number): void {
+    this.pendingCost -= reserved;
     this.serverBalance = result.balance;
     if (result.error === 'INSUFFICIENT_BALANCE') this.showToast('餘額不足，請降低押注');
     else if (result.error === 'BET_OUT_OF_RANGE') this.showToast('押注超出本房範圍');
@@ -1173,11 +1163,9 @@ export class GameScene extends Phaser.Scene {
       const c = monster.center();
       const floor = monster.y;
       const coins = Math.min(30, monster.def.fx.coinCount + Math.floor(outcome.multiplier / 10));
-      const drop = this.mode === 'real' && outcome.drop ? this.bundle.skills.get(outcome.drop.skillId) : undefined;
       monster.kill(() => {
         this.fx.coins(c.x, c.y, coins, floor);
         this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' });
-        if (drop) this.drops.spawn(drop.id, drop.icon ?? 'spark', c.x, c.y, floor);
       });
       this.onPayout(outcome.payout, outcome.multiplier, c);
     }
@@ -1223,28 +1211,24 @@ export class GameScene extends Phaser.Scene {
   private emitHud(patch: Partial<HudState>): void {
     if (!this.opts.onHud) return;
     const classDef = this.bundle.classes.get(this.classId);
-    const now = performance.now();
-    const info = (id: string, consumable: boolean) => {
+    const info = (id: string) => {
       const skill = this.bundle.skills.get(id);
       return {
         id,
         name: skill?.name ?? '',
         icon: skill?.icon ?? 'spark',
-        cooldownMs: this.ready && !consumable ? this.player.cooldown(id) : 0,
-        totalMs: consumable ? 0 : (skill?.cooldownSec ?? 0) * 1000,
+        cooldownMs: this.ready ? this.player.cooldown(id) : 0,
+        totalMs: (skill?.cooldownSec ?? 0) * 1000,
+        price: this.skillPrice(id),
       };
     };
-    const hotbar: HudState['skills'] = [];
-    if (this.mode === 'dev') {
-      for (const [slot, id] of (classDef?.skills ?? []).entries()) hotbar.push({ ...info(id, false), slot, key: String(slot + 1), pendingMs: 0, ultimate: this.bundle.skills.get(id)?.ultimate ?? false });
-    } else {
-      for (const [slot, item] of this.slotsOf(this.classId).entries()) {
-        if (item) hotbar.push({ ...info(item.skillId, true), slot, key: String(slot + 1), pendingMs: Math.max(0, item.readyAt - now), ultimate: this.bundle.skills.get(item.skillId)?.ultimate ?? false });
-      }
-    }
-    this.pickups = this.pickups.filter((p) => this.pickupAge(p.id) < 2000);
+    const hotbar: HudState['skills'] = (classDef?.skills ?? []).map((id, slot) => {
+      return { ...info(id), slot, key: String(slot + 1), ultimate: this.bundle.skills.get(id)?.ultimate ?? false };
+    });
     this.opts.onHud({
       loading: !this.ready,
+      inventory: this.inventoryState,
+      inventoryOpen: this.inventoryOpen,
       balance: this.displayBalance,
       bet: this.bet,
       betLevels: this.betLevels(),
@@ -1256,8 +1240,7 @@ export class GameScene extends Phaser.Scene {
       classes: [...this.bundle.classes.values()].map((c) => ({ id: c.id, name: c.name })),
       mode: this.mode,
       skills: hotbar,
-      ...(classDef?.secondary ? { secondary: info(classDef.secondary, false) } : {}),
-      pickups: this.pickups,
+      ...(classDef?.secondary ? { secondary: info(classDef.secondary) } : {}),
       auto: this.autoOn,
       ...(this.autoOn
         ? {

@@ -1,7 +1,5 @@
-import type * as Phaser from 'phaser';
-
 /**
- * 技能圖示（24×24 細線 SVG 的內容）。HUD 技能列與遊戲裡掉落的技能方塊共用同一份。
+ * 技能圖示（24×24 細線 SVG 的內容），HUD 技能列使用。
  * 技能資料的 `icon` 欄位對應這裡的 key。
  */
 export const SKILL_ICONS: Record<string, string> = {
@@ -35,25 +33,3 @@ export const SKILL_ICONS: Record<string, string> = {
   split: '<path d="m12 9 1.5 3L12 15l-1.5-3Z"/><path d="m4 4 3 3M20 4l-3 3M4 20l3-3M20 20l-3-3"/><circle cx="4" cy="4" r="1.5"/><circle cx="20" cy="4" r="1.5"/><circle cx="4" cy="20" r="1.5"/><circle cx="20" cy="20" r="1.5"/>',
   ninja: '<circle cx="12" cy="7" r="3"/><path d="M8 21l2-8h4l2 8"/><path d="M3 9l5 3M21 9l-5 3"/><path d="M2 17h4M18 17h4"/>',
 };
-
-export const skillIconKey = (icon: string) => `skill-icon:${icon}`;
-
-/** 把技能圖示畫成 Phaser texture（掉落方塊用）。已經有的略過。 */
-export async function loadSkillIconTextures(scene: Phaser.Scene, icons: Iterable<string>, size = 48, color = '#f6e7b8'): Promise<void> {
-  const pending = [...new Set(icons)].filter((icon) => SKILL_ICONS[icon] && !scene.textures.exists(skillIconKey(icon)));
-  await Promise.all(
-    pending.map(
-      (icon) =>
-        new Promise<void>((resolve) => {
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SKILL_ICONS[icon]}</svg>`;
-          const image = new Image();
-          image.onload = () => {
-            if (scene.sys?.game && !scene.textures.exists(skillIconKey(icon))) scene.textures.addImage(skillIconKey(icon), image);
-            resolve();
-          };
-          image.onerror = () => resolve();
-          image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-        }),
-    ),
-  );
-}

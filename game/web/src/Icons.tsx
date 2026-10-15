@@ -17,6 +17,7 @@ export function Icon({ name, className = '' }: { name: string; className?: strin
     pause: <><path d="M9 5v14M15 5v14"/></>,
     help: <><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17h.01"/></>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
+    lock: <><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></>,
     gear: <><path d="M19.38 10.17L21.9 10.59L21.9 13.41L19.38 13.83L18.51 15.92L20 18L18 20L15.92 18.51L13.83 19.38L13.41 21.9L10.59 21.9L10.17 19.38L8.08 18.51L6 20L4 18L5.49 15.92L4.62 13.83L2.1 13.41L2.1 10.59L4.62 10.17L5.49 8.08L4 6L6 4L8.08 5.49L10.17 4.62L10.59 2.1L13.41 2.1L13.83 4.62L15.92 5.49L18 4L20 6L18.51 8.08Z"/><circle cx="12" cy="12" r="3.2"/></>,
   };
   return <svg className={`icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name] ?? paths.spark}</svg>;
