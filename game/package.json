@@ -1,0 +1,25 @@
+{
+  "name": "lawngame2d-game",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "engine",
+    "web",
+    "tools/*"
+  ],
+  "scripts": {
+    "art": "npm run gen -w @lawn/placeholder-art",
+    "predev": "npm run art",
+    "dev": "npm run dev -w @lawn/web",
+    "prebuild": "npm run art",
+    "build": "npm run build -w @lawn/web",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.4"
+  }
+}

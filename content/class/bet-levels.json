@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "levels": [
+    { "bet": 1, "visualTier": 1 },
+    { "bet": 2, "visualTier": 1 },
+    { "bet": 5, "visualTier": 2 },
+    { "bet": 10, "visualTier": 2 },
+    { "bet": 20, "visualTier": 3 },
+    { "bet": 50, "visualTier": 3 },
+    { "bet": 100, "visualTier": 4 },
+    { "bet": 200, "visualTier": 4 },
+    { "bet": 500, "visualTier": 5 }
+  ]
+}

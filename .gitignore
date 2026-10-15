@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.vite/
+*.log
+.DS_Store
+Thumbs.db
+
+# 遊戲端自動產生的測試內容
+game/dev-content/
+
+# visual-check.mjs 產生的截圖
+game/art-review/
+
+# Claude Code 執行期檔案
+.claude/scheduled_tasks.lock

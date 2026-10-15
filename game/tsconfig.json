@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "shared/src",
+    "engine/src",
+    "web/src",
+    "web/vite.config.ts",
+    "tools/*/src"
+  ]
+}

@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.aseprite binary
+*.ase binary
+*.bat text eol=crlf

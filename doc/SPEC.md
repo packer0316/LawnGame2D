@@ -13,6 +13,7 @@
 |---|---|
 | SPEC.md（本文件） | 遊戲本體：玩法、博奕規則、戰鬥手感、美術風格、技術架構、執行時系統 |
 | [STUDIO_SPEC.md](STUDIO_SPEC.md) | 造型製作系統 LawnStudio：工具功能、素材流程，以及角色、怪物、地圖的美術製作規格與內容資料格式 |
+| [COLLAB.md](COLLAB.md) | 遊戲與編輯器兩個 agent 的分工、資料夾歸屬、共用介面與協作規則 |
 
 | 版本 | 變更 |
 |---|---|
@@ -308,11 +309,11 @@
 | 音效 | 揮空、命中、擊殺、金幣分層播放；命中音效依怪物倍率高低變化 |
 
 - 頓幀與慢動作只是演出，不改變攻速上限與扣款規則。
-- 所有數值集中在 `shared/feel.ts`，可在遊戲內除錯面板即時調整。
+- 所有數值集中在 `game/shared/src/feel.ts`，可在遊戲內除錯面板即時調整。
 
 ### 3.5 移動與物理（楓之谷式足場物理）
 
-不使用 Phaser 內建物理，自寫足場物理，放在 `packages/shared`（遊戲與工具共用）。
+不使用 Phaser 內建物理，自寫足場物理，放在 `game/shared`（遊戲與編輯器共用）。
 
 - 沿足場線段跑動，支援 45° 斜坡；垂直線段視為牆。
 - 跳躍：重力、最大落速、空中可左右控制（比楓之谷靈活，接近 Dead Cells）。
@@ -321,7 +322,7 @@
 - 翻滾、土狼時間、跳躍緩衝見 §3.4。
 - 碰到怪物不受傷、不擊退。
 - 固定時間步長（60Hz）更新物理，畫面插值顯示，不受螢幕更新率影響。
-- 物理常數集中在 `shared/physics/constants.ts`。
+- 物理常數集中在 `game/shared/src/physics/constants.ts`。
 
 ### 3.6 自動掛機
 
@@ -489,33 +490,25 @@ LDtk 專案規格（圖層、碰撞值、實體）、主題美術與地圖後處
 
 ### 5.1 專案結構
 
+遊戲與編輯器分屬兩個資料夾、兩個獨立的 npm 專案，開發時不混在一起。分工與檔案歸屬見 [COLLAB.md](COLLAB.md)。
+
 ```
 LawnGame2D/
-├─ SPEC.md
-├─ art/                   美術原始檔（遊戲不直接讀）
-│  ├─ avatar/             avatar_base.aseprite、items/*.aseprite
-│  ├─ monsters/           mob_*.aseprite
-│  ├─ fx/                 技能特效、刀光 *.aseprite
-│  ├─ ui/                 UI 邊框、圖示、傷害數字字型 *.aseprite
-│  ├─ backgrounds/        背景組圖片 *.aseprite
-│  └─ maps/               world.ldtk + tilesets/*.aseprite + 法線貼圖
-├─ packages/
-│  ├─ shared/             純邏輯（無渲染）：型別、zod schema、足場物理、技能範圍判定、RTP 公式、手感參數
-│  └─ engine/             Phaser 4 遊戲場景：地圖、光影、紙娃娃、怪物、戰鬥、掛機、LocalServer
-│                         對外提供 createGame(container, options)，遊戲與工具都用它
-├─ apps/
-│  ├─ game/               遊戲網頁入口 + HUD（React）
-│  └─ studio/             造型製作系統 LawnStudio（React）
-├─ content/               匯出結果（sprite sheet PNG + JSON、地圖 JSON），遊戲直接讀取
-└─ tools/
-   ├─ aseprite-export/    批次呼叫 Aseprite CLI：art/ → content/
-   ├─ ldtk-convert/       LDtk → 遊戲地圖格式（足場、繩梯、實體、光源、圖塊）
-   └─ rtp-sim/            RTP 蒙地卡羅模擬
+├─ doc/                   規格書（SPEC.md、STUDIO_SPEC.md、COLLAB.md）
+├─ game/                  遊戲（npm workspaces）
+│  ├─ shared/             @lawn/shared：純邏輯（無渲染）：型別、內容 schema、Aseprite JSON 解析、足場物理、導航圖、技能範圍判定、RTP 公式、手感參數
+│  ├─ engine/             @lawn/engine：Phaser 4 遊戲場景：地圖、光影、紙娃娃、怪物、戰鬥、掛機、LocalServer
+│  │                      對外提供 createGame() 與預覽元件，遊戲與編輯器都用它
+│  ├─ web/                遊戲網頁入口 + HUD（React）
+│  └─ tools/
+│     ├─ rtp-sim/         RTP 蒙地卡羅模擬
+│     └─ placeholder-art/ 產生 Aseprite 匯出格式的測試美術
+├─ editor/                造型製作系統 LawnStudio（見 STUDIO_SPEC.md）
+├─ art/                   美術原始檔（.aseprite、.ldtk）
+└─ content/               遊戲資料：編輯器寫入、遊戲讀取
 ```
 
-美術匯出流程（Aseprite CLI、`npm run art`）見 [STUDIO_SPEC.md §2](STUDIO_SPEC.md#2-技術與素材流程)。
-
-### 5.2 遊戲模組（`packages/engine`）
+### 5.2 遊戲模組（`game/engine`）
 
 | 模組 | 職責 |
 |---|---|
@@ -531,7 +524,7 @@ LawnGame2D/
 | `room/` | 換房流程、相鄰房預載 |
 | `server/` | `GameServer` 介面 + `LocalServer` 實作 |
 
-HUD 與面板（押注、換房列表、掛機設定、職業切換、怪潮警告、大獎演出）在 `apps/game`，用 React 實作，透過事件與 `engine` 溝通。
+HUD 與面板（押注、換房列表、掛機設定、職業切換、怪潮警告、大獎演出）在 `game/web`，用 React 實作，透過事件與 `engine` 溝通。
 
 ### 5.3 伺服器介面與 LocalServer
 
@@ -582,13 +575,13 @@ interface GameServer {
 | 地圖 | LDtk 匯入、足場與導航圖產生、主題與光影、驗證、試玩 |
 | 房間表 | 20 房設定 |
 
-LawnStudio 的預覽畫布直接使用遊戲的 `packages/engine`（§5.2），試玩時以 `createGame()` 啟動真遊戲。
+LawnStudio 的預覽畫布直接使用遊戲的 `game/engine`（§5.2），試玩時以 `createGame()` 啟動真遊戲。
 
 ---
 
 ## 7. 資料格式
 
-正式定義以 `packages/shared` 的 zod schema 為準，以下為示意。工具產出的內容資料格式（部件、調色盤、怪物、地圖、主題、房間）見 [STUDIO_SPEC.md §9](STUDIO_SPEC.md#9-資料格式)。
+正式定義以 `game/shared` 的 zod schema 為準，以下為示意。工具產出的內容資料格式（部件、調色盤、怪物、地圖、主題、房間）見 [STUDIO_SPEC.md §9](STUDIO_SPEC.md#9-資料格式)。
 
 ```ts
 type ClassId = 'warrior' | 'mage' | 'archer' | 'assassin';

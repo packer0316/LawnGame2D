@@ -1,0 +1,13 @@
+{
+  "name": "@lawn/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lawn/shared": "*",
+    "phaser": "^4.2.1"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@lawn/placeholder-art",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "產生 Aseprite 匯出格式的測試美術與測試內容",
+  "scripts": {
+    "gen": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@lawn/shared": "*",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5",
+    "tsx": "^4.23.15"
+  }
+}

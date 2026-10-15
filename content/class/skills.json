@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "skill_0001",
+      "name": "三連斬・一",
+      "classId": "warrior",
+      "kind": "basic",
+      "pose": "swing1",
+      "strikes": [{ "atMs": 110, "area": { "shape": "rect", "w": 90, "h": 60, "offsetX": -10 }, "maxTargets": 3, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 170,
+      "comboNext": "skill_0002",
+      "lunge": 60,
+      "hitStopMs": 30,
+      "shake": 1,
+      "slashFx": "slash_swing1"
+    },
+    {
+      "id": "skill_0002",
+      "name": "三連斬・二",
+      "classId": "warrior",
+      "kind": "basic",
+      "pose": "swing2",
+      "strikes": [{ "atMs": 110, "area": { "shape": "rect", "w": 90, "h": 60, "offsetX": -10 }, "maxTargets": 3, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 170,
+      "comboNext": "skill_0003",
+      "lunge": 60,
+      "hitStopMs": 30,
+      "shake": 1,
+      "slashFx": "slash_swing2"
+    },
+    {
+      "id": "skill_0003",
+      "name": "三連斬・三",
+      "classId": "warrior",
+      "kind": "basic",
+      "pose": "swing3",
+      "strikes": [{ "atMs": 120, "area": { "shape": "rect", "w": 120, "h": 70, "offsetX": -10 }, "maxTargets": 5, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 200,
+      "lunge": 110,
+      "hitStopMs": 50,
+      "shake": 2,
+      "slashFx": "slash_swing3"
+    },
+    {
+      "id": "skill_0004",
+      "name": "旋風斬",
+      "classId": "warrior",
+      "kind": "active",
+      "pose": "swing2",
+      "strikes": [
+        { "atMs": 80, "area": { "shape": "circle", "r": 110 }, "maxTargets": 8, "pierce": true, "weightRule": "even" },
+        { "atMs": 200, "area": { "shape": "circle", "r": 110 }, "maxTargets": 8, "pierce": true, "weightRule": "even" },
+        { "atMs": 320, "area": { "shape": "circle", "r": 110 }, "maxTargets": 8, "pierce": true, "weightRule": "even" }
+      ],
+      "cooldownSec": 5,
+      "cancelFromMs": 380,
+      "hitStopMs": 50,
+      "shake": 2,
+      "slashFx": "slash_swing2"
+    },
+    {
+      "id": "skill_0005",
+      "name": "地裂斬",
+      "classId": "warrior",
+      "kind": "active",
+      "pose": "swing3",
+      "strikes": [{ "atMs": 140, "area": { "shape": "rect", "w": 300, "h": 80, "offsetX": -10 }, "maxTargets": 12, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 8,
+      "cancelFromMs": 260,
+      "hitStopMs": 80,
+      "shake": 4,
+      "slashFx": "slash_swing3"
+    },
+    {
+      "id": "skill_0011",
+      "name": "魔法彈",
+      "classId": "mage",
+      "kind": "basic",
+      "pose": "cast",
+      "strikes": [{ "atMs": 200, "area": { "shape": "line", "w": 350, "h": 28 }, "maxTargets": 1, "pierce": false, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 300,
+      "projectile": { "fx": "magic_bolt", "speed": 520 },
+      "hitStopMs": 30,
+      "shake": 1,
+      "fx": "slash_cast"
+    },
+    {
+      "id": "skill_0012",
+      "name": "雷電術",
+      "classId": "mage",
+      "kind": "active",
+      "pose": "cast",
+      "strikes": [
+        { "atMs": 210, "area": { "shape": "rect", "w": 250, "h": 150, "offsetX": 20 }, "maxTargets": 6, "pierce": true, "weightRule": "even" },
+        { "atMs": 330, "area": { "shape": "rect", "w": 250, "h": 150, "offsetX": 20 }, "maxTargets": 6, "pierce": true, "weightRule": "even" }
+      ],
+      "cooldownSec": 5,
+      "cancelFromMs": 380,
+      "hitStopMs": 60,
+      "shake": 2,
+      "fx": "slash_cast"
+    },
+    {
+      "id": "skill_0013",
+      "name": "隕石術",
+      "classId": "mage",
+      "kind": "active",
+      "pose": "cast",
+      "strikes": [{ "atMs": 320, "area": { "shape": "screen" }, "maxTargets": 15, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 12,
+      "cancelFromMs": 420,
+      "hitStopMs": 100,
+      "shake": 5,
+      "fx": "explosion"
+    },
+    {
+      "id": "skill_0021",
+      "name": "單箭",
+      "classId": "archer",
+      "kind": "basic",
+      "pose": "shoot",
+      "strikes": [{ "atMs": 210, "area": { "shape": "line", "w": 450, "h": 24 }, "maxTargets": 1, "pierce": false, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 280,
+      "projectile": { "fx": "arrow", "speed": 760 },
+      "hitStopMs": 30,
+      "shake": 1
+    },
+    {
+      "id": "skill_0022",
+      "name": "穿透箭",
+      "classId": "archer",
+      "kind": "active",
+      "pose": "shoot",
+      "strikes": [{ "atMs": 210, "area": { "shape": "line", "w": 500, "h": 28 }, "maxTargets": 6, "pierce": true, "weightRule": "even" }],
+      "cooldownSec": 4,
+      "cancelFromMs": 300,
+      "hitStopMs": 50,
+      "shake": 2
+    },
+    {
+      "id": "skill_0023",
+      "name": "箭雨",
+      "classId": "archer",
+      "kind": "active",
+      "pose": "shoot",
+      "strikes": [
+        { "atMs": 250, "area": { "shape": "rect", "w": 250, "h": 200, "offsetX": 75 }, "maxTargets": 10, "pierce": true, "weightRule": "even" },
+        { "atMs": 400, "area": { "shape": "rect", "w": 250, "h": 200, "offsetX": 75 }, "maxTargets": 10, "pierce": true, "weightRule": "even" },
+        { "atMs": 550, "area": { "shape": "rect", "w": 250, "h": 200, "offsetX": 75 }, "maxTargets": 10, "pierce": true, "weightRule": "even" }
+      ],
+      "cooldownSec": 8,
+      "cancelFromMs": 600,
+      "hitStopMs": 40,
+      "shake": 2
+    },
+    {
+      "id": "skill_0031",
+      "name": "飛鏢",
+      "classId": "assassin",
+      "kind": "basic",
+      "pose": "throw",
+      "strikes": [{ "atMs": 100, "area": { "shape": "line", "w": 300, "h": 24 }, "maxTargets": 1, "pierce": false, "weightRule": "even" }],
+      "cooldownSec": 0,
+      "cancelFromMs": 150,
+      "projectile": { "fx": "shuriken", "speed": 680 },
+      "hitStopMs": 25,
+      "shake": 1
+    },
+    {
+      "id": "skill_0032",
+      "name": "飛鏢風暴",
+      "classId": "assassin",
+      "kind": "active",
+      "pose": "throw",
+      "strikes": [
+        { "atMs": 100, "area": { "shape": "sector", "r": 250 }, "maxTargets": 4, "pierce": true, "weightRule": "even" },
+        { "atMs": 180, "area": { "shape": "sector", "r": 250 }, "maxTargets": 4, "pierce": true, "weightRule": "even" },
+        { "atMs": 260, "area": { "shape": "sector", "r": 250 }, "maxTargets": 4, "pierce": true, "weightRule": "even" },
+        { "atMs": 340, "area": { "shape": "sector", "r": 250 }, "maxTargets": 4, "pierce": true, "weightRule": "even" }
+      ],
+      "cooldownSec": 5,
+      "cancelFromMs": 380,
+      "hitStopMs": 25,
+      "shake": 1
+    },
+    {
+      "id": "skill_0033",
+      "name": "影襲",
+      "classId": "assassin",
+      "kind": "active",
+      "pose": "throw",
+      "strikes": [
+        { "atMs": 80, "area": { "shape": "circle", "r": 48 }, "maxTargets": 1, "pierce": false, "weightRule": "even" },
+        { "atMs": 160, "area": { "shape": "circle", "r": 48 }, "maxTargets": 1, "pierce": false, "weightRule": "even" },
+        { "atMs": 240, "area": { "shape": "circle", "r": 48 }, "maxTargets": 1, "pierce": false, "weightRule": "even" },
+        { "atMs": 320, "area": { "shape": "circle", "r": 48 }, "maxTargets": 1, "pierce": false, "weightRule": "even" },
+        { "atMs": 400, "area": { "shape": "circle", "r": 48 }, "maxTargets": 1, "pierce": false, "weightRule": "even" }
+      ],
+      "cooldownSec": 8,
+      "cancelFromMs": 440,
+      "blink": true,
+      "hitStopMs": 40,
+      "shake": 2
+    }
+  ]
+}

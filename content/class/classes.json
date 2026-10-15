@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "classes": [
+    {
+      "id": "warrior",
+      "name": "劍士",
+      "basic": "skill_0001",
+      "skills": ["skill_0004", "skill_0005"],
+      "weapon": "weapon_0001",
+      "maxAirJumps": 0,
+      "damage": [120, 260]
+    },
+    {
+      "id": "mage",
+      "name": "法師",
+      "basic": "skill_0011",
+      "skills": ["skill_0012", "skill_0013"],
+      "weapon": "weapon_0002",
+      "maxAirJumps": 0,
+      "damage": [150, 320]
+    },
+    {
+      "id": "archer",
+      "name": "弓箭手",
+      "basic": "skill_0021",
+      "skills": ["skill_0022", "skill_0023"],
+      "weapon": "weapon_0003",
+      "maxAirJumps": 0,
+      "damage": [100, 240]
+    },
+    {
+      "id": "assassin",
+      "name": "刺客",
+      "basic": "skill_0031",
+      "skills": ["skill_0032", "skill_0033"],
+      "weapon": "weapon_0004",
+      "maxAirJumps": 1,
+      "damage": [80, 180]
+    }
+  ]
+}
