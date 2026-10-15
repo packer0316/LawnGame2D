@@ -1,5 +1,7 @@
 import { TILE } from './ldtkBuilder';
 import type { LightSpec, RoomSpec, SpawnZoneSpec } from './ldtkBuilder';
+import { battlePlatforms } from './platformLayouts';
+import landmarks from '../../../../game/assets/landmarks/catalog.json';
 
 /** 可重現的亂數（mulberry32）。 */
 function rng(seed: number) {
@@ -50,16 +52,18 @@ const THEMES: ThemeInfo[] = [
   },
 ];
 
-export function themeOfRoom(roomId: number): ThemeInfo {
-  return THEMES[roomId <= 7 ? 0 : roomId <= 14 ? 1 : 2]!;
+export function themeOfRoom(roomId: number, scenic = false): ThemeInfo {
+  const base = THEMES[roomId <= 7 ? 0 : roomId <= 14 ? 1 : 2]!;
+  const scene = scenic ? landmarks.scenes.find(s => s.roomIds.includes(roomId)) : undefined;
+  return scene ? { ...base, theme: scene.themeId, tileset: scene.id, light: {...base.light,color:scene.light,intensity:0.85,flicker:0.05} } : base;
 }
 
 const HEIGHT = 34;
 
-/** 依房號產生一個測試房間：起伏地面（含斜坡）、單向平台與懸空實地、繩梯、傳送點、生怪區、光源。 */
-export function generateRoom(roomId: number): RoomSpec {
+/** 依房號產生房間：寬幅階地、三層戰鬥平台、繩梯、傳送點、生怪區、光源。 */
+export function generateRoom(roomId: number, scenic = false): RoomSpec {
   const r = rng(roomId * 7919);
-  const info = themeOfRoom(roomId);
+  const info = themeOfRoom(roomId, scenic);
   const W = 60 + (roomId % 4) * 15;
   const H = HEIGHT;
   const g: string[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => '.'));
@@ -74,17 +78,25 @@ export function generateRoom(roomId: number): RoomSpec {
     set(W - 1, cy, '#');
   }
 
-  // 起伏地面
+  // 寬幅階地：固定構圖控制高地、谷地與入口，連續斜坡銜接，避免隨機的小凸塊。
+  // 數值是相對基底的抬升格數；每一段都有足夠長的平地供群怪與範圍技能使用。
+  const terrainProfiles = [
+    [0, 3, 1, 4, 0], // 雙丘與中央淺谷
+    [0, 2, 4, 2, 0], // 中央高地
+    [0, 4, 0, 3, 0], // 兩岸與深谷
+    [0, 4, 3, 1, 0], // 向右下降的梯田
+    [0, 1, 3, 4, 0], // 向右上升的梯田
+    [0, 3, 0, 4, 0], // 非對稱谷地
+  ];
+  const profile = terrainProfiles[(roomId - 1) % terrainProfiles.length]!;
   const groundTop: number[] = new Array(W).fill(H - 4);
   let top = H - 4;
-  let cooldown = 0;
   for (let cx = 1; cx < W - 1; cx++) {
-    cooldown--;
-    const canSlope = cx >= 12 && cx <= W - 13 && cooldown <= 0;
-    if (canSlope && r.chance(0.14)) {
-      const up = top >= H - 4 ? true : top <= H - 9 ? false : r.chance(0.5);
-      cooldown = r.int(4, 8);
-      if (up) {
+    const fraction = cx / W;
+    const segment = fraction < 0.20 ? 0 : fraction < 0.40 ? 1 : fraction < 0.65 ? 2 : fraction < 0.82 ? 3 : 4;
+    const target = H - 4 - profile[segment]!;
+    if (target !== top) {
+      if (target < top) {
         set(cx, top - 1, '/');
         for (let cy = top; cy < H; cy++) set(cx, cy, '#');
         groundTop[cx] = top - 1;
@@ -100,49 +112,32 @@ export function generateRoom(roomId: number): RoomSpec {
     for (let cy = top; cy < H; cy++) set(cx, cy, '#');
     groundTop[cx] = top;
   }
-  // 高台：一段突起的實地（產生牆與落差）
-  if (r.chance(0.6)) {
-    const x0 = r.int(14, W - 24);
-    const len = r.int(4, 7);
-    if ([...Array(len + 2).keys()].every((i) => !'/\\'.includes(get(x0 - 1 + i, groundTop[x0 - 1 + i]!)))) {
-      for (let cx = x0; cx < x0 + len; cx++) {
-        const t = groundTop[cx]!;
-        for (let k = 1; k <= 2; k++) set(cx, t - k, '#');
-        groundTop[cx] = t - 2;
-      }
-    }
-  }
 
   const surface = (cx: number) => groundTop[cx]!;
   const spawnZones: SpawnZoneSpec[] = [];
   const pool = () => info.mobs.slice(0, r.int(2, info.mobs.length));
 
-  // 平台
-  const platforms: { x0: number; len: number; row: number; solid: boolean }[] = [];
-  const count = r.int(3, 5);
-  for (let i = 0, tries = 0; i < count && tries < 60; tries++) {
-    const len = r.int(5, 10);
-    const x0 = r.int(6, W - 7 - len);
-    const minTop = Math.min(...groundTop.slice(x0, x0 + len));
-    const tier = r.chance(0.65) ? 1 : 2;
-    const row = minTop - (tier === 1 ? 5 : 10);
-    if (row < 6) continue;
-    let free = true;
-    for (let cy = row - 3; cy <= row + 2 && free; cy++)
-      for (let cx = x0 - 2; cx < x0 + len + 2 && free; cx++) if (get(cx, cy) !== '.') free = false;
-    if (!free) continue;
-    const solid = tier === 2 && r.chance(0.4);
-    for (let cx = x0; cx < x0 + len; cx++) set(cx, row, solid ? '#' : '=');
-    platforms.push({ x0, len, row, solid });
-    i++;
-  }
-  // 繩梯：從平台下方往下接到第一個非空的格子
+  // 每房皆為地面＋中層＋上層，小平台僅作銜接。
+  const platforms = battlePlatforms(roomId, W, groundTop);
+  for (const p of platforms) for (let cx = p.x0; cx < p.x0 + p.len; cx++) set(cx, p.row, p.solid ? '#' : '=');
+  // 主平台都有繩梯路線；大平台兩端皆可上下，不依賴超過跳高的跳躍。
   for (const p of platforms) {
-    const cx = r.chance(0.5) ? p.x0 + 1 : p.x0 + p.len - 2;
-    const ch = p.solid ? 'H' : r.chance(0.5) ? '|' : 'H';
-    let cy = p.row + 1;
-    while (cy < H && get(cx, cy) === '.') set(cx, cy++, ch);
-    spawnZones.push({ rect: [p.x0, p.row - 3, p.len, 3], mobs: pool(), maxCount: Math.ceil(p.len / 3), respawnSec: 6 });
+    if (p.role !== 'main') continue;
+    const anchors = p.len >= 30 ? [p.x0 + 3, p.x0 + p.len - 4] : [p.x0 + Math.floor(p.len / 2)];
+    for (const [i, cx] of anchors.entries()) {
+      let cy = p.row + 1;
+      while (cy < H && get(cx, cy) === '.') set(cx, cy++, i % 2 === 0 ? 'H' : '|');
+    }
+  }
+  // 以房間寬度決定上層總生怪預算，按主平台長度分配，避免放大平台就無限制加怪。
+  const arenas = platforms.filter((p) => p.role === 'main');
+  let remaining = Math.floor(W / 6);
+  let remainingLength = arenas.reduce((sum, p) => sum + p.len, 0);
+  for (const [i, p] of arenas.entries()) {
+    const maxCount = i === arenas.length - 1 ? remaining : Math.max(2, Math.round(remaining * p.len / remainingLength));
+    spawnZones.push({ rect: [p.x0 + 1, p.row - 4, p.len - 2, 4], mobs: pool(), maxCount, respawnSec: 6 });
+    remaining -= maxCount;
+    remainingLength -= p.len;
   }
 
   // 地面生怪區
@@ -192,6 +187,14 @@ export function generateRoom(roomId: number): RoomSpec {
     if (r.chance(0.18)) decorBack.push([cx, cy, info.decorBack[r.int(0, info.decorBack.length - 1)]!]);
     else if (r.chance(0.05)) decorFront.push([cx, cy, info.decorFront[r.int(0, info.decorFront.length - 1)]!]);
   }
+  // 每個主戰鬥層都有少量主題裝飾，沿台緣放置並避開繩梯出口。
+  for (const p of arenas) {
+    for (let cx = p.x0 + 6; cx < p.x0 + p.len - 4; cx += 11) {
+      decorBack.push([cx, p.row - 1, info.decorBack[r.int(0, info.decorBack.length - 1)]!]);
+    }
+  }
+  // 入口平地保留固定前景細節，避免部分種子完全沒有前景層。
+  decorFront.push([9, surface(9) - 1, info.decorFront[0]!]);
 
   return {
     roomId,

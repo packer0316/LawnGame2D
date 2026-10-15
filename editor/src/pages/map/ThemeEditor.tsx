@@ -7,6 +7,7 @@ import { useStudio } from '../../state/studio';
 import { registerValidator, zodIssues } from '../../state/validation';
 import { Checkbox, ColorInput, Empty, Field, NumberInput, Section, Select, TextInput } from '../../ui/controls';
 import { loadExistingMaps, mapIdsInDocs, mapPath } from './mapStore';
+import landmarks from '../../../../game/assets/landmarks/catalog.json';
 
 const PATH = contentPaths.themes;
 
@@ -107,7 +108,10 @@ export function ThemeEditor() {
         {themes.map((t, i) => (
           <div key={i} className={`tree-item ${i === selected ? 'selected' : ''}`} onClick={() => setSelected(i)}>
             <span className="mono">{t.id}</span>
-            <span className="meta">{t.backgrounds.length} 層背景</span>
+            <span className="meta">{(() => {
+              const scene = landmarks.scenes.find(s => s.themeId === t.id);
+              return scene ? `${scene.category} · ${scene.name}` : `${({theme_0001:'晨光森林',theme_0002:'螢苔洞窟',theme_0003:'月影遺跡'} as Record<string,string>)[t.id] ?? '自訂主題'} · ${t.backgrounds.length} 層背景`;
+            })()}</span>
           </div>
         ))}
         {theme && <ThemeForm theme={theme} update={update} onDelete={() => {

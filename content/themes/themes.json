@@ -63,6 +63,132 @@
           "y": 0
         }
       ]
+    },
+    {
+      "id": "theme_0004",
+      "ambient": {
+        "color": "#eef3ff",
+        "intensity": 0.88
+      },
+      "tileset": {
+        "image": "tilesets/tw_jiufen.png",
+        "normal": "tilesets/tw_jiufen_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/tw_jiufen_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0005",
+      "ambient": {
+        "color": "#fff8e9",
+        "intensity": 1
+      },
+      "tileset": {
+        "image": "tilesets/tw_alishan.png",
+        "normal": "tilesets/tw_alishan_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/tw_alishan_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0006",
+      "ambient": {
+        "color": "#fff5fc",
+        "intensity": 1
+      },
+      "tileset": {
+        "image": "tilesets/jp_fuji.png",
+        "normal": "tilesets/jp_fuji_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/jp_fuji_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0007",
+      "ambient": {
+        "color": "#f3f4e8",
+        "intensity": 0.9
+      },
+      "tileset": {
+        "image": "tilesets/jp_kyoto.png",
+        "normal": "tilesets/jp_kyoto_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/jp_kyoto_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0008",
+      "ambient": {
+        "color": "#ffffff",
+        "intensity": 1
+      },
+      "tileset": {
+        "image": "tilesets/gr_santorini.png",
+        "normal": "tilesets/gr_santorini_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/gr_santorini_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0009",
+      "ambient": {
+        "color": "#fff1d8",
+        "intensity": 1
+      },
+      "tileset": {
+        "image": "tilesets/eg_giza.png",
+        "normal": "tilesets/eg_giza_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/eg_giza_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
     }
   ]
 }

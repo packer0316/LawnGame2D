@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { buildLdtkProject } from '../../tools/fixtures/src/ldtkBuilder';
 import { generateRoom } from '../../tools/fixtures/src/rooms';
 import { convertLdtkProject } from '../ldtk/convert';
-import { defaultRoom, mapLineup, parseBetLevels, validateRooms } from './rooms';
+import { defaultBetRange, defaultRoom, mapLineup, parseBetLevels, validateRooms } from './rooms';
 
 const maps = convertLdtkProject(
   buildLdtkProject(Array.from({ length: 20 }, (_, i) => generateRoom(i + 1)), [
@@ -42,6 +42,13 @@ describe('房間表', () => {
     const errors = validateRooms(file, { maps: mapById, monsters: new Set<string>() }).filter((i) => i.severity === 'error').map((i) => i.message);
     expect(errors).toContain('房間 1 的地圖 map_0099 不存在');
     expect(errors).toContain('房間 1 的怪潮怪物 mob_0777 不存在');
+  });
+
+  it('預設押注範圍：每房都用押注等級表的全部級距', () => {
+    const bets = [1, 5, 10, 20, 30, 40, 50, 100, 150, 200, 250, 300, 400, 500, 1000, 1500, 2000, 3000, 4000, 5000, 10000];
+    expect(defaultBetRange(bets)).toEqual([1, 10000]);
+    expect(defaultBetRange()).toEqual([1, 10000]);
+    expect(defaultRoom(20, maps[19], { bets }).betRange).toEqual([1, 10000]);
   });
 
   it('押注等級表：不在表中是警告', () => {

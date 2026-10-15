@@ -9,11 +9,12 @@
  * - 不會動 content/class/（遊戲端手寫）。
  * - 測試美術中的 maps／rooms／manifest 不複製：地圖由 LDtk 轉換、房間表由地圖產生、manifest 重建。
  * - --only avatar：只更新 content/avatar/（遊戲端改了角色或武器的測試美術時用）。
+ * - --only nav：只用目前的遊戲物理重算 content/maps 的導航圖（PHYSICS_VERSION 改變時用），保留手動修改。
  * - 先在記憶體中轉換並驗證，有錯誤就不寫入。
  */
 import { validateBase, validateItem } from '../../../src/avatar/validate';
-import { AvatarItemFile, BetLevelFileVersioned, MonsterDefFile, MonsterMathFileVersioned, RoomFileVersioned, ThemeFileVersioned, buildNavGraph, contentPaths, parseAsepriteSheet } from '@lawn/shared';
-import type { MapDef, RoomFile } from '@lawn/shared';
+import { AvatarItemFile, BetLevelFileVersioned, MapDefFile, MonsterDefFile, MonsterMathFileVersioned, RoomFileVersioned, ThemeFileVersioned, buildNavGraph, contentPaths, parseAsepriteSheet } from '@lawn/shared';
+import type { MapDef, RoomFile, ThemeFile } from '@lawn/shared';
 import { buildManifest } from '../../../src/content/manifest';
 import { dirname, joinPath, readJson, writeJson } from '../../../src/fs/projectFs';
 import type { ProjectFs } from '../../../src/fs/projectFs';
@@ -56,6 +57,38 @@ async function main() {
   const issues: Issue[] = [];
   const log = (s: string) => console.log(s);
 
+  // --only nav：遊戲端改了物理（PHYSICS_VERSION）後，只用新物理重算 content/maps 的導航圖，地圖其他部分不動
+  if (only === 'nav') {
+    const ids = (await fs.list('content/maps')).map((e) => /^(map_\d{4})\.json$/.exec(e.name)?.[1]).filter((x): x is string => !!x);
+    const maps: MapDef[] = [];
+    let changed = 0;
+    for (const id of ids) {
+      const map = MapDefFile.migrate(await readJson(fs, `content/${contentPaths.map(id)}`));
+      const edits = await readJson<NavEdits>(fs, `content/${navEditsPath(id)}`).catch(() => undefined);
+      const nav = applyNavEdits(map, buildNavGraph(map), edits).nav;
+      const before = JSON.stringify(map.nav);
+      map.nav = nav;
+      if (JSON.stringify(nav) !== before) {
+        changed++;
+        log(`  ${id}：導航圖有變動（${nav.edges.length} 條邊）`);
+      }
+      maps.push(map);
+    }
+    const navIssues = validateMaps(maps);
+    for (const i of navIssues) log(`${i.severity === 'error' ? '✖ 錯誤' : '⚠ 警告'}  ${i.message}`);
+    const navErrors = navIssues.filter((i) => i.severity === 'error').length;
+    log(`\n${maps.length} 張地圖，${changed} 張導航圖有變動；驗證 ${navErrors} 個錯誤、${navIssues.length - navErrors} 個警告`);
+    if (navErrors > 0 && !hasFlag('force')) {
+      log('有錯誤，沒有寫入（加 --force 可強制寫入）');
+      process.exitCode = 1;
+      return;
+    }
+    if (dryRun) return log('--dry-run：沒有寫入');
+    for (const map of maps) await writeJson(fs, `content/${contentPaths.map(map.id)}`, map);
+    log('已寫入 content/maps/');
+    return;
+  }
+
   if (!(await fs.exists(`${artFrom}/manifest.json`)) && (await fs.list(artFrom)).length === 0) {
     throw new Error(`找不到測試美術 ${artFrom}（請先在 game/ 執行 npm run art）`);
   }
@@ -65,6 +98,24 @@ async function main() {
   const copies: string[] = [];
   for (const d of dirs) copies.push(...(await listFiles(fs, `${artFrom}/${d}`)).map((p) => p.slice(artFrom.length + 1)));
   log(`測試美術：${artFrom}，${copies.length} 個檔案（${dirs.join('、')}）`);
+
+  // themes.json 是編輯器主題頁編輯的資料：content/ 已經有的話以它為主（可能有手動修改或新主題），
+  // 只補上測試美術中有、content/ 沒有的主題，不整份覆蓋。
+  let mergedThemes: ThemeFile | null = null;
+  if (only !== 'avatar') {
+    const fromArt = ThemeFileVersioned.migrate(await readJson(fs, `${artFrom}/${contentPaths.themes}`));
+    const current = await readJson(fs, `content/${contentPaths.themes}`)
+      .then((raw) => ThemeFileVersioned.migrate(raw))
+      .catch(() => null);
+    mergedThemes = current
+      ? { ...current, themes: [...current.themes, ...fromArt.themes.filter((t) => !current.themes.some((c) => c.id === t.id))] }
+      : fromArt;
+    const kept = current ? current.themes.length : 0;
+    log(`主題：content/ 現有 ${kept} 個，從測試美術補上 ${mergedThemes.themes.length - kept} 個`);
+    // 不直接複製 themes.json，改在寫入階段寫合併後的版本
+    const i = copies.indexOf(contentPaths.themes);
+    if (i >= 0) copies.splice(i, 1);
+  }
 
   // ── 2. 地圖與房間（--only avatar 時略過） ──
   let maps: MapDef[] = [];
@@ -82,8 +133,8 @@ async function main() {
     maps = result.maps;
     issues.push(...validateMaps(maps).map((i) => ({ severity: i.severity, message: i.message })));
 
-    // 主題要存在
-    const themes = ThemeFileVersioned.migrate(await readJson(fs, `${artFrom}/${contentPaths.themes}`));
+    // 主題要存在（用合併後的 themes.json：content/ 現有的為主，補上測試美術中缺少的）
+    const themes = mergedThemes!;
     const themeIds = new Set(themes.themes.map((t) => t.id));
     for (const m of maps) if (!themeIds.has(m.theme)) issues.push({ severity: 'error', message: `${m.id}：主題 ${m.theme} 不在 themes.json` });
 
@@ -155,6 +206,7 @@ async function main() {
   if (only !== 'avatar') {
     for (const map of maps) await writeJson(fs, `content/${contentPaths.map(map.id)}`, map);
     if (rooms) await writeJson(fs, `content/${contentPaths.rooms}`, rooms);
+    if (mergedThemes) await writeJson(fs, `content/${contentPaths.themes}`, mergedThemes);
   }
   await writeJson(fs, `content/${contentPaths.manifest}`, await buildManifest(fs));
   log(`已寫入 content/：美術 ${copies.length} 個檔案${only === 'avatar' ? '' : `、地圖 ${maps.length} 張、房間 ${rooms?.rooms.length ?? 0} 間`}，並重建 manifest.json`);

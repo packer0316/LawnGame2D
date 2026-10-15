@@ -14,6 +14,7 @@ import type { TilesetSpec } from './ldtkBuilder';
 import { encodePng } from './png';
 import { generateRoom } from './rooms';
 import { PALETTES, TILESET_COLS, TILESET_ROWS, paintTileset } from './tilesets';
+import landmarks from '../../../../game/assets/landmarks/catalog.json';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const arg = (name: string) => {
@@ -35,7 +36,7 @@ function pngSize(path: string): { w: number; h: number } {
 let tilesets: TilesetSpec[];
 if (profileName === 'verdant') {
   const from = resolve(arg('tilesets-from') ?? join(here, '../../../../game/dev-content/tilesets'));
-  tilesets = Object.keys(PALETTES).map((identifier) => {
+  tilesets = [...Object.keys(PALETTES), ...landmarks.scenes.map(s => s.id)].map((identifier) => {
     const src = join(from, `${identifier}.png`);
     if (!existsSync(src)) throw new Error(`找不到 ${src}（請先在 game/ 執行 npm run art 產生測試美術）`);
     const relPath = `tilesets/${identifier}.png`;
@@ -53,7 +54,7 @@ if (profileName === 'verdant') {
   });
 }
 
-const rooms = Array.from({ length: 20 }, (_, i) => generateRoom(i + 1));
+const rooms = Array.from({ length: 20 }, (_, i) => generateRoom(i + 1, profileName === 'verdant'));
 const project = buildLdtkProject(rooms, tilesets, profile);
 writeFileSync(join(ldtkDir, 'world.ldtk'), JSON.stringify(project, null, '\t'));
 

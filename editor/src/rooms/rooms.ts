@@ -13,13 +13,12 @@ export function mapLineup(map: MapDef): string[] {
   return [...weight].sort((a, b) => b[1] - a[1]).map(([id]) => id);
 }
 
-/** 預設押注範圍：房號越大上限越高；有押注等級表時從表中挑。 */
-export function defaultBetRange(roomId: number, bets?: number[]): [number, number] {
-  if (bets?.length) {
-    const hi = Math.min(bets.length - 1, Math.ceil(((bets.length - 1) * roomId) / ROOM_COUNT));
-    return [bets[0]!, bets[Math.max(0, hi)]!];
-  }
-  return [1, Math.min(100, 10 * Math.ceil(roomId / 2))];
+/** 沒有押注等級表時的預設範圍。 */
+export const DEFAULT_BET_RANGE: [number, number] = [1, 10000];
+
+/** 預設押注範圍：每房都能用押注等級表的全部級距（使用者決定）。 */
+export function defaultBetRange(bets?: number[]): [number, number] {
+  return bets?.length ? [bets[0]!, bets[bets.length - 1]!] : [...DEFAULT_BET_RANGE];
 }
 
 export interface RoomDefaults {
@@ -36,7 +35,7 @@ export function defaultRoom(roomId: number, map: MapDef | undefined, { bets, tie
     id: roomId,
     mapId: roomMapId(roomId),
     name: map?.name ?? `房間 ${roomId}`,
-    betRange: defaultBetRange(roomId, bets),
+    betRange: defaultBetRange(bets),
     ...(lineup.length ? { lineup } : {}),
   };
   if (map?.boss) room.boss = { mobId: map.boss.mobId, intervalSec: map.boss.intervalSec };
