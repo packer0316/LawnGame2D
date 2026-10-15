@@ -1,0 +1,6 @@
+{
+  "tool": "built-in image_gen",
+  "target": "hero-motion-assassin.png",
+  "output": "hero-motion-assassin-v2.png",
+  "prompt": "Use case: precise-object-edit. Edit this EXACT 4x4 transparent animation sprite sheet, preserve all other pixels/layout/identity/style/size. ONLY repair row 2 column 1 (fifth sprite): it currently has THREE gloved hands/arms. Remove the extra gloved hand crossing at the chest and its extra blade. Character must have EXACTLY TWO arms and TWO daggers: one visible near arm extending diagonally down-left with dagger, one far arm trailing back-right with dagger. Preserve torso, pose, cape, face, legs and the remaining 15 sprites unchanged. True transparent background, retain character fully opaque colored interiors. No text or grid. Output same square dimensions."
+}

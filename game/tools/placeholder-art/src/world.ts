@@ -76,7 +76,8 @@ function footholdsOf(grid: Grid): Foothold[] {
     for (let x = 0; x < grid.w; x += 1) {
       const cell = grid.get(x, y);
       const above = grid.get(x, y - 1);
-      if (cell === '#' && !isGround(above)) segs.push({ a: [x * T, y * T], b: [(x + 1) * T, y * T], oneWay: false });
+      // 地圖上緣以外視為實心：最上排實地的頂邊不是可站立的地面
+      if (cell === '#' && above !== null && !isGround(above)) segs.push({ a: [x * T, y * T], b: [(x + 1) * T, y * T], oneWay: false });
       if (cell === '=') segs.push({ a: [x * T, y * T], b: [(x + 1) * T, y * T], oneWay: true });
       if (cell === '/') segs.push({ a: [x * T, (y + 1) * T], b: [(x + 1) * T, y * T], oneWay: false });
       if (cell === '\\') segs.push({ a: [x * T, y * T], b: [(x + 1) * T, (y + 1) * T], oneWay: false });
@@ -429,7 +430,8 @@ function forestPlan(): MapPlan {
   g.fill(95, 18, 115, 18, '=').column(105, 19, 33, 'H');
   g.fill(120, 24, 135, 24, '=');
   g.fill(100, 28, 103, 33, '#');
-  g.fill(76, 13, 82, 14, '#');
+  // 浮空方塊：從中層平台右端跳得上去，下方可以測試撞頭
+  g.fill(93, 21, 98, 22, '#');
   return {
     id: 'map_0001',
     name: '晨霧之森',
@@ -471,8 +473,9 @@ function cavePlan(): MapPlan {
   g.fill(8, 30, 22, 30, '=').column(15, 31, 37, '|');
   g.fill(58, 26, 80, 26, '=').column(70, 27, 37, 'H');
   g.fill(86, 20, 104, 20, '=').column(95, 21, 37, '|');
-  g.fill(40, 16, 56, 16, '=');
-  g.fill(60, 10, 70, 12, '#');
+  // 高處平台由山丘上的繩子接上去，浮空岩塊從平台右端跳得上去
+  g.fill(40, 16, 56, 16, '=').column(48, 17, 33, '|');
+  g.fill(60, 13, 70, 14, '#');
   return {
     id: 'map_0002',
     name: '星螢秘窟',

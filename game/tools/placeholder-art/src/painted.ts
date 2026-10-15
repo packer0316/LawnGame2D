@@ -64,8 +64,8 @@ function stampPainting(target: Canvas, source: Canvas, ox: number, oy: number, w
 
 let heroes: Canvas[] | undefined;
 
-/** 完整造型仍透過既有 overall 部件載入，武器依職業獨立疊圖，不更動紙娃娃介面。 */
-export function paintHero(target: Canvas, action: string, i: number): void {
+/** 原畫中 16 個關鍵姿勢的切圖（已裁掉透明邊）。 */
+export function heroPoses(): Canvas[] {
   if (!heroes) {
     const atlas = readPainting('hero');
     const rows = [0, 310, 615, 913, atlas.height];
@@ -78,16 +78,65 @@ export function paintHero(target: Canvas, action: string, i: number): void {
       return box ? cell.crop(box.x, box.y, box.w, box.h) : cell;
     });
   }
-  const sequences: Record<string, number[]> = {
-    stand: [0, 0, 0, 0, 0, 0], run: [1, 1, 2, 2, 3, 3, 2, 2],
-    jump: [4, 4], fall: [5, 5], land: [6, 0], roll: [6, 7, 7, 7, 6, 0], prone: [7],
-    ladder: [14, 14, 15, 15], rope: [14, 14, 15, 15],
-    swing1: [0, 8, 9, 10, 0], swing2: [10, 8, 9, 10, 0], swing3: [8, 8, 9, 10, 0],
-    cast: [0, 11, 11, 11, 11, 0], shoot: [0, 12, 12, 12, 12, 0], throw: [0, 13, 13, 13, 0],
-  };
-  const source = heroes[sequences[action]?.[i] ?? 0]!;
-  const scale = 62 / heroes[0]!.height;
-  const w = Math.round(source.width * scale), h = Math.round(source.height * scale);
+  return heroes;
+}
+
+/**
+ * 每張關鍵姿勢的前手握點（相對切圖的比例 0–1），武器的 hand 錨點用它。
+ * 用 scripts/hero-poses.ts 產生對照圖檢查；null = 這張姿勢不拿武器（爬繩梯）。
+ */
+export const HERO_HANDS: ({ x: number; y: number } | null)[] = [
+  { x: 0.14, y: 0.7 }, // 0 待機：前手垂下
+  { x: 0.11, y: 0.56 }, // 1 跑步：前拳
+  { x: 0.17, y: 0.58 }, // 2 跑步
+  { x: 0.18, y: 0.54 }, // 3 跑步
+  { x: 0.22, y: 0.54 }, // 4 起跳
+  { x: 0.09, y: 0.54 }, // 5 下落：手往前伸
+  { x: 0.39, y: 0.93 }, // 6 落地：手撐地
+  { x: 0.38, y: 0.73 }, // 7 翻滾
+  { x: 0.5, y: 0.07 }, // 8 揮砍預備：手舉過頭
+  { x: 0.07, y: 0.46 }, // 9 揮砍：手臂往前伸直
+  { x: 0.15, y: 0.71 }, // 10 揮砍收招：手在前下方
+  { x: 0.09, y: 0.46 }, // 11 施法：手往前伸
+  { x: 0.08, y: 0.46 }, // 12 射箭：前手
+  { x: 0.07, y: 0.43 }, // 13 投擲：前手
+  null, // 14 爬梯（背面，收起武器）
+  null, // 15 爬梯
+];
+
+/** 每個動作每一幀用哪一張關鍵姿勢。 */
+const HERO_SEQUENCES: Record<string, number[]> = {
+  stand: [0, 0, 0, 0, 0, 0],
+  run: [1, 1, 2, 2, 3, 3, 2, 2],
+  jump: [4, 4],
+  fall: [5, 5],
+  land: [6, 0],
+  roll: [6, 7, 7, 7, 6, 0],
+  prone: [7],
+  ladder: [14, 14, 15, 15],
+  rope: [14, 14, 15, 15],
+  swing1: [0, 8, 9, 10, 0],
+  swing2: [10, 8, 9, 10, 0],
+  swing3: [8, 8, 9, 10, 0],
+  cast: [0, 11, 11, 11, 11, 0],
+  shoot: [0, 12, 12, 12, 12, 0],
+  throw: [0, 13, 13, 13, 0],
+};
+
+/** 某動作第 i 幀的關鍵姿勢，以及它蓋在 128×128 範本畫布上的位置（腳底在 (64, 120)）。 */
+export function heroPlacement(action: string, i: number): { pose: number; x: number; y: number; w: number; h: number } {
+  const poses = heroPoses();
+  const pose = HERO_SEQUENCES[action]?.[i] ?? 0;
+  const source = poses[pose]!;
+  const scale = 62 / poses[0]!.height;
+  const w = Math.round(source.width * scale);
+  const h = Math.round(source.height * scale);
   const bob = action === 'stand' && i > 1 && i < 5 ? 1 : 0;
-  stampPainting(target, source, Math.round(64 - w * 0.42), 120 - h + bob, w, h);
+  return { pose, x: Math.round(64 - w * 0.42), y: 120 - h + bob, w, h };
+}
+
+/** 完整人物原畫：四職業共用，武器依職業獨立疊圖。 */
+export function paintHero(target: Canvas, action: string, i: number): void {
+  const place = heroPlacement(action, i);
+  stampPainting(target, heroPoses()[place.pose]!, place.x, place.y, place.w, place.h);
 }

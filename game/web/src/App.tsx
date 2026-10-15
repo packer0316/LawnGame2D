@@ -45,6 +45,21 @@ export function App() {
     };
   }, []);
 
+  // 遊戲畫面畫在 HUD 底欄上方：量底欄的頂端位置，告訴遊戲保留多少高度
+  useEffect(() => {
+    const update = () => {
+      const bar = document.querySelector('.hud-bottom');
+      const top = bar ? bar.getBoundingClientRect().top : window.innerHeight;
+      handleRef.current?.setViewInsets({ bottom: Math.max(0, window.innerHeight - top + 6) });
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(document.body);
+    const bar = document.querySelector('.hud-bottom');
+    if (bar) observer.observe(bar);
+    update();
+    return () => observer.disconnect();
+  }, [hud?.loading]);
+
   const command = (cmd: GameCommand) => handleRef.current?.command(cmd);
 
   return (

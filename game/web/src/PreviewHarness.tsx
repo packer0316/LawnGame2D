@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { createMapPreview, createMonsterPreview, httpContentSource } from '@lawn/engine';
-import { MapDefFile, MonsterDefFile, contentPaths } from '@lawn/shared';
+import { createAvatarPreview, createMapPreview, createMonsterPreview, httpContentSource } from '@lawn/engine';
+import { MapDefFile, MonsterDefFile, contentPaths, type AvatarTag, type ClassId } from '@lawn/shared';
 
 /**
  * 預覽元件的測試頁（給編輯器用的元件在遊戲端先自我驗證）。
  * ?preview=monster&id=mob_0004&action=kill|hit|die|move&patrol=1
  * ?preview=map&id=map_0002&lights=0&nav=1&colliders=1&x=900&y=500
  */
-export function PreviewHarness({ kind }: { kind: 'monster' | 'map' }) {
+export function PreviewHarness({ kind }: { kind: 'monster' | 'map' | 'avatar' }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -19,6 +19,17 @@ export function PreviewHarness({ kind }: { kind: 'monster' | 'map' }) {
     (async () => {
       if (!ref.current) return;
       const race = params.get('race') === '1';
+      if (kind === 'avatar') {
+        const handle = createAvatarPreview(ref.current, {
+          content,
+          classId: (params.get('class') ?? 'warrior') as ClassId,
+          tag: (params.get('tag') ?? 'stand') as AvatarTag,
+          ...(params.get('frame') ? { frame: Number(params.get('frame')) } : {}),
+          showAnchors: params.get('anchors') === '1',
+        });
+        destroy = handle.destroy;
+        return;
+      }
       if (kind === 'monster') {
         const monster = MonsterDefFile.migrate(await content.json(contentPaths.monster(params.get('id') ?? 'mob_0001')));
         if (disposed) return;

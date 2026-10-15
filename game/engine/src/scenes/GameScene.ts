@@ -2,14 +2,17 @@ import * as Phaser from 'phaser';
 import {
   FootholdWorld,
   PHYSICS,
+  buildNavGraph,
   type Area,
   type AvatarLoadout,
   type ClassId,
   type MapDef,
+  type NavGraph,
   type Rect,
   type SkillDef,
 } from '@lawn/shared';
-import { Player } from '../actor/Player';
+import { Player, type PlayerInput } from '../actor/Player';
+import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
 import type { ContentBundle } from '../content/bundle';
 import { InputState } from '../core/input';
@@ -24,6 +27,9 @@ import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server
 export const INTERNAL_HEIGHT = 540;
 const STEP_MS = PHYSICS.dt * 1000;
 const BIG_WIN = { big: 50, mega: 100, super: 300 } as const;
+/** 手動介入後多久恢復掛機（SPEC §3.6） */
+const AUTO_RESUME_MS = 3000;
+const AUTO_CONFIG_KEY = 'lawn.autoConfig';
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
@@ -40,6 +46,8 @@ export interface GameSceneOptions {
 
 interface Projectile {
   sprite: Phaser.GameObjects.Sprite;
+  /** 上一步的位置：判定用「掃過的區段」，貼身的怪也打得到、高速也不會穿過去 */
+  lastX: number;
   x: number;
   y: number;
   dir: 1 | -1;
@@ -48,14 +56,6 @@ interface Projectile {
   skill: SkillDef;
   strike: number;
 }
-
-const DEFAULT_LOADOUT: Omit<AvatarLoadout, 'items'> & { items: string[] } = {
-  items: ['face_0001', 'hair_0001', 'top_0001', 'bottom_0001', 'shoes_0001', 'gloves_0001', 'cape_0001'],
-  skin: 'palette_0001',
-  hair: 'palette_0010',
-  eye: 'palette_0020',
-  dyes: { top_0001: 'palette_0032', bottom_0001: 'palette_0035', cape_0001: 'palette_0032', gloves_0001: 'palette_0035' },
-};
 
 export class GameScene extends Phaser.Scene {
   private opts!: GameSceneOptions;
@@ -92,8 +92,16 @@ export class GameScene extends Phaser.Scene {
   private unsubscribes: (() => void)[] = [];
   private readonly damageStacks = new Map<number, { count: number; at: number }>();
   private playerLight: Phaser.GameObjects.Light | null = null;
+  /** HUD 底欄佔用的高度（裝置像素），遊戲畫面畫在它上方 */
+  private insetBottom = 0;
   /** 場景已銷毀：非同步載入回來後一律忽略 */
   private dead = false;
+  private nav: NavGraph = { nodes: [], edges: [] };
+  private readonly auto = new AutoHunt();
+  private autoOn = false;
+  /** 手動介入：這個時間（performance.now）之前不掛機 */
+  private autoPausedUntil = 0;
+  private autoSession = { startBalance: 0, startedAt: 0 };
 
   constructor() {
     super('game');
@@ -104,10 +112,12 @@ export class GameScene extends Phaser.Scene {
     this.bundle = options.bundle;
     this.classId = options.classId ?? 'warrior';
     this.colliders = options.showColliders ?? false;
+    this.auto.config = loadAutoConfig();
   }
 
   create(): void {
     this.keys = new InputState(window);
+    this.keys.onManualInput = () => this.pauseAutoForManual();
     this.fx = new FxLayer(this, this.bundle);
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
@@ -180,6 +190,9 @@ export class GameScene extends Phaser.Scene {
     this.fx.destroy();
 
     this.world = new FootholdWorld(map);
+    // 編輯器預覽的地圖可能還沒產生導航圖：現場算一份
+    this.nav = map.nav.edges.length > 0 ? map.nav : buildNavGraph(map);
+    this.auto.reset();
     this.mapView = new MapView(this, map, theme);
     this.mapView.build({ lighting: this.opts.lighting ?? true });
     this.mapView.setDebug(this.colliders);
@@ -233,8 +246,23 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 遊戲畫面只畫在 HUD 底欄上方（像楓之谷的狀態列在畫面外），
+   * 縮放讓內部 540 像素高剛好填滿這塊區域。
+   */
   private applyZoom(): void {
-    this.cameras.main.setZoom(this.scale.height / INTERNAL_HEIGHT);
+    const height = Math.max(120, this.scale.height - this.insetBottom);
+    const camera = this.cameras.main;
+    camera.setViewport(0, 0, this.scale.width, height);
+    camera.setZoom(height / INTERNAL_HEIGHT);
+  }
+
+  /** HUD 佔用的底部高度（裝置像素）。 */
+  setViewInsets(bottom: number): void {
+    const next = Math.max(0, Math.round(bottom));
+    if (next === this.insetBottom) return;
+    this.insetBottom = next;
+    if (this.cameras?.main) this.applyZoom();
   }
 
   private spawnMonster(spawn: MonsterSpawn): void {
@@ -300,13 +328,14 @@ export class GameScene extends Phaser.Scene {
     this.hudElapsed += frameMs;
     if (this.hudElapsed >= 100) {
       this.hudElapsed = 0;
+      this.checkAutoStop();
       this.emitHud({});
     }
   }
 
   private fixedStep(): void {
     const k = this.keys;
-    this.player.step(this.world, {
+    const manual: PlayerInput = {
       x: k.axisX(),
       up: k.isHeld('up'),
       down: k.isHeld('down'),
@@ -316,10 +345,63 @@ export class GameScene extends Phaser.Scene {
       skill1: k.consume('skill1'),
       skill2: k.consume('skill2'),
       roll: k.consume('roll'),
-    });
+    };
+    // 按住任何移動或攻擊鍵：掛機持續暫停，放開 3 秒後恢復
+    if (manual.x !== 0 || manual.up || manual.down || manual.jumpHeld || manual.attack) this.pauseAutoForManual();
+    const driving = this.autoDriving;
+    const input = driving ? this.stepAuto() : manual;
+    this.player.step(this.world, input);
     for (const monster of this.monsters.values()) monster.step();
     this.stepProjectiles();
-    this.checkPortals();
+    // 掛機只有在「前往傳送點」時才會用 ↑ 換房，爬繩時按 ↑ 不會誤觸旁邊的傳送點
+    this.checkPortals(driving ? input.up && this.auto.status === 'portal' : manual.up);
+  }
+
+  private get autoDriving(): boolean {
+    return this.autoOn && performance.now() >= this.autoPausedUntil;
+  }
+
+  private stepAuto(): PlayerInput {
+    const classDef = this.bundle.classes.get(this.classId)!;
+    return this.auto.step({
+      world: this.world,
+      nav: this.nav,
+      map: this.mapView!.map,
+      player: this.player,
+      monsters: this.monsters.values(),
+      basic: this.bundle.skills.get(classDef.basic)!,
+      skills: classDef.skills.map((id) => this.bundle.skills.get(id)),
+    });
+  }
+
+  private pauseAutoForManual(): void {
+    if (this.autoOn) this.autoPausedUntil = performance.now() + AUTO_RESUME_MS;
+  }
+
+  private setAuto(on: boolean, reason?: string): void {
+    if (on === this.autoOn) return;
+    this.autoOn = on;
+    this.autoPausedUntil = 0;
+    this.auto.reset();
+    if (on) {
+      this.autoSession = { startBalance: this.displayBalance, startedAt: performance.now() };
+      this.showToast('自動冒險開始');
+    } else {
+      this.showToast(reason ? `自動冒險停止：${reason}` : '自動冒險停止');
+    }
+  }
+
+  /** 停止條件（SPEC §3.6）；單次派彩倍數在 onPayout 檢查。 */
+  private checkAutoStop(): void {
+    if (!this.autoOn) return;
+    const stop = this.auto.config.stop;
+    const balance = this.displayBalance;
+    const net = balance - this.autoSession.startBalance;
+    if (balance < this.bet) this.setAuto(false, '餘額不足');
+    else if (stop.balanceBelow !== null && balance < stop.balanceBelow) this.setAuto(false, `餘額低於 ${stop.balanceBelow.toLocaleString()}`);
+    else if (stop.lossAtLeast !== null && -net >= stop.lossAtLeast) this.setAuto(false, `累計輸 ${(-net).toLocaleString()}`);
+    else if (stop.winAtLeast !== null && net >= stop.winAtLeast) this.setAuto(false, `累計贏 ${net.toLocaleString()}`);
+    else if (stop.minutes !== null && performance.now() - this.autoSession.startedAt >= stop.minutes * 60_000) this.setAuto(false, '時間到');
   }
 
   private handleCommandsFromKeys(): void {
@@ -334,6 +416,7 @@ export class GameScene extends Phaser.Scene {
     });
     if (k.consume('roomNext')) this.command({ type: 'changeRoom', roomId: this.neighborRoom(1) });
     if (k.consume('roomPrev')) this.command({ type: 'changeRoom', roomId: this.neighborRoom(-1) });
+    if (k.consume('auto')) this.command({ type: 'toggleAuto' });
   }
 
   /** HUD 與快捷鍵的操作。 */
@@ -361,7 +444,11 @@ export class GameScene extends Phaser.Scene {
         this.mapView?.setDebug(this.colliders);
         break;
       case 'toggleAuto':
-        this.showToast('自動冒險尚未開放');
+        if (this.ready) this.setAuto(!this.autoOn);
+        break;
+      case 'setAutoConfig':
+        this.auto.config = structuredClone(cmd.config);
+        saveAutoConfig(this.auto.config);
         break;
     }
     this.emitHud({});
@@ -381,9 +468,9 @@ export class GameScene extends Phaser.Scene {
     return ids[(index + delta + ids.length) % ids.length] ?? this.roomId;
   }
 
-  private checkPortals(): void {
+  private checkPortals(up: boolean): void {
     const map = this.mapView?.map;
-    if (!map || !this.keys.isHeld('up') || this.player.body.climb !== null) return;
+    if (!map || !up || this.player.body.climb !== null) return;
     const body = this.player.body;
     for (const portal of map.portals) {
       if (portal.type === 'spawn') continue;
@@ -403,14 +490,15 @@ export class GameScene extends Phaser.Scene {
     if (!classDef || classId === this.classId) return;
     this.classId = classId;
     this.player.setClass(classDef);
+    this.auto.reset();
     this.applyLoadout();
     this.showToast(`切換職業：${classDef.name}`);
   }
 
+  /** 人物固定，只換成這個職業的武器（SPEC v0.6 §4.3）。 */
   private applyLoadout(): void {
     const classDef = this.bundle.classes.get(this.classId)!;
-    const outfit = this.bundle.items.has('overall_0001') ? ['overall_0001'] : [];
-    this.avatar.setLoadout({ ...DEFAULT_LOADOUT, items: [...DEFAULT_LOADOUT.items, ...outfit, classDef.weapon] });
+    this.avatar.setLoadout({ weapon: classDef.weapon });
   }
 
   private poseDuration(tag: string): number {
@@ -499,7 +587,7 @@ export class GameScene extends Phaser.Scene {
       if (!asset) return;
       const sprite = this.add.sprite(body.x + dir * 14, body.y - 26, asset.path, '0').setDepth(DEPTH.fx).setFlipX(dir === 1);
       sprite.setTint(tint);
-      this.projectiles.push({ sprite, x: body.x + dir * 14, y: body.y - 26, dir, speed: skill.projectile.speed, remaining: strike.area.w ?? 300, skill, strike: index });
+      this.projectiles.push({ sprite, lastX: body.x, x: body.x + dir * 14, y: body.y - 26, dir, speed: skill.projectile.speed, remaining: strike.area.w ?? 300, skill, strike: index });
       return;
     }
     const targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
@@ -512,10 +600,19 @@ export class GameScene extends Phaser.Scene {
       const move = p.speed * dt;
       p.x += p.dir * move;
       p.remaining -= move;
-      const hit = [...this.monsters.values()].find((m) => m.alive && containsPoint(m.hitbox(), p.x, p.y, 4));
+      const x1 = Math.min(p.lastX, p.x);
+      const x2 = Math.max(p.lastX, p.x);
+      // 掃過的區段內最靠近起點的那隻
+      let hit: MonsterActor | undefined;
+      for (const m of this.monsters.values()) {
+        if (!m.alive || !sweepHits(m.hitbox(), x1, x2, p.y, 4)) continue;
+        if (!hit || Math.abs(m.center().x - p.lastX) < Math.abs(hit.center().x - p.lastX)) hit = m;
+      }
+      p.lastX = p.x;
       if (hit) {
         this.applyHits(p.skill, p.strike, [hit]);
-        this.fx.spawn('hit_spark', p.x, p.y, { additive: true });
+        const box = hit.hitbox();
+        this.fx.spawn('hit_spark', Phaser.Math.Clamp(p.x, box.x, box.x + box.w), p.y, { additive: true });
       }
       if (hit || p.remaining <= 0) {
         p.sprite.destroy();
@@ -565,7 +662,8 @@ export class GameScene extends Phaser.Scene {
     if (targets.length === 0) return;
     const bet = this.bet;
     if (this.displayBalance < bet) {
-      this.showToast('餘額不足，請降低押注');
+      if (this.autoOn) this.setAuto(false, '餘額不足');
+      else this.showToast('餘額不足，請降低押注');
       return;
     }
     const classDef = this.bundle.classes.get(this.classId)!;
@@ -635,6 +733,9 @@ export class GameScene extends Phaser.Scene {
       .setResolution(3);
     this.tweens.add({ targets: text, y: text.y - 26, alpha: { from: 1, to: 0 }, delay: 500, duration: 600, onComplete: () => text.destroy() });
 
+    const stopMultiple = this.auto.config.stop.payoutMultipleAtLeast;
+    if (this.autoOn && stopMultiple !== null && multiplier >= stopMultiple) this.setAuto(false, `單次派彩 ×${multiplier}`);
+
     if (multiplier >= BIG_WIN.big) {
       this.hitStopMs = Math.max(this.hitStopMs, 100);
       this.slowMoMs = 300;
@@ -672,7 +773,14 @@ export class GameScene extends Phaser.Scene {
       classId: this.classId,
       classes: [...this.bundle.classes.values()].map((c) => ({ id: c.id, name: c.name })),
       skills: [skillInfo('skill1', classDef?.skills[0]), skillInfo('skill2', classDef?.skills[1])],
-      auto: false,
+      auto: this.autoOn,
+      ...(this.autoOn
+        ? {
+            autoStatus: this.autoDriving ? this.auto.status : ('paused' as const),
+            autoSession: { net: this.displayBalance - this.autoSession.startBalance, elapsedMs: performance.now() - this.autoSession.startedAt },
+          }
+        : {}),
+      autoConfig: this.auto.config,
       fps: Math.round(this.game.loop.actualFps),
       ...(this.toast ? { toast: this.toast } : {}),
       ...(this.bigWin ? { bigWin: this.bigWin } : {}),
@@ -693,6 +801,8 @@ export class GameScene extends Phaser.Scene {
       climb: this.player?.body.climb ?? -1,
       room: this.roomId,
       balance: this.displayBalance,
+      auto: this.autoOn ? 1 : 0,
+      ...(this.autoOn ? this.auto.debugInfo() : {}),
     };
   }
 
@@ -716,6 +826,26 @@ function circleRect(cx: number, cy: number, r: number, rect: Rect): boolean {
   return (cx - nx) ** 2 + (cy - ny) ** 2 <= r * r;
 }
 
-function containsPoint(rect: Rect, x: number, y: number, pad: number): boolean {
-  return x >= rect.x - pad && x <= rect.x + rect.w + pad && y >= rect.y - pad && y <= rect.y + rect.h + pad;
+/** 水平線段 [x1, x2]（高度 y）是否碰到 rect。 */
+function sweepHits(rect: Rect, x1: number, x2: number, y: number, pad: number): boolean {
+  return x2 >= rect.x - pad && x1 <= rect.x + rect.w + pad && y >= rect.y - pad && y <= rect.y + rect.h + pad;
+}
+
+function loadAutoConfig(): AutoConfig {
+  const config = structuredClone(DEFAULT_AUTO_CONFIG);
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUTO_CONFIG_KEY) ?? 'null') as Partial<AutoConfig> | null;
+    if (saved && typeof saved === 'object') return { ...config, ...saved, stop: { ...config.stop, ...saved.stop } };
+  } catch {
+    // 存檔壞掉或無法讀取：用預設值
+  }
+  return config;
+}
+
+function saveAutoConfig(config: AutoConfig): void {
+  try {
+    localStorage.setItem(AUTO_CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // 無痕模式等情況無法存，忽略
+  }
 }

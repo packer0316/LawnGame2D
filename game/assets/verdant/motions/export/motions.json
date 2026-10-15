@@ -1,0 +1,2971 @@
+{
+  "schemaVersion": 1,
+  "kind": "standalone-baked-avatar-motions",
+  "sheet": "hero-motions.sheet.json",
+  "sourceSize": {
+    "w": 128,
+    "h": 128
+  },
+  "root": {
+    "x": 64,
+    "y": 120
+  },
+  "rootMotion": "none",
+  "facing": "left",
+  "weaponsBaked": true,
+  "integration": "整體角色含武器；播放時替代整個紙娃娃，勿再疊職業武器。時序僅供美術對齊，不定義傷害、碰撞或位移。",
+  "clips": [
+    {
+      "id": "jump_spin",
+      "label": "原地旋轉跳躍",
+      "classId": "warrior",
+      "timing": [
+        90,
+        100,
+        80,
+        80,
+        80,
+        80,
+        90,
+        120
+      ],
+      "airborne": true,
+      "from": 0,
+      "to": 7,
+      "durationMs": 720,
+      "visualReleaseAtMs": null,
+      "frames": [
+        {
+          "frame": 0,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 1,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 329,
+            "y": 96,
+            "w": 287,
+            "h": 225
+          },
+          "registration": {
+            "x": 478,
+            "y": 266
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 2,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 641,
+            "y": 42,
+            "w": 270,
+            "h": 259
+          },
+          "registration": {
+            "x": 789,
+            "y": 220
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 3,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 950,
+            "y": 41,
+            "w": 275,
+            "h": 255
+          },
+          "registration": {
+            "x": 1084,
+            "y": 216
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 4,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 35,
+            "y": 345,
+            "w": 275,
+            "h": 250
+          },
+          "registration": {
+            "x": 163,
+            "y": 516
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 5,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 330,
+            "y": 356,
+            "w": 294,
+            "h": 248
+          },
+          "registration": {
+            "x": 477,
+            "y": 530
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 6,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 628,
+            "y": 409,
+            "w": 304,
+            "h": 214
+          },
+          "registration": {
+            "x": 785,
+            "y": 568
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 7,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "draw_slash",
+      "label": "拔刀斬",
+      "classId": "warrior",
+      "timing": [
+        90,
+        100,
+        140,
+        70,
+        50,
+        70,
+        90,
+        120
+      ],
+      "release": 4,
+      "from": 8,
+      "to": 15,
+      "durationMs": 730,
+      "visualReleaseAtMs": 400,
+      "frames": [
+        {
+          "frame": 8,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 9,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 367,
+            "y": 664,
+            "w": 256,
+            "h": 259
+          },
+          "registration": {
+            "x": 488,
+            "y": 922
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 10,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 661,
+            "y": 695,
+            "w": 238,
+            "h": 228
+          },
+          "registration": {
+            "x": 792,
+            "y": 922
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 11,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 986,
+            "y": 678,
+            "w": 251,
+            "h": 245
+          },
+          "registration": {
+            "x": 1097,
+            "y": 922
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 12,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 15,
+            "y": 960,
+            "w": 313,
+            "h": 263
+          },
+          "registration": {
+            "x": 179,
+            "y": 1222
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 13,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 327,
+            "y": 982,
+            "w": 298,
+            "h": 241
+          },
+          "registration": {
+            "x": 494,
+            "y": 1222
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 14,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 640,
+            "y": 964,
+            "w": 294,
+            "h": 260
+          },
+          "registration": {
+            "x": 803,
+            "y": 1223
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 15,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "slash_horizontal",
+      "label": "橫斬",
+      "classId": "warrior",
+      "timing": [
+        80,
+        80,
+        110,
+        55,
+        50,
+        70,
+        90,
+        120
+      ],
+      "release": 4,
+      "from": 16,
+      "to": 23,
+      "durationMs": 655,
+      "visualReleaseAtMs": 325,
+      "frames": [
+        {
+          "frame": 16,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 17,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 380,
+            "y": 66,
+            "w": 250,
+            "h": 262
+          },
+          "registration": {
+            "x": 478,
+            "y": 327
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 18,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 678,
+            "y": 51,
+            "w": 263,
+            "h": 278
+          },
+          "registration": {
+            "x": 787,
+            "y": 328
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 19,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 970,
+            "y": 56,
+            "w": 276,
+            "h": 272
+          },
+          "registration": {
+            "x": 1107,
+            "y": 327
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 20,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 16,
+            "y": 354,
+            "w": 338,
+            "h": 270
+          },
+          "registration": {
+            "x": 206,
+            "y": 623
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 21,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 375,
+            "y": 373,
+            "w": 253,
+            "h": 253
+          },
+          "registration": {
+            "x": 524,
+            "y": 625
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 22,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 678,
+            "y": 366,
+            "w": 265,
+            "h": 259
+          },
+          "registration": {
+            "x": 833,
+            "y": 624
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 23,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "slash_rising",
+      "label": "上挑斬",
+      "classId": "warrior",
+      "timing": [
+        80,
+        90,
+        110,
+        55,
+        50,
+        80,
+        100,
+        120
+      ],
+      "release": 4,
+      "from": 24,
+      "to": 31,
+      "durationMs": 685,
+      "visualReleaseAtMs": 335,
+      "frames": [
+        {
+          "frame": 24,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 25,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 326,
+            "y": 710,
+            "w": 299,
+            "h": 222
+          },
+          "registration": {
+            "x": 467,
+            "y": 931
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 26,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 632,
+            "y": 709,
+            "w": 303,
+            "h": 226
+          },
+          "registration": {
+            "x": 789,
+            "y": 934
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 27,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 1000,
+            "y": 702,
+            "w": 238,
+            "h": 233
+          },
+          "registration": {
+            "x": 1098,
+            "y": 934
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 28,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 49,
+            "y": 955,
+            "w": 281,
+            "h": 273
+          },
+          "registration": {
+            "x": 184,
+            "y": 1227
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 29,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 380,
+            "y": 947,
+            "w": 247,
+            "h": 279
+          },
+          "registration": {
+            "x": 476,
+            "y": 1225
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 30,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-slashes.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 657,
+            "y": 965,
+            "w": 291,
+            "h": 260
+          },
+          "registration": {
+            "x": 816,
+            "y": 1224
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.22302158273381295
+        },
+        {
+          "frame": 31,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "cleave_heavy",
+      "label": "雙手重劈",
+      "classId": "warrior",
+      "timing": [
+        80,
+        100,
+        110,
+        150,
+        55,
+        90,
+        110,
+        120
+      ],
+      "release": 4,
+      "from": 32,
+      "to": 39,
+      "durationMs": 815,
+      "visualReleaseAtMs": 440,
+      "frames": [
+        {
+          "frame": 32,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 33,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 349,
+            "y": 51,
+            "w": 276,
+            "h": 284
+          },
+          "registration": {
+            "x": 491,
+            "y": 334
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 34,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 696,
+            "y": 15,
+            "w": 222,
+            "h": 318
+          },
+          "registration": {
+            "x": 787,
+            "y": 332
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 35,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 997,
+            "y": 59,
+            "w": 242,
+            "h": 274
+          },
+          "registration": {
+            "x": 1090,
+            "y": 332
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 36,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 26,
+            "y": 396,
+            "w": 293,
+            "h": 255
+          },
+          "registration": {
+            "x": 183,
+            "y": 650
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 37,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 349,
+            "y": 412,
+            "w": 276,
+            "h": 243
+          },
+          "registration": {
+            "x": 506,
+            "y": 654
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 38,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 653,
+            "y": 403,
+            "w": 299,
+            "h": 254
+          },
+          "registration": {
+            "x": 820,
+            "y": 656
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 39,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "thrust",
+      "label": "定點突刺",
+      "classId": "warrior",
+      "timing": [
+        80,
+        100,
+        100,
+        60,
+        55,
+        80,
+        90,
+        120
+      ],
+      "release": 4,
+      "from": 40,
+      "to": 47,
+      "durationMs": 685,
+      "visualReleaseAtMs": 340,
+      "frames": [
+        {
+          "frame": 40,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        },
+        {
+          "frame": 41,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 397,
+            "y": 676,
+            "w": 227,
+            "h": 269
+          },
+          "registration": {
+            "x": 481,
+            "y": 944
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 42,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 644,
+            "y": 677,
+            "w": 286,
+            "h": 268
+          },
+          "registration": {
+            "x": 802,
+            "y": 944
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 43,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 922,
+            "y": 678,
+            "w": 330,
+            "h": 268
+          },
+          "registration": {
+            "x": 1112,
+            "y": 945
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 44,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 15,
+            "y": 966,
+            "w": 326,
+            "h": 270
+          },
+          "registration": {
+            "x": 191,
+            "y": 1235
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 45,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 365,
+            "y": 972,
+            "w": 282,
+            "h": 263
+          },
+          "registration": {
+            "x": 513,
+            "y": 1234
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 46,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-heavy-thrust.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 655,
+            "y": 969,
+            "w": 292,
+            "h": 267
+          },
+          "registration": {
+            "x": 816,
+            "y": 1235
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.2206405693950178
+        },
+        {
+          "frame": 47,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-spin-draw.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 34,
+            "y": 47,
+            "w": 272,
+            "h": 274
+          },
+          "registration": {
+            "x": 174,
+            "y": 242
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 102
+          },
+          "scale": 0.22627737226277372
+        }
+      ]
+    },
+    {
+      "id": "mage_cast",
+      "label": "聚能施法",
+      "classId": "mage",
+      "timing": [
+        80,
+        100,
+        130,
+        100,
+        70,
+        90,
+        100,
+        120
+      ],
+      "release": 4,
+      "from": 48,
+      "to": 55,
+      "durationMs": 790,
+      "visualReleaseAtMs": 410,
+      "frames": [
+        {
+          "frame": 48,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 52,
+            "y": 56,
+            "w": 269,
+            "h": 269
+          },
+          "registration": {
+            "x": 175,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 49,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 350,
+            "y": 56,
+            "w": 284,
+            "h": 269
+          },
+          "registration": {
+            "x": 490,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 50,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 680,
+            "y": 56,
+            "w": 265,
+            "h": 269
+          },
+          "registration": {
+            "x": 804,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 51,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 969,
+            "y": 56,
+            "w": 276,
+            "h": 269
+          },
+          "registration": {
+            "x": 1112,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 52,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 15,
+            "y": 364,
+            "w": 303,
+            "h": 270
+          },
+          "registration": {
+            "x": 174,
+            "y": 633
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 53,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 328,
+            "y": 364,
+            "w": 302,
+            "h": 270
+          },
+          "registration": {
+            "x": 489,
+            "y": 633
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 54,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 669,
+            "y": 363,
+            "w": 276,
+            "h": 271
+          },
+          "registration": {
+            "x": 805,
+            "y": 633
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 55,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 52,
+            "y": 56,
+            "w": 269,
+            "h": 269
+          },
+          "registration": {
+            "x": 175,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        }
+      ]
+    },
+    {
+      "id": "mage_staff_burst",
+      "label": "法杖爆發",
+      "classId": "mage",
+      "timing": [
+        80,
+        100,
+        110,
+        140,
+        65,
+        90,
+        110,
+        120
+      ],
+      "release": 4,
+      "from": 56,
+      "to": 63,
+      "durationMs": 815,
+      "visualReleaseAtMs": 430,
+      "frames": [
+        {
+          "frame": 56,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 52,
+            "y": 56,
+            "w": 269,
+            "h": 269
+          },
+          "registration": {
+            "x": 175,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 57,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 370,
+            "y": 667,
+            "w": 256,
+            "h": 277
+          },
+          "registration": {
+            "x": 488,
+            "y": 943
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 58,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 703,
+            "y": 673,
+            "w": 235,
+            "h": 269
+          },
+          "registration": {
+            "x": 802,
+            "y": 941
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 59,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 977,
+            "y": 625,
+            "w": 268,
+            "h": 317
+          },
+          "registration": {
+            "x": 1111,
+            "y": 941
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 60,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 20,
+            "y": 966,
+            "w": 348,
+            "h": 266
+          },
+          "registration": {
+            "x": 213,
+            "y": 1231
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 61,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 365,
+            "y": 966,
+            "w": 290,
+            "h": 266
+          },
+          "registration": {
+            "x": 534,
+            "y": 1231
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 62,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 693,
+            "y": 964,
+            "w": 249,
+            "h": 270
+          },
+          "registration": {
+            "x": 808,
+            "y": 1233
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        },
+        {
+          "frame": 63,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-mage.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 52,
+            "y": 56,
+            "w": 269,
+            "h": 269
+          },
+          "registration": {
+            "x": 175,
+            "y": 324
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.23048327137546468
+        }
+      ]
+    },
+    {
+      "id": "archer_aimed_shot",
+      "label": "拉弓蓄力射擊",
+      "classId": "archer",
+      "timing": [
+        80,
+        100,
+        90,
+        110,
+        160,
+        65,
+        90,
+        120
+      ],
+      "release": 5,
+      "from": 64,
+      "to": 71,
+      "durationMs": 815,
+      "visualReleaseAtMs": 540,
+      "frames": [
+        {
+          "frame": 64,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 64,
+            "y": 22,
+            "w": 230,
+            "h": 291
+          },
+          "registration": {
+            "x": 149,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 65,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 372,
+            "y": 22,
+            "w": 236,
+            "h": 291
+          },
+          "registration": {
+            "x": 459,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 66,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 674,
+            "y": 22,
+            "w": 251,
+            "h": 293
+          },
+          "registration": {
+            "x": 780,
+            "y": 314
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 67,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 968,
+            "y": 22,
+            "w": 268,
+            "h": 291
+          },
+          "registration": {
+            "x": 1099,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 68,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 27,
+            "y": 331,
+            "w": 282,
+            "h": 290
+          },
+          "registration": {
+            "x": 163,
+            "y": 620
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 69,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 366,
+            "y": 331,
+            "w": 260,
+            "h": 290
+          },
+          "registration": {
+            "x": 481,
+            "y": 620
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 70,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 688,
+            "y": 335,
+            "w": 235,
+            "h": 287
+          },
+          "registration": {
+            "x": 778,
+            "y": 621
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 71,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 64,
+            "y": 22,
+            "w": 230,
+            "h": 291
+          },
+          "registration": {
+            "x": 149,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        }
+      ]
+    },
+    {
+      "id": "archer_quick_shot",
+      "label": "快速接續射擊",
+      "classId": "archer",
+      "timing": [
+        60,
+        65,
+        65,
+        90,
+        50,
+        60,
+        70,
+        100
+      ],
+      "release": 4,
+      "from": 72,
+      "to": 79,
+      "durationMs": 560,
+      "visualReleaseAtMs": 280,
+      "frames": [
+        {
+          "frame": 72,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 64,
+            "y": 22,
+            "w": 230,
+            "h": 291
+          },
+          "registration": {
+            "x": 149,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 73,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 353,
+            "y": 642,
+            "w": 260,
+            "h": 288
+          },
+          "registration": {
+            "x": 465,
+            "y": 929
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 74,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 654,
+            "y": 642,
+            "w": 274,
+            "h": 288
+          },
+          "registration": {
+            "x": 783,
+            "y": 929
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 75,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 962,
+            "y": 637,
+            "w": 282,
+            "h": 293
+          },
+          "registration": {
+            "x": 1110,
+            "y": 929
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 76,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 58,
+            "y": 937,
+            "w": 259,
+            "h": 293
+          },
+          "registration": {
+            "x": 171,
+            "y": 1229
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 77,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 370,
+            "y": 937,
+            "w": 244,
+            "h": 293
+          },
+          "registration": {
+            "x": 482,
+            "y": 1229
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 78,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 694,
+            "y": 941,
+            "w": 233,
+            "h": 289
+          },
+          "registration": {
+            "x": 784,
+            "y": 1229
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        },
+        {
+          "frame": 79,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-archer.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 64,
+            "y": 22,
+            "w": 230,
+            "h": 291
+          },
+          "registration": {
+            "x": 149,
+            "y": 312
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.21305841924398625
+        }
+      ]
+    },
+    {
+      "id": "assassin_dual_slash",
+      "label": "雙刃連斬",
+      "classId": "assassin",
+      "timing": [
+        70,
+        95,
+        50,
+        65,
+        50,
+        80,
+        90,
+        120
+      ],
+      "release": 2,
+      "from": 80,
+      "to": 87,
+      "durationMs": 620,
+      "visualReleaseAtMs": 165,
+      "frames": [
+        {
+          "frame": 80,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 18,
+            "y": 28,
+            "w": 283,
+            "h": 303
+          },
+          "registration": {
+            "x": 146,
+            "y": 330
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 81,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 1,
+          "sourceCell": {
+            "x": 364,
+            "y": 75,
+            "w": 244,
+            "h": 259
+          },
+          "registration": {
+            "x": 470,
+            "y": 333
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 82,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 2,
+          "sourceCell": {
+            "x": 624,
+            "y": 60,
+            "w": 303,
+            "h": 273
+          },
+          "registration": {
+            "x": 787,
+            "y": 332
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 83,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 3,
+          "sourceCell": {
+            "x": 953,
+            "y": 77,
+            "w": 286,
+            "h": 257
+          },
+          "registration": {
+            "x": 1095,
+            "y": 333
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 84,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 4,
+          "sourceCell": {
+            "x": 27,
+            "y": 385,
+            "w": 290,
+            "h": 253
+          },
+          "registration": {
+            "x": 160,
+            "y": 637
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 85,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 5,
+          "sourceCell": {
+            "x": 369,
+            "y": 393,
+            "w": 244,
+            "h": 246
+          },
+          "registration": {
+            "x": 475,
+            "y": 638
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 86,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 6,
+          "sourceCell": {
+            "x": 647,
+            "y": 369,
+            "w": 294,
+            "h": 274
+          },
+          "registration": {
+            "x": 787,
+            "y": 642
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 87,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 18,
+            "y": 28,
+            "w": 283,
+            "h": 303
+          },
+          "registration": {
+            "x": 146,
+            "y": 330
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        }
+      ]
+    },
+    {
+      "id": "assassin_throw",
+      "label": "飛刃投擲",
+      "classId": "assassin",
+      "timing": [
+        70,
+        90,
+        110,
+        55,
+        50,
+        80,
+        100,
+        120
+      ],
+      "release": 4,
+      "from": 88,
+      "to": 95,
+      "durationMs": 675,
+      "visualReleaseAtMs": 325,
+      "frames": [
+        {
+          "frame": 88,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 18,
+            "y": 28,
+            "w": 283,
+            "h": 303
+          },
+          "registration": {
+            "x": 146,
+            "y": 330
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 89,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 9,
+          "sourceCell": {
+            "x": 378,
+            "y": 667,
+            "w": 238,
+            "h": 283
+          },
+          "registration": {
+            "x": 472,
+            "y": 949
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 90,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 10,
+          "sourceCell": {
+            "x": 678,
+            "y": 659,
+            "w": 242,
+            "h": 292
+          },
+          "registration": {
+            "x": 778,
+            "y": 950
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 91,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 11,
+          "sourceCell": {
+            "x": 907,
+            "y": 676,
+            "w": 335,
+            "h": 274
+          },
+          "registration": {
+            "x": 1092,
+            "y": 949
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 92,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 12,
+          "sourceCell": {
+            "x": 33,
+            "y": 970,
+            "w": 295,
+            "h": 268
+          },
+          "registration": {
+            "x": 173,
+            "y": 1237
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 93,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 13,
+          "sourceCell": {
+            "x": 380,
+            "y": 956,
+            "w": 252,
+            "h": 282
+          },
+          "registration": {
+            "x": 482,
+            "y": 1237
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 94,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 14,
+          "sourceCell": {
+            "x": 691,
+            "y": 959,
+            "w": 247,
+            "h": 279
+          },
+          "registration": {
+            "x": 785,
+            "y": 1237
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        },
+        {
+          "frame": 95,
+          "root": {
+            "x": 64,
+            "y": 120
+          },
+          "rootMotion": {
+            "x": 0,
+            "y": 0
+          },
+          "sourceImage": "hero-motion-assassin-v2.png",
+          "sourceFrame": 0,
+          "sourceCell": {
+            "x": 18,
+            "y": 28,
+            "w": 283,
+            "h": 303
+          },
+          "registration": {
+            "x": 146,
+            "y": 330
+          },
+          "registrationTarget": {
+            "x": 64,
+            "y": 120
+          },
+          "scale": 0.20462046204620463
+        }
+      ]
+    }
+  ]
+}

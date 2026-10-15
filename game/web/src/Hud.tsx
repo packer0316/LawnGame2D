@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { GameCommand, HudState } from '@lawn/engine';
+import { AUTO_STATUS_TEXT, AutoPanel } from './AutoPanel';
 import { Icon } from './Icons';
 
 const BIG_WIN_TITLE = { big: 'BIG WIN', mega: 'MEGA WIN', super: 'SUPER WIN' } as const;
@@ -8,6 +9,7 @@ const BIG_WIN_TITLE = { big: 'BIG WIN', mega: 'MEGA WIN', super: 'SUPER WIN' } a
 export function Hud({ state, command, action }: { state: HudState | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | 'skill1' | 'skill2') => void }) {
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
   const [bigWinShown, setBigWinShown] = useState<number | null>(null);
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
       <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
         <div className="world-title"><span className="eyebrow">LAWN / ADVENTURE</span><strong>{state.roomName}</strong></div>
-        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { setRoomsOpen((open) => !open); setHelpOpen(false); }}><Icon name="compass" /><span>換房</span><span className="room-count">{String(roomIndex).padStart(2, '0')} / {String(state.rooms.length).padStart(2, '0')}</span></button>
+        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { setRoomsOpen((open) => !open); setHelpOpen(false); setAutoOpen(false); }}><Icon name="compass" /><span>換房</span><span className="room-count">{String(roomIndex).padStart(2, '0')} / {String(state.rooms.length).padStart(2, '0')}</span></button>
       </div>
 
       {roomsOpen && (
@@ -64,7 +66,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
         <div className="panel balance">
           <Icon name="coin" /><div><span className="label">持有金幣</span><strong>{state.balance.toLocaleString()}</strong></div>
         </div>
-        <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { setHelpOpen(!helpOpen); setRoomsOpen(false); }}><Icon name="help" /></button>
+        <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { setHelpOpen(!helpOpen); setRoomsOpen(false); setAutoOpen(false); }}><Icon name="help" /></button>
       </div>
 
       <div className="hud-bottom">
@@ -87,11 +89,15 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
           <div className="bet-heading"><span className="eyebrow">每刀押注</span><span className={`tier tier-${state.betTier}`}>Lv. {state.betTier}</span></div>
           <div className="bet-controls"><button aria-label="減少押注" disabled={state.bet <= Math.min(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: -1 })}>−</button><span className="value">{state.bet}</span><button aria-label="增加押注" disabled={state.bet >= Math.max(...state.betLevels)} onClick={() => command({ type: 'stepBet', delta: 1 })}>+</button></div>
         </div>
-        <button className={`auto-button ${state.auto ? 'is-on' : ''}`} aria-pressed={state.auto} onClick={() => command({ type: 'toggleAuto' })}><Icon name={state.auto ? 'pause' : 'play'} /><span>{state.auto ? '冒險中' : '自動冒險'}</span><small>{state.auto ? '點擊暫停' : '即將開放'}</small></button>
+        <div className="auto-group">
+          <button className={`auto-button ${state.auto ? 'is-on' : ''}`} aria-pressed={state.auto} title="自動冒險 · A" onClick={() => command({ type: 'toggleAuto' })}><Icon name={state.auto ? 'pause' : 'play'} /><span>{state.auto ? '冒險中' : '自動冒險'}</span><small>{state.auto ? AUTO_STATUS_TEXT[state.autoStatus ?? 'search'] : '按 A 開始'}</small></button>
+          <button className="auto-gear" aria-label="自動冒險設定" aria-expanded={autoOpen} onClick={() => { setAutoOpen(!autoOpen); setRoomsOpen(false); setHelpOpen(false); }}><Icon name="gear" /></button>
+        </div>
       </div>
 
       <div className="hud-footer"><span>← → 移動 <i>·</i> SPACE 跳躍 <i>·</i> SHIFT 翻滾</span><span className="fps">{state.fps} FPS</span></div>
-      {helpOpen && <div className="panel help"><span className="eyebrow">冒險指南</span><h3>操作說明</h3><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>Z</kbd> 按住連擊 <kbd>X C</kbd> 技能</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>1–4</kbd> 切換職業 <kbd>F1</kbd> 碰撞資訊</p><small>命中時扣除押注；揮空不扣款。</small></div>}
+      {autoOpen && <AutoPanel state={state} command={command} onClose={() => setAutoOpen(false)} />}
+      {helpOpen && <div className="panel help"><span className="eyebrow">冒險指南</span><h3>操作說明</h3><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>Z</kbd> 按住連擊 <kbd>X C</kbd> 技能</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>1–4</kbd> 切換職業 <kbd>A</kbd> 自動冒險</p><p><kbd>F1</kbd> 碰撞與導航圖</p><small>命中時扣除押注；揮空不扣款。</small></div>}
 
       {state.toast && (
         <div key={state.toast.id} className="panel toast">

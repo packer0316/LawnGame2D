@@ -99,3 +99,29 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #b5c6ae3b; backgro
 @media (max-width: 680px) { .hud-bottom { max-width: calc(100% - 20px); width: 550px; gap: 8px; flex-wrap: wrap; justify-content: center; border-radius: 9px; padding: 8px; } .class-section { order: 4; } .class-section > .eyebrow, .dock-divider { display: none; } .class-select button { height: 31px; width: 59px; flex-direction: row; gap: 4px; } .class-select .icon { width: 16px; height: 16px; } .class-select span { font-size: 9px; } .hud .skill { width: 57px; height: 57px; } .hud .auto-button { min-height: 57px; } .hud .bet { min-width: 98px; } .world-title strong { font-size: 16px; letter-spacing: 2px; } .world-title .eyebrow { font-size: 6px; letter-spacing: 1.4px; } .world-title { min-width: 94px; } .hud-top-left { left: 12px; gap: 7px; } .hud-top-right { right: 12px; gap: 6px; } .hud .room-switch { padding: 8px; } .room-switch span { display: none; } .balance { min-width: 115px; padding: 8px 10px; gap: 7px; } .balance > .icon { width: 22px; height: 22px; } .balance strong { font-size: 17px; } .balance .label { font-size: 8px; } .hud .help-toggle { width: 30px; height: 30px; } .hud-footer > span:first-child { visibility: hidden; } .room-list { width: calc(100% - 24px); left: 12px; top: 83px; } .help { right: 12px; left: 12px; top: 83px; padding: 16px 20px; } }
 @media (max-width: 420px) { .hud .auto-button { order: 5; min-height: 32px; min-width: 89px; padding: 5px 7px; } .auto-button small { display: none; } .skills { gap: 5px; } .class-select button { width: 48px; } .class-select span { font-size: 8px; } }
 @media (prefers-reduced-motion: reduce) { .hud *, .hud *::before { animation: none !important; transition: none !important; } }
+.auto-group { position: relative; }
+.hud .auto-gear { position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; display: grid; place-items: center; padding: 0; border-radius: 50%; background: #1b3a32; border-color: #ccbd7f70; color: #e8d9a4; }
+.auto-gear .icon { width: 14px; height: 14px; }
+.auto-settings { position: absolute; right: max(16px, calc(50% - 470px)); bottom: 140px; width: 320px; max-height: calc(100% - 200px); overflow: auto; padding: 16px 18px; z-index: 3; display: flex; flex-direction: column; gap: 12px; }
+.auto-settings-heading { display: flex; align-items: center; justify-content: space-between; }
+.auto-settings-heading button { border: 0; padding: 2px; background: transparent; height: 24px; }
+.auto-settings-heading .icon { width: 17px; height: 17px; }
+.auto-session { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 5px; background: #0a221f99; font-size: 12px; font-variant-numeric: tabular-nums; }
+.auto-session .win { color: #b7e3a1; }
+.auto-session .loss { color: var(--danger); }
+.auto-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.auto-label { font-size: 12px; color: #d3dcc6; }
+.auto-row.toggle { pointer-events: auto; cursor: pointer; }
+.auto-row input[type='checkbox'] { width: 16px; height: 16px; accent-color: #c9b26f; cursor: pointer; }
+.segmented { display: flex; border: 1px solid #b4c6a42e; border-radius: 5px; overflow: hidden; }
+.hud .segmented button { border: 0; border-radius: 0; padding: 5px 8px; font-size: 11px; background: transparent; color: #a9bcae; }
+.hud .segmented button.active { background: #4a60396b; color: #f4dfa1; }
+.auto-stop-title { margin-top: 4px; }
+.auto-stops { display: grid; gap: 7px; }
+.auto-stops label { display: grid; grid-template-columns: 1fr 96px 30px; align-items: center; gap: 6px; font-size: 12px; color: #c1cebd; }
+.auto-stops input { width: 100%; padding: 4px 6px; border-radius: 4px; border: 1px solid #b4c6a43b; background: #081e2399; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; text-align: right; }
+.auto-stops input:focus { outline: 1px solid #d6c795; }
+.auto-stops small { font-size: 10px; color: #93a89a; }
+.auto-note { font-size: 10px; color: #c7b385; line-height: 1.5; }
+@media (max-width: 680px) { .auto-settings { left: 12px; right: 12px; width: auto; top: 83px; bottom: auto; max-height: calc(100% - 230px); } }
+.auto-label small { display: block; margin-top: 2px; font-size: 10px; color: #93a89a; }

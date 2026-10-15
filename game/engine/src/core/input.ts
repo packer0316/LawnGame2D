@@ -20,6 +20,13 @@ export type Action =
   | 'roomPrev'
   | 'roomNext';
 
+/** 正在 HUD 的輸入框打字：不當成遊戲按鍵。 */
+function isTyping(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'range'].includes(target.type);
+  return target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+}
+
 const KEYMAP: Record<string, Action> = {
   ArrowLeft: 'left',
   ArrowRight: 'right',
@@ -56,13 +63,13 @@ export class InputState {
   private readonly pressed = new Set<Action>();
   private readonly onKeyDown = (event: KeyboardEvent) => {
     const action = KEYMAP[event.code];
-    if (!action) return;
+    if (!action || isTyping(event.target)) return;
     event.preventDefault();
     if (!event.repeat) this.press(action);
   };
   private readonly onKeyUp = (event: KeyboardEvent) => {
     const action = KEYMAP[event.code];
-    if (!action) return;
+    if (!action || isTyping(event.target)) return;
     event.preventDefault();
     this.release(action);
   };

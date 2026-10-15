@@ -7,5 +7,5 @@ import { PreviewHarness } from './PreviewHarness';
 const preview = new URLSearchParams(location.search).get('preview');
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>{preview === 'monster' || preview === 'map' ? <PreviewHarness kind={preview} /> : <App />}</StrictMode>,
+  <StrictMode>{preview === 'monster' || preview === 'map' || preview === 'avatar' ? <PreviewHarness kind={preview} /> : <App />}</StrictMode>,
 );

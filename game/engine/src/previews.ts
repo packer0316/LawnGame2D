@@ -1,14 +1,20 @@
 import * as Phaser from 'phaser';
 import {
+  AVATAR_CANVAS,
+  AvatarItemFile,
+  ClassFileVersioned,
+  ContentManifestFile,
   ThemeFileVersioned,
   contentPaths,
   parseAsepriteSheet,
   resolveSheetImage,
-  type AvatarLoadout,
+  type AvatarItem,
   type AvatarTag,
+  type ClassId,
   type MapDef,
   type MonsterDef,
 } from '@lawn/shared';
+import { AvatarView, type AvatarContent } from './avatar/AvatarView';
 import type { ContentSource } from './content';
 import type { SheetAsset } from './content/bundle';
 import { MapView } from './map/MapView';
@@ -437,19 +443,20 @@ export function createMapPreview(parent: HTMLElement, options: MapPreviewOptions
 }
 
 // ---------------------------------------------------------------------------
-// 紙娃娃預覽（M5 前完成）
+// 角色預覽（人物 + 武器，SPEC v0.6 §4.3）
 // ---------------------------------------------------------------------------
 
 export interface AvatarPreviewOptions {
   content: ContentSource;
-  loadout: AvatarLoadout;
-  classId?: 'warrior' | 'mage' | 'archer' | 'assassin';
+  /** 武器 itemId；不填時用 classId 的預設武器（class/classes.json），兩者都沒有就空手。 */
+  weapon?: string;
+  classId?: ClassId;
   tag: AvatarTag;
-  /** 指定幀；未指定時循環播放。 */
+  /** 指定 Tag 內第幾幀（0 起算）並停住；不填時循環播放。 */
   frame?: number;
-  onionSkin?: boolean;
-  lighting?: boolean;
-  /** 整數倍放大，預設 4。 */
+  /** 顯示 head（藍）、torso（綠）、hand（紅）錨點與腳底原點。 */
+  showAnchors?: boolean;
+  /** 整數倍放大；不填時依畫布高度自動決定。 */
   zoom?: number;
 }
 export interface AvatarPreviewHandle {
@@ -457,15 +464,105 @@ export interface AvatarPreviewHandle {
   destroy(): void;
 }
 
-export function createAvatarPreview(parent: HTMLElement, _options: AvatarPreviewOptions): AvatarPreviewHandle {
-  class PlaceholderScene extends PreviewScene {
-    create(): void {
-      this.markReady();
-      this.add
-        .text(this.scale.width / 2, this.scale.height / 2, '紙娃娃預覽\n（M5 前完成）', { fontFamily: 'monospace', fontSize: '14px', color: '#9a96b0', align: 'center' })
-        .setOrigin(0.5);
-    }
+class AvatarPreviewScene extends PreviewScene {
+  opts!: AvatarPreviewOptions;
+  private view: AvatarView | null = null;
+  private avatar: AvatarContent | null = null;
+  private weaponByClass = new Map<string, string>();
+  private overlay!: Phaser.GameObjects.Graphics;
+  private loadToken = 0;
+
+  constructor() {
+    super('avatar-preview');
   }
-  const { dispose } = createPreviewGame(parent, new PlaceholderScene(), false);
-  return { update() {}, destroy: dispose };
+
+  create(): void {
+    this.overlay = this.add.graphics().setDepth(10);
+    this.scale.on(Phaser.Scale.Events.RESIZE, () => this.layout());
+    this.markReady();
+    void this.reload();
+  }
+
+  async reload(): Promise<void> {
+    if (!this.ready || this.dead) return;
+    const token = ++this.loadToken;
+    const { content } = this.opts;
+    const manifest = ContentManifestFile.migrate(await content.json(contentPaths.manifest));
+    const base = await loadSheetAsset(content, contentPaths.avatarBaseSheet);
+    const items = new Map<string, { item: AvatarItem; sheet: SheetAsset }>();
+    for (const id of manifest.avatarItems) {
+      const item = AvatarItemFile.migrate(await content.json(contentPaths.avatarItem(id)));
+      items.set(id, { item, sheet: await loadSheetAsset(content, item.sheet) });
+    }
+    const classes = await content
+      .json(contentPaths.classes)
+      .then((raw) => ClassFileVersioned.migrate(raw))
+      .catch(() => null);
+    if (this.dead || token !== this.loadToken) return;
+    // 重新匯出後 texture 要換新：key 加上載入序號
+    base.path = `${base.path}?v=${token}`;
+    for (const entry of items.values()) entry.sheet.path = `${entry.sheet.path}?v=${token}`;
+    await loadSheetAssets(this, content, [base, ...[...items.values()].map((entry) => entry.sheet)]);
+    if (this.dead || token !== this.loadToken) return;
+    this.weaponByClass = new Map((classes?.classes ?? []).map((c) => [c.id, c.weapon]));
+    this.avatar = { base, items };
+    this.view?.destroy();
+    this.view = new AvatarView(this, this.avatar);
+    this.apply();
+  }
+
+  /** 套用武器、動作、幀（不重新載入）。 */
+  apply(): void {
+    if (!this.view) return;
+    const weapon = this.opts.weapon ?? (this.opts.classId ? this.weaponByClass.get(this.opts.classId) : undefined);
+    this.view.setLoadout(weapon ? { weapon } : {});
+    this.view.play(this.opts.tag, { loop: true, restart: true });
+    if (this.opts.frame !== undefined) this.view.animator.seek(this.opts.frame);
+    this.view.animator.speed = this.opts.frame === undefined ? 1 : 0;
+    this.view.refresh();
+    this.layout();
+  }
+
+  private layout(): void {
+    if (!this.ready || this.dead) return;
+    const zoom = this.opts.zoom ?? Math.max(1, Math.floor((this.scale.height * 0.7) / AVATAR_CANVAS.h));
+    const camera = this.cameras.main;
+    camera.setZoom(zoom);
+    camera.centerOn(0, -AVATAR_CANVAS.h * 0.4);
+  }
+
+  override update(_time: number, delta: number): void {
+    if (!this.view || !this.avatar) return;
+    this.view.tick(Math.min(delta, 100));
+    const g = this.overlay;
+    g.clear();
+    g.lineStyle(1, 0x6a6488, 1).lineBetween(-80, 0, 80, 0);
+    if (!this.opts.showAnchors) return;
+    const frame = this.view.frame;
+    const colors: Record<string, number> = { head: 0x4d8bff, torso: 0x4dff88, hand: 0xff4d4d };
+    for (const [slice, color] of Object.entries(colors)) {
+      const pivot = this.avatar.base.sheet.slicePivotAt(slice, frame);
+      if (!pivot) continue;
+      const x = pivot.x - AVATAR_CANVAS.footX;
+      const y = pivot.y - AVATAR_CANVAS.footY;
+      g.fillStyle(color, 1).fillRect(x - 1, y - 1, 3, 3);
+    }
+    g.fillStyle(0xffe066, 1).fillRect(-1, -1, 3, 3);
+  }
+}
+
+export function createAvatarPreview(parent: HTMLElement, options: AvatarPreviewOptions): AvatarPreviewHandle {
+  const scene = new AvatarPreviewScene();
+  scene.opts = { ...options };
+  const { dispose } = createPreviewGame(parent, scene, false);
+  return {
+    update(patch) {
+      const reload = patch.content !== undefined && patch.content !== scene.opts.content;
+      scene.opts = { ...scene.opts, ...patch };
+      // 場景建立前只更新設定；create() 會用最新的設定載入
+      if (reload) void scene.reload();
+      else if (scene.ready) scene.apply();
+    },
+    destroy: dispose,
+  };
 }

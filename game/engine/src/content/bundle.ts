@@ -11,7 +11,7 @@ import {
   MapDefFile,
   MonsterDefFile,
   MonsterMathFileVersioned,
-  PaletteFileVersioned,
+
   RoomFileVersioned,
   ThemeFileVersioned,
   contentPaths,
@@ -23,7 +23,6 @@ import {
   type MapDef,
   type MonsterDef,
   type MonsterMath,
-  type PaletteFile,
   type RoomDef,
   type ThemeDef,
 } from '@lawn/shared';
@@ -40,7 +39,6 @@ export interface SheetAsset {
 export interface ContentBundle {
   source: ContentSource;
   manifest: ContentManifest;
-  palettes: PaletteFile;
   base: SheetAsset;
   items: Map<string, { item: AvatarItem; sheet: SheetAsset }>;
   monsters: Map<string, { def: MonsterDef; sheet: SheetAsset; math: MonsterMath | undefined }>;
@@ -61,8 +59,8 @@ async function loadSheet(source: ContentSource, path: string): Promise<SheetAsse
 /** 讀取 manifest 與所有固定檔案（圖片之後由 Phaser 載入）。 */
 export async function loadContentBundle(source: ContentSource): Promise<ContentBundle> {
   const manifest = ContentManifestFile.migrate(await source.json(contentPaths.manifest));
-  const [palettes, base, themes, rooms, math, classes, skills, betLevels] = await Promise.all([
-    source.json(contentPaths.palettes).then((raw) => PaletteFileVersioned.migrate(raw)),
+  const [base, themes, rooms, math, classes, skills, betLevels] = await Promise.all([
+
     loadSheet(source, contentPaths.avatarBaseSheet),
     source.json(contentPaths.themes).then((raw) => ThemeFileVersioned.migrate(raw)),
     source.json(contentPaths.rooms).then((raw) => RoomFileVersioned.migrate(raw)),
@@ -99,7 +97,7 @@ export async function loadContentBundle(source: ContentSource): Promise<ContentB
   return {
     source,
     manifest,
-    palettes,
+
     base,
     items,
     monsters,

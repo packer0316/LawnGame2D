@@ -1,0 +1,998 @@
+{
+  "schemaVersion": 1,
+  "recordVersion": "1.0",
+  "recordedOn": "2026-10-15",
+  "kind": "art-motion-catalog-not-runtime-skill-definitions",
+  "status": "art_ready_not_integrated",
+  "timingSource": "export/motions.json",
+  "preview": "export/preview.html",
+  "sheet": "export/hero-motions.sheet.json",
+  "texture": "export/hero-motions.png",
+  "frameIndexBase": 0,
+  "canvas": {
+    "width": 128,
+    "height": 128,
+    "root": {
+      "x": 64,
+      "y": 120
+    }
+  },
+  "facing": "left",
+  "weaponsBaked": true,
+  "rootMotion": {
+    "x": 0,
+    "y": 0
+  },
+  "eventMeaning": "視覺事件是動畫對齊參考，不自動產生命中、投射物、扣款或傷害。",
+  "undecidedGameplay": [
+    "技能代價與資源消耗",
+    "傷害與命中次數",
+    "冷卻",
+    "取消與連段窗口",
+    "判定範圍與有效時段",
+    "位移與跳躍弧線",
+    "投射物與音效",
+    "特效及頓幀"
+  ],
+  "skills": [
+    {
+      "id": "jump_spin",
+      "name": "原地旋轉跳躍",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "原地收腿並繞身體垂直軸轉一圈，依序呈現側面、背面與正面，披風隨轉身展開。適合跳躍轉身或空中技能的動作演出；本身沒有攻擊出手事件。",
+      "weaponContinuity": "單手劍保持握持；旋轉中的前後遮擋已畫入角色。",
+      "integrationNotes": "由程式施加跳躍弧線，並依實際落地時機銜接收勢；不要用貼圖包圍盒的位置推算世界位移。",
+      "globalFrameRange": {
+        "from": 0,
+        "to": 7
+      },
+      "durationMs": 720,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 0,
+          "startMs": 0,
+          "durationMs": 90,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 1,
+          "startMs": 90,
+          "durationMs": 100,
+          "description": "蹲伏預備"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 2,
+          "startMs": 190,
+          "durationMs": 80,
+          "description": "收腿起轉"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 3,
+          "startMs": 270,
+          "durationMs": 80,
+          "description": "背面旋轉"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 4,
+          "startMs": 350,
+          "durationMs": 80,
+          "description": "另一側側面旋轉"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 5,
+          "startMs": 430,
+          "durationMs": 80,
+          "description": "正面收腿"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 6,
+          "startMs": 510,
+          "durationMs": 90,
+          "description": "朝原方向收勢"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 7,
+          "startMs": 600,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": []
+    },
+    {
+      "id": "draw_slash",
+      "name": "拔刀斬",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "先將刀移向鞘口、壓低重心握柄，再抽刀向前橫斬，最後回到低位持刀。此動作包含入鞘準備，因此可從本套件的持劍待機開始。",
+      "weaponContinuity": "刀鞘、刀身與手掌一併繪製；出鞘到斬出的接觸關係由逐幀原畫表現。",
+      "integrationNotes": "可在出刀時對齊斬擊特效；是否附帶前衝、攻擊範圍與命中時段由遊戲設定。",
+      "globalFrameRange": {
+        "from": 8,
+        "to": 15
+      },
+      "durationMs": 730,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 8,
+          "startMs": 0,
+          "durationMs": 90,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 9,
+          "startMs": 90,
+          "durationMs": 100,
+          "description": "導刀入鞘"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 10,
+          "startMs": 190,
+          "durationMs": 140,
+          "description": "低姿握柄蓄勢"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 11,
+          "startMs": 330,
+          "durationMs": 70,
+          "description": "抽刀過渡"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 12,
+          "startMs": 400,
+          "durationMs": 50,
+          "description": "向前拔刀橫斬"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 13,
+          "startMs": 450,
+          "durationMs": 70,
+          "description": "低位延伸收刀"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 14,
+          "startMs": 520,
+          "durationMs": 90,
+          "description": "回收手臂"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 15,
+          "startMs": 610,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 4,
+          "globalFrame": 12,
+          "atMs": 400
+        }
+      ]
+    },
+    {
+      "id": "slash_horizontal",
+      "name": "橫斬",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "將持刀手向後上方蓄勢，經過身前向前方橫切，再向下收刀。可作為一般揮砍或連段中的橫向攻擊演出。",
+      "weaponContinuity": "單手持劍；刀身跟隨手腕從高位穿過身前到低位。",
+      "integrationNotes": "斬擊殘影與命中區域需另行建立；素材沒有包含刀光判定。",
+      "globalFrameRange": {
+        "from": 16,
+        "to": 23
+      },
+      "durationMs": 655,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 16,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 17,
+          "startMs": 80,
+          "durationMs": 80,
+          "description": "向後引刀"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 18,
+          "startMs": 160,
+          "durationMs": 110,
+          "description": "後上方蓄勢"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 19,
+          "startMs": 270,
+          "durationMs": 55,
+          "description": "刀身經過身前"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 20,
+          "startMs": 325,
+          "durationMs": 50,
+          "description": "向前橫切"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 21,
+          "startMs": 375,
+          "durationMs": 70,
+          "description": "向下隨勢"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 22,
+          "startMs": 445,
+          "durationMs": 90,
+          "description": "低位回收"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 23,
+          "startMs": 535,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 4,
+          "globalFrame": 20,
+          "atMs": 325
+        }
+      ]
+    },
+    {
+      "id": "slash_rising",
+      "name": "上挑斬",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "先壓低重心將刀移至低位，再沿斜向上方挑斬，完成高位收刀後回到待機。適合作為上挑或連段方向變化。",
+      "weaponContinuity": "低位持刀逐步轉為舉刀，刀與手不另外疊圖。",
+      "integrationNotes": "敵人浮空、角色升空或向上判定都需遊戲另行定義，動畫不包含這些機制。",
+      "globalFrameRange": {
+        "from": 24,
+        "to": 31
+      },
+      "durationMs": 685,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 24,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 25,
+          "startMs": 80,
+          "durationMs": 90,
+          "description": "壓低重心引刀"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 26,
+          "startMs": 170,
+          "durationMs": 110,
+          "description": "低位準備"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 27,
+          "startMs": 280,
+          "durationMs": 55,
+          "description": "上挑過渡"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 28,
+          "startMs": 335,
+          "durationMs": 50,
+          "description": "斜向上挑斬"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 29,
+          "startMs": 385,
+          "durationMs": 80,
+          "description": "高位隨勢"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 30,
+          "startMs": 465,
+          "durationMs": 100,
+          "description": "降低刀位"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 31,
+          "startMs": 565,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 4,
+          "globalFrame": 28,
+          "atMs": 335
+        }
+      ]
+    },
+    {
+      "id": "cleave_heavy",
+      "name": "雙手重劈",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "雙手將刀舉過頭部，保留較長的高位蓄勢，再向前下方重劈，彎膝收勢後恢復待機。此組節奏偏重，強調蓄勢與收招。",
+      "weaponContinuity": "出招中雙手握同一刀柄；首尾仍使用劍系共用待機。",
+      "integrationNotes": "頓幀、震動、衝擊波與重擊傷害屬後續機制；不要直接把 815ms 當作冷卻時間。",
+      "globalFrameRange": {
+        "from": 32,
+        "to": 39
+      },
+      "durationMs": 815,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 32,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 33,
+          "startMs": 80,
+          "durationMs": 100,
+          "description": "抬刀"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 34,
+          "startMs": 180,
+          "durationMs": 110,
+          "description": "雙手舉刀"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 35,
+          "startMs": 290,
+          "durationMs": 150,
+          "description": "頭頂蓄勢"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 36,
+          "startMs": 440,
+          "durationMs": 55,
+          "description": "向前下方重劈"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 37,
+          "startMs": 495,
+          "durationMs": 90,
+          "description": "低位隨勢"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 38,
+          "startMs": 585,
+          "durationMs": 110,
+          "description": "抬身回收"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 39,
+          "startMs": 695,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 4,
+          "globalFrame": 36,
+          "atMs": 440
+        }
+      ]
+    },
+    {
+      "id": "thrust",
+      "name": "定點突刺",
+      "classId": "warrior",
+      "status": "art_ready_not_integrated",
+      "description": "將持刀手收近身體，使刀身朝向前方，再伸手直刺並沿原方向回收。適合作為窄幅、直線方向的攻擊動作。",
+      "weaponContinuity": "刀身在前伸與收回時保持與持刀手連接。",
+      "integrationNotes": "素材只有伸臂，沒有角色前衝；衝刺距離、穿透與直線判定交給程式。",
+      "globalFrameRange": {
+        "from": 40,
+        "to": 47
+      },
+      "durationMs": 685,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 40,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持劍待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 41,
+          "startMs": 80,
+          "durationMs": 100,
+          "description": "收手至腰側"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 42,
+          "startMs": 180,
+          "durationMs": 100,
+          "description": "刀身對準前方"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 43,
+          "startMs": 280,
+          "durationMs": 60,
+          "description": "前伸過渡"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 44,
+          "startMs": 340,
+          "durationMs": 55,
+          "description": "伸手直刺"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 45,
+          "startMs": 395,
+          "durationMs": 80,
+          "description": "收回前臂"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 46,
+          "startMs": 475,
+          "durationMs": 90,
+          "description": "放低刀身"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 47,
+          "startMs": 565,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 4,
+          "globalFrame": 44,
+          "atMs": 340
+        }
+      ]
+    },
+    {
+      "id": "mage_cast",
+      "name": "聚能施法",
+      "classId": "mage",
+      "status": "art_ready_not_integrated",
+      "description": "持杖保持身體穩定，另一手在胸前聚能，轉掌向前施法，最後收回。原畫有掌心附近的小型魔法亮點。",
+      "weaponContinuity": "法杖保持在握持手上；施法手從胸前轉為前伸掌心。",
+      "integrationNotes": "魔法彈、射線或區域特效需另外建立；掌心亮點不是可獨立移動的投射物。",
+      "globalFrameRange": {
+        "from": 48,
+        "to": 55
+      },
+      "durationMs": 790,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 48,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持杖待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 49,
+          "startMs": 80,
+          "durationMs": 100,
+          "description": "施法手靠近胸口"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 50,
+          "startMs": 180,
+          "durationMs": 130,
+          "description": "掌心聚能"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 51,
+          "startMs": 310,
+          "durationMs": 100,
+          "description": "轉掌向前"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 52,
+          "startMs": 410,
+          "durationMs": 70,
+          "description": "伸掌釋放"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 53,
+          "startMs": 480,
+          "durationMs": 90,
+          "description": "伸掌隨勢"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 54,
+          "startMs": 570,
+          "durationMs": 100,
+          "description": "收回施法手"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 55,
+          "startMs": 670,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_spell_release",
+          "localFrame": 4,
+          "globalFrame": 52,
+          "atMs": 410
+        }
+      ]
+    },
+    {
+      "id": "mage_staff_burst",
+      "name": "法杖爆發",
+      "classId": "mage",
+      "status": "art_ready_not_integrated",
+      "description": "雙手提杖並向上蓄勢，再把杖頭朝前推出以表現爆發，隨後收回法杖。動作幅度比聚能施法更大。",
+      "weaponContinuity": "雙手與杖身合圖，杖頭的近距離光效已包含在原畫。",
+      "integrationNotes": "爆發範圍、法陣、擊退與額外光效由遊戲決定，素材沒有既定的範圍傷害。",
+      "globalFrameRange": {
+        "from": 56,
+        "to": 63
+      },
+      "durationMs": 815,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 56,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "持杖待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 57,
+          "startMs": 80,
+          "durationMs": 100,
+          "description": "提起法杖"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 58,
+          "startMs": 180,
+          "durationMs": 110,
+          "description": "雙手準備"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 59,
+          "startMs": 290,
+          "durationMs": 140,
+          "description": "舉杖蓄勢"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 60,
+          "startMs": 430,
+          "durationMs": 65,
+          "description": "杖頭向前爆發"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 61,
+          "startMs": 495,
+          "durationMs": 90,
+          "description": "雙肘回收"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 62,
+          "startMs": 585,
+          "durationMs": 110,
+          "description": "放低法杖"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 63,
+          "startMs": 695,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_spell_release",
+          "localFrame": 4,
+          "globalFrame": 60,
+          "atMs": 430
+        }
+      ]
+    },
+    {
+      "id": "archer_aimed_shot",
+      "name": "拉弓蓄力射擊",
+      "classId": "archer",
+      "status": "art_ready_not_integrated",
+      "description": "依序取箭、搭箭、拉弓並停留在滿弦姿勢，再放弦射出與收弓。此組有較明顯的瞄準蓄力節奏。",
+      "weaponContinuity": "弓、弦、搭弦中的箭與手部一併繪製；放弦幀起不保留搭弦箭。",
+      "integrationNotes": "在放弦視覺事件建立箭矢；如果實作按住蓄力，可延長滿弦姿勢，但需同步更新事件時間。",
+      "globalFrameRange": {
+        "from": 64,
+        "to": 71
+      },
+      "durationMs": 815,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 64,
+          "startMs": 0,
+          "durationMs": 80,
+          "description": "低位持弓"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 65,
+          "startMs": 80,
+          "durationMs": 100,
+          "description": "取箭"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 66,
+          "startMs": 180,
+          "durationMs": 90,
+          "description": "搭箭"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 67,
+          "startMs": 270,
+          "durationMs": 110,
+          "description": "拉弓過渡"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 68,
+          "startMs": 380,
+          "durationMs": 160,
+          "description": "滿弦瞄準"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 69,
+          "startMs": 540,
+          "durationMs": 65,
+          "description": "放弦"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 70,
+          "startMs": 605,
+          "durationMs": 90,
+          "description": "收弓"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 71,
+          "startMs": 695,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_arrow_release",
+          "localFrame": 5,
+          "globalFrame": 69,
+          "atMs": 540
+        }
+      ]
+    },
+    {
+      "id": "archer_quick_shot",
+      "name": "快速接續射擊",
+      "classId": "archer",
+      "status": "art_ready_not_integrated",
+      "description": "快速搭箭並斜向拉弓，較短停留後放弦，手回到箭袋附近準備接續。這是一發快速射擊的動作，可由遊戲安排多次播放。",
+      "weaponContinuity": "箭搭在弓弦上，放弦後由角色貼圖移除；弓身持續由握弓手支撐。",
+      "integrationNotes": "每次播放只代表一次射箭；連射次數、瞄準角度、射速與箭矢彈道另行定義。",
+      "globalFrameRange": {
+        "from": 72,
+        "to": 79
+      },
+      "durationMs": 560,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 72,
+          "startMs": 0,
+          "durationMs": 60,
+          "description": "低位持弓"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 73,
+          "startMs": 60,
+          "durationMs": 65,
+          "description": "快速搭箭"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 74,
+          "startMs": 125,
+          "durationMs": 65,
+          "description": "拉弓過渡"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 75,
+          "startMs": 190,
+          "durationMs": 90,
+          "description": "斜向滿弦"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 76,
+          "startMs": 280,
+          "durationMs": 50,
+          "description": "放弦"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 77,
+          "startMs": 330,
+          "durationMs": 60,
+          "description": "手回箭袋"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 78,
+          "startMs": 390,
+          "durationMs": 70,
+          "description": "收弓準備"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 79,
+          "startMs": 460,
+          "durationMs": 100,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_arrow_release",
+          "localFrame": 4,
+          "globalFrame": 76,
+          "atMs": 280
+        }
+      ]
+    },
+    {
+      "id": "assassin_dual_slash",
+      "name": "雙刃連斬",
+      "classId": "assassin",
+      "status": "art_ready_not_integrated",
+      "description": "雙手短刃在胸前交叉蓄勢，先以一刀向前橫切，另一刀接續斜斬，最後交叉收勢並恢復待機。兩個出刀姿勢應分別記錄。",
+      "weaponContinuity": "每手一柄短刃。正式原畫採用 v2，已修正第五姿勢多出的手臂。",
+      "integrationNotes": "視覺有兩刀，但命中次數、傷害及資源消耗仍由技能邏輯決定；不要只因兩個視覺事件就重複結算。",
+      "globalFrameRange": {
+        "from": 80,
+        "to": 87
+      },
+      "durationMs": 620,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 80,
+          "startMs": 0,
+          "durationMs": 70,
+          "description": "雙刃待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 81,
+          "startMs": 70,
+          "durationMs": 95,
+          "description": "交叉蓄勢"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 82,
+          "startMs": 165,
+          "durationMs": 50,
+          "description": "第一刀橫切"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 83,
+          "startMs": 215,
+          "durationMs": 65,
+          "description": "換手蓄勢"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 84,
+          "startMs": 280,
+          "durationMs": 50,
+          "description": "第二刀斜斬"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 85,
+          "startMs": 330,
+          "durationMs": 80,
+          "description": "低位交叉收勢"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 86,
+          "startMs": 410,
+          "durationMs": 90,
+          "description": "分開雙刃回收"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 87,
+          "startMs": 500,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_strike_1",
+          "localFrame": 2,
+          "globalFrame": 82,
+          "atMs": 165
+        },
+        {
+          "id": "visual_strike_2",
+          "localFrame": 4,
+          "globalFrame": 84,
+          "atMs": 280
+        }
+      ]
+    },
+    {
+      "id": "assassin_throw",
+      "name": "飛刃投擲",
+      "classId": "assassin",
+      "status": "art_ready_not_integrated",
+      "description": "一手保留短刃護身，另一手舉刃後向前投擲；出手後呈現空手，再從腰間補刃回到雙刃待機。",
+      "weaponContinuity": "投擲手在釋放幀後為空手，另一手持刃不變；飛行中的刀沒有畫入角色。",
+      "integrationNotes": "在張手幀建立獨立飛刃投射物；投射物圖像、速度、回收與穿透皆需另行提供或設定。",
+      "globalFrameRange": {
+        "from": 88,
+        "to": 95
+      },
+      "durationMs": 675,
+      "phases": [
+        {
+          "localFrame": 0,
+          "globalFrame": 88,
+          "startMs": 0,
+          "durationMs": 70,
+          "description": "雙刃待機"
+        },
+        {
+          "localFrame": 1,
+          "globalFrame": 89,
+          "startMs": 70,
+          "durationMs": 90,
+          "description": "舉起投擲刃"
+        },
+        {
+          "localFrame": 2,
+          "globalFrame": 90,
+          "startMs": 160,
+          "durationMs": 110,
+          "description": "後擺蓄勢"
+        },
+        {
+          "localFrame": 3,
+          "globalFrame": 91,
+          "startMs": 270,
+          "durationMs": 55,
+          "description": "手臂向前送出"
+        },
+        {
+          "localFrame": 4,
+          "globalFrame": 92,
+          "startMs": 325,
+          "durationMs": 50,
+          "description": "張手釋放"
+        },
+        {
+          "localFrame": 5,
+          "globalFrame": 93,
+          "startMs": 375,
+          "durationMs": 80,
+          "description": "空手回收"
+        },
+        {
+          "localFrame": 6,
+          "globalFrame": 94,
+          "startMs": 455,
+          "durationMs": 100,
+          "description": "從腰間補刃"
+        },
+        {
+          "localFrame": 7,
+          "globalFrame": 95,
+          "startMs": 555,
+          "durationMs": 120,
+          "description": "共用待機"
+        }
+      ],
+      "visualEvents": [
+        {
+          "id": "visual_blade_release",
+          "localFrame": 4,
+          "globalFrame": 92,
+          "atMs": 325
+        }
+      ]
+    }
+  ]
+}

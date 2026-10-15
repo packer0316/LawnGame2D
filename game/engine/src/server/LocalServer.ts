@@ -170,9 +170,12 @@ export class LocalServer implements GameServer {
   private spawnIn(zone: SpawnZone, notify: boolean): void {
     if (!this.world) return;
     const random = Math.random;
-    const totalWeight = zone.pool.reduce((sum, entry) => sum + entry.weight, 0);
+    // Boss 只能定時出現（SPEC §3.8），就算內容把 Boss 放進一般生怪區也略過
+    const pool = zone.pool.filter((e) => this.bundle.monsters.get(e.mobId)?.math?.tier !== 'boss');
+    if (pool.length === 0) return;
+    const totalWeight = pool.reduce((sum, entry) => sum + entry.weight, 0);
     let pick = random() * totalWeight;
-    const entry = zone.pool.find((e) => (pick -= e.weight) < 0) ?? zone.pool[0]!;
+    const entry = pool.find((e) => (pick -= e.weight) < 0) ?? pool[0]!;
     const monster = this.bundle.monsters.get(entry.mobId);
     if (!monster) return;
     const multiplier = rollMultiplier(monster.math?.multiplier ?? 2, random);

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { versioned } from '../versioned';
-import { ClassIdSchema, HexColorSchema, IdSchema, Vec2Schema } from './common';
+import { ClassIdSchema, IdSchema, Vec2Schema } from './common';
 
 /** 紙娃娃圖層，由後到前（STUDIO_SPEC §4.3）。 */
 export const AVATAR_LAYERS = [
@@ -89,6 +89,7 @@ export const AvatarItemSchema = z.object({
   offset: Vec2Schema.optional(),
   /** 錨點部件的視角幀覆寫；不填時正面 = stand 第一幀、背面 = ladder 第一幀。 */
   views: z.object({ front: z.number().int().min(0).optional(), back: z.number().int().min(0).optional() }).optional(),
+  /** 以下三個欄位是舊版換裝用的；SPEC v0.6 起只有武器，保留只為了讀得懂舊資料，遊戲不使用。 */
   recolor: z.enum(['hair', 'eye', 'dye']).optional(),
   hairMode: z.enum(['full', 'underHat', 'hidden']).optional(),
   hidesLayers: z.array(AvatarLayerSchema).optional(),
@@ -97,52 +98,11 @@ export const AvatarItemSchema = z.object({
 export type AvatarItem = z.infer<typeof AvatarItemSchema>;
 export const AvatarItemFile = versioned(AvatarItemSchema, 1);
 
-export const PaletteGroupSchema = z.enum(['skin', 'hair', 'eye', 'dye']);
-export type PaletteGroup = z.infer<typeof PaletteGroupSchema>;
-
-export const PaletteSchema = z.object({
-  id: IdSchema,
-  group: PaletteGroupSchema,
-  name: z.string().min(1),
-  /** 依序對應該群組 Key 色階的每一階。 */
-  colors: z.array(HexColorSchema).min(1),
-});
-export type Palette = z.infer<typeof PaletteSchema>;
-
-/** `content/avatar/palettes.json`：Key 色階 + 各顏色的色階。 */
-export const PaletteFileSchema = z
-  .object({
-    schemaVersion: z.literal(1),
-    keyRamps: z.object({
-      skin: z.array(HexColorSchema).min(1),
-      hair: z.array(HexColorSchema).min(1),
-      eye: z.array(HexColorSchema).min(1),
-      dye: z.array(HexColorSchema).min(1),
-    }),
-    palettes: z.array(PaletteSchema),
-  })
-  .superRefine((file, ctx) => {
-    file.palettes.forEach((palette, index) => {
-      const expected = file.keyRamps[palette.group].length;
-      if (palette.colors.length !== expected) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['palettes', index, 'colors'],
-          message: `${palette.id} 有 ${palette.colors.length} 階，但 ${palette.group} 的 Key 色階有 ${expected} 階`,
-        });
-      }
-    });
-  });
-export type PaletteFile = z.infer<typeof PaletteFileSchema>;
-export const PaletteFileVersioned = versioned(PaletteFileSchema, 1);
-
-/** 角色目前的外觀組合。 */
+/**
+ * 角色外觀：人物固定（四職業共用同一個人物、不換裝、不換色），只換武器（SPEC v0.6 §4.3）。
+ * weapon 不填時用職業的預設武器（ClassDef.weapon）。
+ */
 export const AvatarLoadoutSchema = z.object({
-  items: z.array(IdSchema),
-  skin: IdSchema,
-  hair: IdSchema,
-  eye: IdSchema,
-  /** 部件 ID → 染色 palette ID。 */
-  dyes: z.record(z.string(), IdSchema).optional(),
+  weapon: IdSchema.optional(),
 });
 export type AvatarLoadout = z.infer<typeof AvatarLoadoutSchema>;

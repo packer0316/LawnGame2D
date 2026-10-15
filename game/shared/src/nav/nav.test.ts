@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildNavGraph } from './buildNavGraph';
+import { findPath, reachableFrom } from './path';
 
 /**
  *  y=140      ═══════ 單向平台 2（x 40–90），梯子 x=70 通到地面
@@ -51,6 +52,16 @@ describe('buildNavGraph', () => {
       climbables: [{ id: 2, type: 'rope' as const, x: 70, yTop: 156, yBottom: 170 }],
     });
     expect(rope.edges.some((e) => e.type === 'climb' && e.from === 1 && e.to === 2)).toBe(true);
+  });
+
+  it('可達性與最短路線', () => {
+    expect([...reachableFrom(nav, 1)].sort()).toEqual([1, 2, 3]);
+    expect(findPath(nav, 1, 1)).toEqual([]);
+    const path = findPath(nav, 3, 2)!;
+    expect(path.length).toBeGreaterThan(0);
+    expect(path[0]!.from).toBe(3);
+    expect(path.at(-1)!.to).toBe(2);
+    expect(findPath({ nodes: nav.nodes, edges: [] }, 1, 2)).toBeNull();
   });
 
   it('邊帶有起跳點', () => {

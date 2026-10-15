@@ -36,6 +36,8 @@ export interface GameHandle {
   /** 觸控按鈕：按下／放開某個動作。 */
   press(action: Action): void;
   release(action: Action): void;
+  /** HUD 佔用的區域（CSS 像素）。遊戲畫面只畫在底欄上方。 */
+  setViewInsets(insets: { bottom: number }): void;
 }
 
 /** 內部高度固定 540 像素（SPEC §4.1）。 */
@@ -65,6 +67,8 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
 
   let scene: GameScene | null = null;
   let destroyed = false;
+  /** 場景建立前就設定的 HUD 高度，建立後套用 */
+  let insetBottom = 0;
 
   const start = async () => {
     const bundle = await loadContentBundle(options.content);
@@ -81,6 +85,7 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
       ...(options.onExit ? { onExit: options.onExit } : {}),
     });
     scene = game.scene.getScene('game') as GameScene;
+    scene.setViewInsets(insetBottom);
   };
   start().catch((error: unknown) => {
     console.error(error);
@@ -122,6 +127,10 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
     },
     release(action) {
       scene?.release(action);
+    },
+    setViewInsets(insets) {
+      insetBottom = insets.bottom * dpr;
+      scene?.setViewInsets(insetBottom);
     },
   };
 }

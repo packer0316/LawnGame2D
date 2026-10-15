@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isValidId, idCategory } from './ids';
-import { PaletteFileSchema, RoomFileVersioned } from './content';
+import { RoomFileVersioned } from './content';
 import { versioned } from './versioned';
 import { z } from 'zod';
 
@@ -33,15 +33,6 @@ describe('versioned', () => {
 });
 
 describe('內容 schema', () => {
-  it('調色盤階數要跟 Key 色階一致', () => {
-    const base = {
-      schemaVersion: 1,
-      keyRamps: { skin: ['#ff0000', '#00ff00'], hair: ['#000001'], eye: ['#000002'], dye: ['#000003'] },
-    };
-    expect(PaletteFileSchema.safeParse({ ...base, palettes: [{ id: 'palette_0001', group: 'skin', name: '白', colors: ['#ffffff', '#eeeeee'] }] }).success).toBe(true);
-    expect(PaletteFileSchema.safeParse({ ...base, palettes: [{ id: 'palette_0001', group: 'skin', name: '白', colors: ['#ffffff'] }] }).success).toBe(false);
-  });
-
   it('房間檔', () => {
     const rooms = RoomFileVersioned.migrate({
       schemaVersion: 1,

@@ -22,7 +22,6 @@ export const ContentManifestFile = versioned(ContentManifestSchema, 1);
 export const contentPaths = {
   manifest: 'manifest.json',
   avatarBaseSheet: 'avatar/base.sheet.json',
-  palettes: 'avatar/palettes.json',
   avatarItem: (id: string) => `avatar/items/${id}.json`,
   avatarItemSheet: (id: string) => `avatar/items/${id}.sheet.json`,
   monster: (id: string) => `monsters/${id}.json`,

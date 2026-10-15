@@ -83,6 +83,15 @@ export class MonsterActor {
     return this.state !== 'die' && this.state !== 'gone';
   }
 
+  /** 站在哪個足場上（飛行怪為 null）。 */
+  get foothold(): number | null {
+    return this.body?.ground ?? null;
+  }
+
+  get flying(): boolean {
+    return this.fly !== null;
+  }
+
   /** 判定框（世界座標）。 */
   hitbox(): Rect {
     const hb = this.def.hitbox;
