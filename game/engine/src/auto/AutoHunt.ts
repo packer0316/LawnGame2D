@@ -1,4 +1,4 @@
-import { MAX_JUMP_HEIGHT, PHYSICS, findPath, navDistances, type Area, type FootholdWorld, type MapDef, type NavGraph, type SkillDef } from '@lawn/shared';
+import { MAX_JUMP_HEIGHT, PHYSICS, findPath, type Area, type FootholdWorld, type MapDef, type NavGraph, type SkillDef } from '@lawn/shared';
 import type { Player, PlayerInput } from '../actor/Player';
 import type { MonsterActor } from '../monster/MonsterActor';
 
@@ -84,6 +84,68 @@ function skillReach(skill: SkillDef): number {
   return reachOf(skill.strikes[0]!.area) + travel;
 }
 
+/** 換目標的門檻：新的打怪點分數要超過目前目標的幾倍才換（避免兩群差不多時來回跑）。 */
+const SWITCH_RATIO = 1.25;
+/** 到了打怪點之後大約要花多久出手、清怪（秒）；分數的分母加上這段，近的單隻怪才不會永遠贏過遠一點的一群。 */
+const ENGAGE_SEC = 1.2;
+/** 「附近」的範圍：同一足場這個距離內的怪，打完眼前這群可以接著打，算一部分價值。 */
+const NEAR_PX = 260;
+/** 遠程職業也走到這個距離內才打：站進怪群裡，兩側都打得到、範圍技能放得到，不會停在出生點遠遠地射。 */
+const STAND_OFF_PX = 150;
+
+/** 跟目標保持多遠就可以出手。 */
+const standOff = (reach: number): number => Math.max(8, Math.min(reach * 0.7, STAND_OFF_PX));
+
+/** 一條路線：估計秒數、抵達足場時的 x、第一條要走的邊（出發點為 null）。 */
+interface Route {
+  time: number;
+  x: number;
+  first: Edge | null;
+}
+
+/** 足場在 x 的高度；x 超出足場範圍時取最近的端點。 */
+function yOn(world: FootholdWorld, fh: number, x: number): number {
+  const range = world.footholdRange(fh);
+  if (!range) return 0;
+  return world.footholdY(fh, Math.max(range.x1, Math.min(range.x2, x))) ?? 0;
+}
+
+/** 走一條邊大約要幾秒（不含走到起跳點）：跳、落下、爬繩照高低差估。 */
+function edgeSeconds(world: FootholdWorld, edge: Edge, x: number): number {
+  const drop = yOn(world, edge.to, x) - yOn(world, edge.from, x);
+  const fall = Math.sqrt((2 * Math.max(0, drop)) / PHYSICS.gravity);
+  switch (edge.type) {
+    case 'run':
+      return 0.1;
+    case 'roll':
+      return 0.4;
+    case 'drop':
+      return 0.25 + fall;
+    case 'jump':
+      return 0.8 + fall;
+    case 'climb':
+      return 0.3 + Math.abs(drop) / PHYSICS.climbSpeed;
+    case 'portal':
+      return 2;
+  }
+}
+
+/** 走完一條邊大約落在目標足場的哪裡。 */
+function landingX(world: FootholdWorld, edge: Edge, takeoff: number): number {
+  const ahead = edge.type === 'jump' ? 56 : edge.type === 'climb' || edge.type === 'portal' ? 0 : 20;
+  const x = takeoff + (edge.dir ?? 0) * ahead;
+  const range = world.footholdRange(edge.to);
+  return range ? Math.max(range.x1, Math.min(range.x2, x)) : x;
+}
+
+/** 技能往後退多遠（後撤射擊、後空翻）；不往後退回傳 0。 */
+function backoffOf(skill: SkillDef): number {
+  const move = skill.move;
+  if (move?.kind === 'dash') return Math.max(0, -move.distance);
+  if (move?.kind === 'leap') return Math.max(0, -move.vx) * 0.6;
+  return 0;
+}
+
 /** 技能第一刀的上下範圍（相對身體中心）。 */
 function heightOf(area: Area): number {
   if (area.shape === 'circle' || area.shape === 'sector') return (area.r ?? 0) * 2;
@@ -113,6 +175,8 @@ export class AutoHunt {
   /** 走得到的怪太少持續多久 */
   private sparseMs = 0;
   private reachableCount = 0;
+  /** 目前目標的打怪點分數（每秒打得到的價值） */
+  private targetScore = 0;
   /** 已決定前往下一房 */
   private leaving = false;
   private clock = 0;
@@ -130,6 +194,7 @@ export class AutoHunt {
       targetFh: t?.foothold ?? -1,
       edgeTo: this.run?.edge.to ?? -1,
       blacklisted: [...this.blacklist.values()].filter((until) => until > this.clock).length,
+      targetScore: Math.round(this.targetScore * 100) / 100,
     };
   }
 
@@ -141,6 +206,7 @@ export class AutoHunt {
     this.stuckMs = 0;
     this.sparseMs = 0;
     this.reachableCount = 0;
+    this.targetScore = 0;
     this.leaving = false;
     this.blacklist.clear();
     this.looseClimb = null;
@@ -148,6 +214,8 @@ export class AutoHunt {
   }
 
   step(ctx: AutoContext): PlayerInput {
+    // GameScene 傳的是 Map.values()，只能走訪一次；選怪、站位、判斷放技能都要走好幾次，先收成陣列
+    ctx = { ...ctx, monsters: [...ctx.monsters] };
     const dt = PHYSICS.dt * 1000;
     this.clock += dt;
     const body = ctx.player.body;
@@ -186,9 +254,10 @@ export class AutoHunt {
     const goal = this.footholdOf(ctx, this.target);
     if (goal === null) return this.giveUp(this.target);
     if (body.ground !== goal) {
-      const path = findPath(ctx.nav, body.ground, goal);
-      if (!path || path.length === 0) return this.giveUp(this.target);
-      this.run = this.startEdge(ctx, path[0]!);
+      // 跟選怪用同一套「以時間計」的路線：選的時候估多遠，就照那條路走
+      const edge = this.routes(ctx).get(goal)?.first;
+      if (!edge) return this.giveUp(this.target);
+      this.run = this.startEdge(ctx, edge);
       this.status = 'travel';
       return this.runEdge(ctx, dt);
     }
@@ -246,32 +315,106 @@ export class AutoHunt {
     return dy > 0 ? dy - reachY : -1;
   }
 
+  /**
+   * 選打怪點：每隻走得到的怪都是一個候選點。價值 = 站在牠旁邊、面向怪多的一側時普攻打得到的怪，
+   * 再加上同足場附近的怪（打完這群可以接著打）；成本 = 沿導航圖估的移動秒數。
+   * 分數 = 價值 ÷（移動秒數 + 出手時間），也就是「每秒打得到多少」，所以會往怪多的地方走，
+   * 不會只顧著打最近的一隻、一直在出生點附近繞。目前目標要被明顯超過才換。
+   */
   private pickTarget(ctx: AutoContext): void {
     const body = ctx.player.body;
     if (body.ground === null) return;
-    const dist = navDistances(ctx.nav, body.ground);
-    const alive = [...ctx.monsters].filter((m) => m.alive);
-    let best: { m: MonsterActor; score: number } | null = null;
+    const routes = this.routes(ctx);
+    const reach = reachOf(ctx.basic.strikes[0]!.area);
+    const window = Math.max(70, Math.min(220, reach));
+    const byFoothold = new Map<number, MonsterActor[]>();
     this.reachableCount = 0;
-    for (const m of alive) {
-      if ((this.blacklist.get(m.spawn.uid) ?? 0) > this.clock) continue;
+    for (const m of ctx.monsters) {
+      if (!m.alive || (this.blacklist.get(m.spawn.uid) ?? 0) > this.clock) continue;
       const fh = this.footholdOf(ctx, m);
-      if (fh === null) continue;
-      const cost = dist.get(fh);
-      if (cost === undefined) continue;
+      if (fh === null || !routes.has(fh)) continue;
       this.reachableCount += 1;
-      // 換算成「要跑多少像素」：每條邊的成本 ≈ 一次跳躍 ≈ 跑 80 像素
-      const travel = cost * 80 + Math.abs(m.x - body.x);
-      let score: number;
-      if (this.config.strategy === 'highest') score = -m.spawn.multiplier * 400 + travel;
-      else if (this.config.strategy === 'densest') score = -alive.filter((o) => Math.abs(o.x - m.x) < 110 && Math.abs(o.y - m.y) < 60).length * 240 + travel;
-      else score = travel;
-      // 目前的目標加分，避免兩隻差不多遠時來回換
-      if (m === this.target) score -= 60;
-      if (!best || score < best.score) best = { m, score };
+      const list = byFoothold.get(fh);
+      if (list) list.push(m);
+      else byFoothold.set(fh, [m]);
+    }
+    let best: { m: MonsterActor; score: number } | null = null;
+    let current = -Infinity;
+    for (const [fh, list] of byFoothold) {
+      const route = routes.get(fh)!;
+      for (const m of list) {
+        // 遠程職業站在射程內就能打，不用走到怪旁邊
+        const walk = Math.max(0, Math.abs(m.x - route.x) - standOff(reach)) / PHYSICS.runSpeed;
+        const score = this.spotValue(m, list, window) / (route.time + walk + (m.flying ? 0.6 : 0) + ENGAGE_SEC);
+        if (m === this.target) current = score;
+        if (!best || score > best.score) best = { m, score };
+      }
+    }
+    if (this.target && current > 0 && current * SWITCH_RATIO >= (best?.score ?? 0)) {
+      this.targetScore = current;
+      return;
     }
     if (best?.m !== this.target) this.stuckMs = 0;
     this.target = best?.m ?? null;
+    this.targetScore = best?.score ?? 0;
+  }
+
+  /** 站在 m 旁邊、面向怪多的一側時打得到的價值（依策略加權）；同足場 NEAR_PX 內的其他怪算一部分。 */
+  private spotValue(m: MonsterActor, sameFoothold: MonsterActor[], window: number): number {
+    let right = 0;
+    let left = 0;
+    let near = 0;
+    for (const other of sameFoothold) {
+      const dx = other.x - m.x;
+      const weight = this.weightOf(other);
+      if (dx >= -8 && dx <= window) right += weight;
+      if (dx <= 8 && dx >= -window) left += weight;
+      if (Math.abs(dx) <= NEAR_PX) near += weight;
+    }
+    const hit = Math.max(right, left);
+    const around = near - hit;
+    const self = this.weightOf(m);
+    switch (this.config.strategy) {
+      case 'nearest':
+        // 最近：距離為主，但順路的一群還是比落單的一隻值得
+        return self + 0.6 * (hit - self) + 0.25 * around;
+      case 'densest':
+        return hit + 0.6 * around;
+      case 'highest':
+        return hit + 0.3 * around;
+    }
+  }
+
+  /**
+   * 一隻怪的價值。最高倍率：照倍率。其他策略：高倍率的怪很難打死（擊殺機率約 1／倍率），只算一部分，
+   * 不然一群打不死的菁英會把角色一直綁在同一個地方。
+   */
+  private weightOf(m: MonsterActor): number {
+    if (this.config.strategy === 'highest') return m.spawn.multiplier;
+    return Math.max(0.25, Math.min(1, 4 / m.spawn.multiplier));
+  }
+
+  /** 從目前位置沿導航圖到每個足場：估計秒數、抵達時的 x、第一條要走的邊。以時間計，會算進走到起跳點的距離。 */
+  private routes(ctx: AutoContext): Map<number, Route> {
+    const body = ctx.player.body;
+    const start = body.ground!;
+    const best = new Map<number, Route>([[start, { time: 0, x: body.x, first: null }]]);
+    const open = new Set<number>([start]);
+    while (open.size > 0) {
+      let fh = -1;
+      for (const id of open) if (fh < 0 || best.get(id)!.time < best.get(fh)!.time) fh = id;
+      open.delete(fh);
+      const from = best.get(fh)!;
+      for (const edge of ctx.nav.edges) {
+        if (edge.from !== fh) continue;
+        const takeoff = edge.x ?? from.x;
+        const time = from.time + Math.abs(takeoff - from.x) / PHYSICS.runSpeed + edgeSeconds(ctx.world, edge, takeoff);
+        if (time >= (best.get(edge.to)?.time ?? Infinity)) continue;
+        best.set(edge.to, { time, x: landingX(ctx.world, edge, takeoff), first: from.first ?? edge });
+        open.add(edge.to);
+      }
+    }
+    return best;
   }
 
   /** 同一個足場：走進射程、面向目標、出招。 */
@@ -280,15 +423,30 @@ export class AutoHunt {
     const target = this.target!;
     const box = target.hitbox();
     const cx = box.x + box.w / 2;
-    const dir: 1 | -1 = cx >= body.x ? 1 : -1;
+    let dir: 1 | -1 = cx >= body.x ? 1 : -1;
     const reach = reachOf(ctx.basic.strikes[0]!.area);
     const gap = Math.max(0, Math.abs(cx - body.x) - box.w / 2);
 
-    if (gap > Math.max(8, reach * 0.7)) {
+    // 遠程：站在怪群邊緣（另一側沒有怪）時，先走進怪群中間，兩側都打得到、範圍技能放得到；
+    // 已經在怪群裡就不再挪，免得一直走來走去少打幾下
+    if (reach > STAND_OFF_PX) {
+      const spot = this.clusterCenter(ctx, target);
+      if (spot !== null && Math.abs(spot - body.x) > 60 && gap < reach * 0.9) {
+        const toward: 1 | -1 = spot > body.x ? 1 : -1;
+        if (this.countAhead(ctx, toward === 1 ? -1 : 1, reach) === 0) {
+          if (this.trackStuck(body.x, dt)) return this.giveUp(target);
+          return input({ x: toward });
+        }
+      }
+    }
+    if (gap > standOff(reach)) {
       if (this.trackStuck(body.x, dt)) return this.giveUp(target);
       return input({ x: dir });
     }
     this.stuckMs = 0;
+    // 站位：身後打得到的怪比面前多就轉過去打（目標之後再回頭打）
+    const back: 1 | -1 = dir === 1 ? -1 : 1;
+    if (this.countAhead(ctx, back, reach) > this.countAhead(ctx, dir, reach)) dir = back;
     if (body.facing !== dir) return input({ x: dir });
 
     // 目標在頭上：跳得到就跳起來打（空中出手在 step() 開頭處理），跳不到就換目標
@@ -303,8 +461,14 @@ export class AutoHunt {
     }
 
     if (this.config.useSkills) {
+      const behind = this.roomBehind(ctx);
+      const keepWithin = standOff(reach) + 40;
       for (const { skill, press, ready } of ctx.skills) {
         if (!ready) continue;
+        // 往後退的技能（後撤射擊、後空翻）：身後要有空間，退完也還在出手距離內才放。
+        // 不然每放一次就要走回來，遠程職業會被一路推回牆角，或從平台邊緣掉下去
+        const backoff = backoffOf(skill);
+        if (backoff > 0 && (behind < backoff + 40 || gap + backoff > keepWithin)) continue;
         const strike = skill.strikes[0]!;
         const reach = skillReach(skill);
         const inRange = [...ctx.monsters].filter((m) => m.alive && (m.x - body.x) * body.facing >= -60 && Math.abs(m.x - body.x) <= reach + 20 && Math.abs(m.y - body.y) < 80).length;
@@ -313,6 +477,46 @@ export class AutoHunt {
       }
     }
     return input({ attack: true });
+  }
+
+  /** 目標附近（同足場 NEAR_PX 內）怪群的中位數 x，夾在足場範圍內；角色不在足場上時回傳 null。 */
+  private clusterCenter(ctx: AutoContext, target: MonsterActor): number | null {
+    const ground = ctx.player.body.ground;
+    const range = ground !== null ? ctx.world.footholdRange(ground) : null;
+    if (!range) return null;
+    const xs: number[] = [];
+    for (const m of ctx.monsters) {
+      if (m.alive && Math.abs(m.x - target.x) <= NEAR_PX && this.footholdOf(ctx, m) === ground) xs.push(m.x);
+    }
+    if (xs.length === 0) return null;
+    xs.sort((a, b) => a - b);
+    const median = xs[Math.floor(xs.length / 2)]!;
+    return Math.max(range.x1 + 24, Math.min(range.x2 - 24, median));
+  }
+
+  /** 身後（背對的方向）還能退多遠：到足場盡頭或牆。 */
+  private roomBehind(ctx: AutoContext): number {
+    const body = ctx.player.body;
+    const range = body.ground !== null ? ctx.world.footholdRange(body.ground) : null;
+    if (!range) return 0;
+    const back = body.facing === 1 ? -1 : 1;
+    const edge = back === 1 ? range.x2 : range.x1;
+    const wall = ctx.world.blockByWalls(body.x, edge, body.y - PHYSICS.height, body.y - 2, PHYSICS.halfWidth);
+    return Math.abs(wall - body.x);
+  }
+
+  /** 面向 dir 時普攻打得到幾隻（水平在射程內、高度在判定範圍內）。 */
+  private countAhead(ctx: AutoContext, dir: 1 | -1, reach: number): number {
+    const body = ctx.player.body;
+    const half = heightOf(ctx.basic.strikes[0]!.area) / 2 + 12;
+    let count = 0;
+    for (const m of ctx.monsters) {
+      if (!m.alive) continue;
+      const box = m.hitbox();
+      const dx = (box.x + box.w / 2 - body.x) * dir;
+      if (dx >= -box.w / 2 && dx <= reach + box.w / 2 && Math.abs(box.y + box.h / 2 - (body.y - 24)) <= half + box.h / 2) count += 1;
+    }
+    return count;
   }
 
   /** 執行導航圖的一條邊：先走到起跳點，再跑／跳／下跳／爬。 */

@@ -4,7 +4,7 @@ import { FootholdWorld, buildNavGraph, type ClassDef, type MapDef, type Rect, ty
 import { Player } from '../actor/Player';
 import type { AvatarView } from '../avatar/AvatarView';
 import type { MonsterActor } from '../monster/MonsterActor';
-import { AUTO_ROOM, AutoHunt } from './AutoHunt';
+import { AUTO_ROOM, AutoHunt, type AutoConfig } from './AutoHunt';
 
 /**
  *  y=240  ════ fh5（60–160）       ════════ fh3（500–700）
@@ -58,9 +58,10 @@ function monster(uid: number, x: number, y: number, fh: number | null): MonsterA
 }
 
 /** 跑到目標被打中或時間到；回傳用了幾步（-1 = 沒打到）。 */
-function hunt(targets: (MonsterActor & Fake)[], start: { x: number; y: number }, maxSteps = 60 * 25) {
+function hunt(targets: (MonsterActor & Fake)[], start: { x: number; y: number }, maxSteps = 60 * 25, strategy: AutoConfig['strategy'] = 'nearest') {
   const auto = new AutoHunt();
   auto.config.useSkills = false;
+  auto.config.strategy = strategy;
   let player!: Player;
   const hits: number[] = [];
   player = new Player(world, start.x, start.y, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, {
@@ -159,6 +160,40 @@ describe('自動掛機', () => {
     }
     expect(landedAt).toBeGreaterThan(0);
     expect(landedAt).toBeLessThan(60 * 1.5);
+  });
+
+  it('預設策略也會往怪多的地方走：先去平台上打一群，不先打旁邊落單的一隻', () => {
+    const lone = monster(1, 40, 400, 1);
+    const pack = [230, 250, 270, 290].map((x, i) => monster(2 + i, x, 330, 2));
+    const result = hunt([lone, ...pack], { x: 100, y: 400 }, 60 * 30);
+    expect(result.steps).toBeGreaterThan(0);
+    expect(result.hits[0]).not.toBe(1);
+  });
+
+  it('遠程職業走進怪群中間打，不會停在出生點遠遠地射', () => {
+    const mage = classes.find((c) => c.id === 'mage')!;
+    const auto = new AutoHunt();
+    auto.config.useSkills = false;
+    const player = new Player(world, 40, 400, mage, skills, { pose: () => 300, motion: () => 0 }, avatar, { onStrike() {} });
+    // 打不死的怪：只看站位
+    const pack = [300, 340, 380, 420].map((x, i) => monster(1 + i, x, 400, 1));
+    for (let i = 0; i < 60 * 5; i += 1) player.step(world, auto.step({ world, nav, map, player, monsters: pack, basic: skills.get(mage.basic)!, skills: [] }));
+    expect(player.body.x).toBeGreaterThan(250);
+    expect(player.body.x).toBeLessThan(440);
+  });
+
+  it('怪物清單跟 GameScene 一樣是只能走一次的 Map.values()，照樣會放技能', () => {
+    const auto = new AutoHunt();
+    const player = new Player(world, 300, 400, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, { onStrike() {} });
+    const pack = new Map([320, 335, 350].map((x, i) => [i + 1, monster(i + 1, x, 400, 1)] as const));
+    const skill = skills.get(warrior.skills[0]!)!;
+    let casted = false;
+    for (let i = 0; i < 60 && !casted; i += 1) {
+      const input = auto.step({ world, nav, map, player, monsters: pack.values(), basic: skills.get(warrior.basic)!, skills: [{ skill, press: { skill: 0 }, ready: true }] });
+      casted = input.skill === 0;
+      player.step(world, input);
+    }
+    expect(casted).toBe(true);
   });
 
   it('打不到的怪不會卡住，改打別隻', () => {

@@ -1,10 +1,10 @@
 import { AUTO_ROOM, type AutoConfig, type AutoStatus, type GameCommand, type HudState } from '@lawn/engine';
 import { Icon } from './Icons';
 
-const STRATEGIES: { id: AutoConfig['strategy']; label: string }[] = [
-  { id: 'nearest', label: '最近' },
-  { id: 'highest', label: '最高倍率' },
-  { id: 'densest', label: '最密集' },
+const STRATEGIES: { id: AutoConfig['strategy']; label: string; hint: string }[] = [
+  { id: 'nearest', label: '最近', hint: '以距離為主，順路打怪多的一群' },
+  { id: 'highest', label: '最高倍率', hint: '往高倍率的怪走' },
+  { id: 'densest', label: '最密集', hint: '往怪最多的地方走，站在打得到最多隻的位置' },
 ];
 
 const STOPS: { key: keyof AutoConfig['stop']; label: string; unit: string }[] = [
@@ -59,7 +59,7 @@ export function AutoPanel({ state, command, onClose }: { state: HudState; comman
       <div className="auto-row">
         <span className="auto-label">選怪策略</span>
         <div className="segmented">
-          {STRATEGIES.map((s) => <button key={s.id} aria-pressed={config.strategy === s.id} className={config.strategy === s.id ? 'active' : ''} onClick={() => set({ strategy: s.id })}>{s.label}</button>)}
+          {STRATEGIES.map((s) => <button key={s.id} title={s.hint} aria-pressed={config.strategy === s.id} className={config.strategy === s.id ? 'active' : ''} onClick={() => set({ strategy: s.id })}>{s.label}</button>)}
         </div>
       </div>
       <label className="auto-row toggle">
