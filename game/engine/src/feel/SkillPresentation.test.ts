@@ -16,8 +16,8 @@ describe('技能表現節奏',()=>{
       expect(end.pixels).toBeLessThanOrEqual(7);
       for(let i=0;i<skill.strikes.length-1;i++){
         const beat=impactFeel(skill,i);
-        // Ground Cleave has deliberate heavy intermediate impacts, unlike fast combos.
-        expect(beat.stopMs).toBeLessThanOrEqual(skill.id==='skill_0006'?48:22);
+        // Cleave and the skeletal crush use deliberate heavy beats, unlike fast combos.
+        expect(beat.stopMs).toBeLessThanOrEqual(skill.id==='skill_0049'?32:skill.id==='skill_0006'?48:22);
         expect(beat.stopMs).toBeLessThanOrEqual(end.stopMs);
         expect(beat.pixels).toBeLessThanOrEqual(end.pixels);
       }

@@ -185,6 +185,11 @@ export const SFX_CUES: Record<string, SfxCue> = {
   'fx:cloneSlash': [{ s: 'whip', gain: -4 }, { s: CUT, gain: -6, at: 20 }, { s: 'swing_big', gain: -11 }, FINALE],
   // 月斷・月下影殺：演出自己的節拍（MoonExecution 呼叫 moon:<段落>），命中聲也由演出負責
   'hit:skill_0048': [],
+  'cast:skill_0049': [{s:'sub_drop',gain:-6},{s:'dark_drone',gain:-8},{s:'charge_long',gain:-10}],
+  'hit:skill_0049': [],
+  'grasp:rise': [{s:CRUNCH,gain:-12,rate:.65},{s:'dark_portal',gain:-8}],
+  'grasp:crush': [{s:CRUNCH,gain:-4},{s:'explosion_low',gain:-8},{s:'magic_impact',gain:-9}],
+  'grasp:finish': [{s:'cinematic_hit',gain:-3},{s:'explosion_low',gain:-5},{s:GLASS_H,gain:-10}],
   'moon:seal': [{ s: 'sub_drop', gain: -6 }, { s: BELL, gain: -9, rate: 0.7 }],
   'moon:eye': [{ s: 'sparkle', gain: -6, rate: 0.8 }, { s: 'zap_short', gain: -15 }],
   'moon:cut': [{ s: 'sword_ring', gain: -2 }, { s: 'cut_2', gain: -4 }],

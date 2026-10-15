@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-16",
+  "mode": "built-in image_gen",
+  "assets": [
+    {
+      "file": "hands-v1.png",
+      "layout": "4x4, 16 frames",
+      "prompt": "Use case: stylized-concept. Asset: transparent game sprite atlas 4 columns x 4 rows, exactly 16 equal square cells. A gigantic skeletal undead HAND and long forearm of an underworld titan, palm front three-quarter view, five clearly articulated bony fingers, ivory bone with dark violet joints, hot amber-gold occult cracks and narrow violet spectral flame edges. No flesh, no gore. Same hand, same pivot at cell bottom center, same forearm length and proportions throughout all frames; preserve full wrist and forearm to bottom. Clean high-end hand-painted pixel-informed 2D fantasy RPG sprite. Stage animation read left to right: frames 0-3 claw emerges, fingers spread, unfurls from curled to fully open; frames 4-7 reaching open hand struggles, articulated fingers tense and curl slightly inward, subtle wrist torsion; frames 8-11 strong sequential fist clench, fingers close around EMPTY transparent air, culminating in brutally tight clenched bony fist at frame 11; frames 12-15 clenched fist recoils slightly, fractures glow, then fingers relax and hand subsides, keep full arm visible (runtime handles fading). Silhouette tall and imposing, one long forearm and ONE hand per cell. Hand should fit within central 65% of cell width and 88% of height, long forearm occupies lower half, fingers upper half. All cells have 8% transparent gutters. NO ground, NO characters, NO monsters, NO background, NO cell borders or text. Keep surrounding effects very restrained: short violet soul wisps close to bone only, no huge particle blast obscuring the fingers. Actual transparent background.",
+      "source": "exec-859a7775-636e-4661-8c8d-d19529d14cdb.png"
+    },
+    {
+      "file": "portrait-v1.png",
+      "layout": "4x2, 8 frames",
+      "prompt": "Use case: stylized-concept. Transparent 2D fantasy RPG cinematic portrait animation sprite sheet: exactly 4 columns x 2 rows, eight equal square cells. SAME appealing chibi young adult male mage in every cell, warm brown tousled hair, amber eyes, dark indigo hooded mage robe with ornate gold trim and violet lining, hood pushed back so hair and face visible, clasp and engraved bone charm. Framing waist-up, large expressive head, both hands visible casting. NOT a ninja. Original character. Elegant underworld sorcerer fantasy, powerful and stylish, no gore. Same centered torso position and scale in all cells, 8% transparent gutters. Chronological frames 0-1 eyes closed, hands apart in front of chest drawing a small purple sigil; 2-3 eyes open glowing amber, raise both hands with splayed fingers, violet energy between palms; 4-5 intense commanding gaze, thrust hands forward then start clenching both fists; 6-7 both fists snap closed, expression determined, gold-violet light rim on face and sleeves, black-violet smoke curls under robe edge. Each frame visibly different natural hand poses. Premium hand-painted pixel-informed 2D game art with clear silhouette, polished shading and small bright magical accents, same outfit/face/hair in every frame. No hat, no staff covering face, no lettering, no borders, no background. True transparent background.",
+      "edit": "Remove background while preserving eight poses, face, outfit, placement and panel boundaries; retain only mage and close magical energy, transparent alpha.",
+      "source": "exec-1c1cc3cd-29f8-4a95-9953-a3338287bec6.png"
+    },
+    {
+      "file": "crush-v1.png",
+      "layout": "4x2, 8 frames",
+      "prompt": "Use case: stylized-concept. Make a transparent fantasy RPG VFX sprite atlas, exactly 4 columns x 2 rows, eight equal square cells, 2:1 overall canvas. Eight chronological frames of an UNDERWORLD SKELETAL FIST CRUSH MAGIC IMPACT without the hand itself. Frame 0: tiny concentrated amber soul orb enclosed by angular violet pressure cracks; frame 1-2: inward compressed bright golden core, jagged purple runic shell collapsing; frame 3-4: spectacular sharp amber-white shatter explosion with violet soul flames and a few pale bone-like crystal fragments flying radially; frame 5-7: broken gold violet halo expanding and fading into sparse bright glowing fragments. Clear stylized hand-painted pixel-informed 2D action game VFX, luminous high contrast, readable forceful compact silhouette, no flower petal shape, no moon, no shuriken, no character, no text. Center of every cell fixed, effect entirely within central 80 percent of cell with generous transparent gutters. No background, no grid, no borders, actual transparent alpha.",
+      "source": "exec-b12d8eeb-6907-461b-9047-901e43084342.png"
+    }
+  ]
+}

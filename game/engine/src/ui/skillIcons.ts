@@ -3,6 +3,7 @@
  * 技能資料的 `icon` 欄位對應這裡的 key。
  */
 export const SKILL_ICONS: Record<string, string> = {
+  infernalGrasp: '<path d="M8 21v-6L4 9l2-2 4 4V4h2v6-8h2v8-6h2v7l2-5 2 1-2 10-3 4Z"/>',
   moonExecution: '<path d="M17 3A9 9 0 1 0 21 17 8 8 0 0 1 17 3Z"/><path d="m17 8 1 2 2 1-2 1-1 2-1-2-2-1 2-1Z"/>',
   whirl: '<path d="M12 4a8 8 0 1 1-7.4 5"/><path d="M12 8a4 4 0 1 1-3.6 2.3"/><path d="m3 6 1.6 3 3-1.4"/>',
   iaido: '<path d="M3 15h18"/><path d="m15 9 6 6-6 2"/><path d="M5 11h7"/>',

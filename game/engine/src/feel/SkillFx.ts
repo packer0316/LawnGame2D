@@ -15,6 +15,9 @@ import { SkillAudio } from './SkillAudio';
 import { MoonExecution } from './MoonExecution';
 import { loadMoonExecutionArt } from './MoonExecutionArt';
 import { MOON_SKILL } from './MoonExecutionTiming';
+import {InfernalGrasp} from './InfernalGrasp';
+import {loadInfernalGraspArt} from './InfernalGraspArt';
+import {GRASP_SKILL} from './InfernalGraspTiming';
 import { loadWarriorBladeArt } from './WarriorBladeArt';
 import { WarriorBladeEffects } from './WarriorBladeEffects';
 import type { SheetAsset } from '../content/bundle';
@@ -89,6 +92,7 @@ export class SkillFx {
   private tiger:TigerSummon|null=null;
   private storm:AssassinStorm|null=null;
   private moon:MoonExecution|null=null;
+  private grasp:InfernalGrasp|null=null;
   private readonly warriorBlades:WarriorBladeEffects;
   private readonly rains = new Set<FallingRain>();
   private readonly rainWaves = new Map<string, FallingRain[]>();
@@ -99,6 +103,7 @@ export class SkillFx {
   static async preload(scene: Phaser.Scene): Promise<void> {
     await loadSkillAtlases(scene);
     await loadMoonExecutionArt(scene);
+    await loadInfernalGraspArt(scene);
     await loadWarriorBladeArt(scene);
   }
 
@@ -118,12 +123,13 @@ export class SkillFx {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
+  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + (this.grasp?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
     this.warriorBlades.begin(skill.id);
     if(skill.id===MOON_SKILL){this.moon?.destroy();this.moon=new MoonExecution(this.scene,ctx,this.audio);return;}
+    if(skill.id===GRASP_SKILL){this.grasp?.destroy();this.grasp=new InfernalGrasp(this.scene,ctx);return;}
     this.prepareRain(skill, ctx);
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
     if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
@@ -185,6 +191,7 @@ export class SkillFx {
   contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
     const feel=impactFeel(skill,index);
     if(skill.id===MOON_SKILL){this.moon?.contact(ctx.targets,feel.last);return feel;}
+    if(skill.id===GRASP_SKILL){this.grasp?.contact(ctx.targets,index,feel.last);return feel;}
     this.audio.play(skill.classId,feel.strength);
     // 每個可見的實際命中都有核心效果；只縮減附加粒子，不截掉後面的怪物。
     const visible=ctx.targets.filter(t=>t.x>=ctx.view.x-100&&t.x<=ctx.view.x+ctx.view.w+100&&t.y>=ctx.view.y-100&&t.y<=ctx.view.y+ctx.view.h+100);
@@ -347,6 +354,7 @@ export class SkillFx {
   clear(): void {
     this.warriorBlades.clear();
     this.moon?.destroy();this.moon=null;
+    this.grasp?.destroy();this.grasp=null;
     for (const rain of this.rains) rain.destroy();
     this.rainWaves.clear();
     this.tiger?.destroy();this.tiger=null;
@@ -453,6 +461,8 @@ export class SkillFx {
     this.warriorBlades.step(dt);
     this.moon?.step(dt);
     if(this.moon&&!this.moon.active)this.moon=null;
+    this.grasp?.step(dt);
+    if(this.grasp&&!this.grasp.active)this.grasp=null;
     for (const rain of this.rains) rain.step(dt);
     this.tiger?.step(dt);
     if(this.tiger&&!this.tiger.sprite.active)this.tiger=null;

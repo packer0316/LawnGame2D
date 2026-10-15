@@ -749,6 +749,27 @@
       "hitStopMs": 70,
       "shake": 5,
       "ultimate": true
+    },
+    {
+      "id":"skill_0049",
+      "name":"冥獄之握",
+      "classId":"mage",
+      "kind":"active",
+      "pose":"cast",
+      "motion":{"tag":"mage_cast","speed":0.7,"loop":true},
+      "icon":"infernalGrasp",
+      "strikes":[
+        {"atMs":3100,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3270,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3430,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3580,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3720,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":3850,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":4030,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"},
+        {"atMs":4320,"area":{"shape":"map"},"maxTargets":1000,"pierce":true,"weightRule":"even"}
+      ],
+      "cooldownSec":40,"price":20,"fullTargets":20,"cancelFromMs":4950,
+      "hitStopMs":80,"shake":5,"ultimate":true
     }
   ]
 }
