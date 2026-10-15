@@ -85,7 +85,7 @@
         {"atMs": 710, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"},
         {"atMs": 880, "area": {"shape": "path", "h": 100, "w": 40}, "maxTargets": 14, "pierce": true, "weightRule": "even", "fx": "iaido"}
       ],
-      "cooldownSec": 7,
+      "cooldownSec": 6,
       "cancelFromMs": 970,
       "hitStopMs": 130,
       "shake": 5,
@@ -97,17 +97,17 @@
       "classId": "warrior",
       "kind": "active",
       "pose": "swing3",
-      "motion": {"tag": "cleave_heavy"},
+      "motion": {"tag": "cleave_heavy", "speed": 0.64},
       "icon": "quake",
       "strikes": [
-        {"atMs": 445, "area": {"shape": "rect", "w": 160, "h": 110, "offsetX": -10}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
-        {"atMs": 545, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 150}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
-        {"atMs": 645, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 300}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
-        {"atMs": 745, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 450}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"}
+        {"atMs": 700, "area": {"shape": "rect", "w": 160, "h": 110, "offsetX": -10}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
+        {"atMs": 960, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 150}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
+        {"atMs": 1220, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 300}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"},
+        {"atMs": 1480, "area": {"shape": "rect", "w": 150, "h": 100, "offsetX": 450}, "maxTargets": 8, "pierce": true, "weightRule": "even", "fx": "quake"}
       ],
       "cooldownSec": 7,
-      "cancelFromMs": 820,
-      "hitStopMs": 70,
+      "cancelFromMs": 1850,
+      "hitStopMs": 100,
       "shake": 4
     },
     {
@@ -116,16 +116,16 @@
       "classId": "warrior",
       "kind": "active",
       "pose": "swing1",
-      "motion": {"tag": "thrust", "speed": 1.2},
+      "motion": {"tag": "thrust", "speed": 0.6},
       "icon": "thrust",
       "strikes": [
-        {"atMs": 320, "area": {"shape": "path", "h": 80, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "streak"}
+        {"atMs": 780, "area": {"shape": "path", "h": 80, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "streak"}
       ],
       "cooldownSec": 4,
-      "cancelFromMs": 470,
-      "hitStopMs": 60,
+      "cancelFromMs": 1280,
+      "hitStopMs": 100,
       "shake": 3,
-      "move": {"kind": "dash", "atMs": 240, "distance": 280, "durationMs": 150}
+      "move": {"kind": "dash", "atMs": 520, "distance": 280, "durationMs": 360}
     },
     {
       "id": "skill_0008",
@@ -152,18 +152,18 @@
       "classId": "warrior",
       "kind": "active",
       "pose": "swing1",
-      "motion": {"tag": "slash_horizontal", "speed": 1.2},
+      "motion": {"tag": "slash_horizontal", "speed": 0.85},
       "icon": "wave",
       "strikes": [
-        {"atMs": 275, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 10}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 345, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 140}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 415, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 270}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 485, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 400}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
-        {"atMs": 555, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 530}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"}
+        {"atMs": 600, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 10}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 1000, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 140}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 1400, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 270}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 1800, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 400}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"},
+        {"atMs": 2200, "area": {"shape": "rect", "w": 200, "h": 90, "offsetX": 530}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "wave"}
       ],
       "cooldownSec": 3,
-      "cancelFromMs": 645,
-      "hitStopMs": 40,
+      "cancelFromMs": 3050,
+      "hitStopMs": 0,
       "shake": 2
     },
     {
@@ -541,18 +541,18 @@
       "classId": "assassin",
       "kind": "active",
       "pose": "throw",
-      "motion": {"tag": "assassin_throw", "speed": 2.4, "loop": true},
+      "motion": {"tag": "assassin_throw", "speed": 0.85, "loop": false},
       "icon": "fan",
       "strikes": [
-        {"atMs": 140, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 290, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 440, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 590, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
-        {"atMs": 740, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"}
+        {"atMs": 340, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 740, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 1140, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 1540, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"},
+        {"atMs": 2040, "area": {"shape": "sector", "r": 360}, "maxTargets": 6, "pierce": true, "weightRule": "even", "fx": "bladeFan"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 830,
-      "hitStopMs": 25,
+      "cancelFromMs": 2460,
+      "hitStopMs": 35,
       "shake": 1
     },
     {
@@ -585,8 +585,8 @@
       "motion": {"tag": "assassin_dual_slash"},
       "icon": "dash",
       "strikes": [
-        {"atMs": 180, "area": {"shape": "path", "h": 90, "w": 50}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "pathSlash"},
-        {"atMs": 300, "area": {"shape": "path", "h": 90, "w": 50}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "pathSlash"}
+        {"atMs": 180, "area": {"shape": "path", "h": 140, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "pathSlash"},
+        {"atMs": 300, "area": {"shape": "path", "h": 140, "w": 100}, "maxTargets": 10, "pierce": true, "weightRule": "even", "fx": "pathSlash"}
       ],
       "cooldownSec": 4,
       "cancelFromMs": 460,
@@ -600,21 +600,21 @@
       "classId": "assassin",
       "kind": "active",
       "pose": "throw",
-      "motion": {"tag": "assassin_throw", "speed": 1.2},
+      "motion": {"tag": "assassin_throw", "speed": 0.85},
       "icon": "boomerang",
       "strikes": [
-        {"atMs": 330, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 410, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 490, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 560, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 640, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
-        {"atMs": 720, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"}
+        {"atMs": 500, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 760, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 940, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 1180, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 200}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 1420, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"},
+        {"atMs": 1640, "area": {"shape": "rect", "w": 200, "h": 80, "offsetX": 0}, "maxTargets": 6, "pierce": true, "weightRule": "even"}
       ],
       "cooldownSec": 5,
-      "cancelFromMs": 810,
+      "cancelFromMs": 1900,
       "hitStopMs": 25,
       "shake": 1,
-      "cues": [{"atMs": 271, "fx": "boomerang"}]
+      "cues": [{"atMs": 340, "fx": "boomerang"}]
     },
     {
       "id": "skill_0046",
@@ -626,14 +626,14 @@
       "icon": "split",
       "strikes": [
         {"atMs": 330, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenStorm"},
-        {"atMs": 560, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
-        {"atMs": 760, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
-        {"atMs": 960, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
-        {"atMs": 1160, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
-        {"atMs": 1360, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"}
+        {"atMs": 620, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
+        {"atMs": 910, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
+        {"atMs": 1200, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
+        {"atMs": 1490, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"},
+        {"atMs": 1780, "area": {"shape": "map"}, "maxTargets": 20, "pierce": true, "weightRule": "even", "fx": "shurikenSpin"}
       ],
       "cooldownSec": 20,
-      "cancelFromMs": 1440,
+      "cancelFromMs": 2450,
       "hitStopMs": 25,
       "shake": 2,
       "ultimate": true,

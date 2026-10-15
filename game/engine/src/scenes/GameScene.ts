@@ -422,6 +422,7 @@ export class GameScene extends Phaser.Scene {
     if (manual.x !== 0 || manual.up || manual.down || manual.jumpHeld || manual.attack || manual.secondary || manual.skill >= 0) this.pauseAutoForManual();
     const driving = this.autoDriving;
     const input = driving ? this.stepAuto() : manual;
+    this.skillFx.step(STEP_MS);
     this.player.step(this.world, input);
     for (const monster of this.monsters.values()) monster.step();
     this.stepProjectiles();
@@ -636,6 +637,7 @@ export class GameScene extends Phaser.Scene {
   private setClass(classId: ClassId): void {
     const classDef = this.bundle.classes.get(classId);
     if (!classDef || classId === this.classId) return;
+    this.skillFx.clear();
     this.classId = classId;
     this.player.setClass(classDef);
     this.auto.reset();
@@ -784,6 +786,9 @@ export class GameScene extends Phaser.Scene {
       bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
       points: this.scatter?.skillId === skill.id ? this.scatter.points : [],
       groundAt: (x, fromY) => this.world.groundBelow(x, fromY)?.y ?? null,
+      playerAt:()=>({x:this.player.body.x,y:this.player.body.y-26}),
+      targetsAt:(x,y,radius)=>[...this.monsters.values()].filter(m=>m.alive&&circleRect(x,y,radius,m.hitbox()))
+        .map(m=>m.center()).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)),
       frame: this.avatar.motionFrame,
       remainingMs: Math.max(0, skill.strikes.at(-1)!.atMs - atMs) + 250,
       reach: this.skillReach(skill),
@@ -827,6 +832,13 @@ export class GameScene extends Phaser.Scene {
     let from: FxPoint | null = null;
     if (skill.chain) ({ targets, from } = this.chainTargets(skill, index, strike));
     else if (skill.scatter) targets = this.scatterTargets(skill, index, strike);
+    else if(skill.id==='skill_0009'){
+      const box=this.skillFx.tigerHitRect(index);
+      targets=box?[...this.monsters.values()]
+        .filter(m=>m.alive&&Math.abs(m.y-(this.skillFx.tigerFloorAt(m.x)??Infinity))<=60&&intersects(m.hitbox(),box))
+        .sort((a,b)=>Math.abs(a.x-box.x-box.w/2)-Math.abs(b.x-box.x-box.w/2))
+        .slice(0,strike.maxTargets):[];
+    }
     else targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
     if (strike.fx) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
     this.applyHits(skill, index, targets);
@@ -1122,7 +1134,7 @@ export class GameScene extends Phaser.Scene {
     const [minDamage, maxDamage] = classDef.damage;
     const body = this.player.body;
     for (const m of targets) {
-      m.onHit(body.x,impactFeel(skill,index).strength);
+      m.onHit(skill.id==='skill_0009'?this.skillFx.tigerImpactX??body.x:body.x,impactFeel(skill,index).strength);
       m.pending += 1;
       const c = m.center();
       const crit = Math.random() < 0.15;

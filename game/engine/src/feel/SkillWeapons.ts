@@ -4,15 +4,21 @@ import { DEPTH } from '../map/MapView';
 
 /** All weapon images point left; direction is centralized so texture and travel agree. */
 export function orientSkillWeapon(sprite:Phaser.GameObjects.Sprite,angle:number):void {
-  if(sprite.texture.key==='skill-fuma')return;
+  if(sprite.texture.key.startsWith('skill-assassin-'))return;
   sprite.setFlipX(Math.cos(angle)>=0).setRotation(Math.cos(angle)>=0?angle:angle-Math.PI);
 }
 
-export function createSkillWeapon(scene:Phaser.Scene,kind:'arrow'|'fireArrow'|'fuma',x:number,y:number,size:number):Phaser.GameObjects.Sprite {
-  const sprite=scene.add.sprite(x,y,kind==='fuma'?'skill-fuma':'skill-arrows',kind==='fuma'?undefined:kind==='fireArrow'?1:0).setDepth(DEPTH.fx);
-  sprite.setDisplaySize(size,kind==='fuma'?size:size*.25);
-  if(kind==='fuma'){
-    scene.tweens.add({targets:sprite,angle:360,duration:220,repeat:-1});
+export type SkillWeaponKind='arrow'|'fireArrow'|'fuma'|'crescent'|'glaive'|'split';
+export const bladeSpinMs=(kind:SkillWeaponKind):number=>kind==='crescent'?160:kind==='glaive'?240:220;
+
+export function createSkillWeapon(scene:Phaser.Scene,kind:SkillWeaponKind,x:number,y:number,size:number):Phaser.GameObjects.Sprite {
+  const rotating=kind!=='arrow'&&kind!=='fireArrow';
+  const key=rotating?'skill-assassin-fourblade':'skill-arrows';
+  const frame=kind==='glaive'?2:kind==='split'?3:kind==='fireArrow'||kind==='crescent'?1:0;
+  const sprite=scene.add.sprite(x,y,key,frame).setDepth(DEPTH.fx);
+  sprite.setDisplaySize(size,rotating?size:size*.25);
+  if(rotating){
+    scene.tweens.add({targets:sprite,angle:360,duration:bladeSpinMs(kind),repeat:-1});
     sprite.once(Phaser.GameObjects.Events.DESTROY,()=>scene.tweens.killTweensOf(sprite));
   }
   return sprite;

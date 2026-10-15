@@ -5,10 +5,12 @@ import { DEPTH } from '../map/MapView';
 import { frameName } from '../render/sheets';
 import type { FxLayer } from './FxLayer';
 import { SkillVfxKit } from './SkillVfxKit';
-import { CLASS_ENERGY, impactFeel, VFX_BUDGET } from './SkillPresentation';
+import { CLASS_ENERGY, skillEnergyColor, impactFeel, VFX_BUDGET } from './SkillPresentation';
 import { atlasKey, BURST_DURATION, loadSkillAtlases, type SkillAtlasName } from './SkillAtlas';
+import { TigerSummon } from './TigerSummon';
+import { AssassinStorm } from './AssassinStorm';
 import { SkillAudio } from './SkillAudio';
-import { bladeFlipX, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
+import { bladeFlipX, bladeSpinMs, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
 
 export interface FxPoint {
   x: number;
@@ -48,6 +50,9 @@ export interface SkillFxContext {
   remainingMs: number;
   /** 這個技能往前打得到多遠 */
   reach: number;
+  /** Live contacts are cosmetic only; damage remains in the strike schedule. */
+  targetsAt?: (x:number,y:number,radius:number)=>FxPoint[];
+  playerAt?: ()=>FxPoint;
 }
 
 const CHEST = 26;
@@ -65,9 +70,12 @@ export class SkillFx {
   private readonly audio: SkillAudio;
   private activeReaper: Phaser.GameObjects.Sprite | null = null;
   private reaperBeat=0;
+  private tiger:TigerSummon|null=null;
+  private storm:AssassinStorm|null=null;
   private activeDragon:Phaser.GameObjects.Sprite|null=null;
   private comboLabel:Phaser.GameObjects.Text|null=null;
   private readonly trailTimes = new WeakMap<Phaser.GameObjects.Sprite,number>();
+  private goldContacts:{x:number;y:number;at:number}[]=[];
 
   static async preload(scene: Phaser.Scene): Promise<void> {
     await loadSkillAtlases(scene);
@@ -91,6 +99,11 @@ export class SkillFx {
     if(skill.kind==='basic')return;
     this.comboLabel?.destroy();this.comboLabel=null;
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
+    if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
+    if(skill.id==='skill_0032'){
+      this.storm?.destroy();
+      this.storm=new AssassinStorm(this.scene,this.kit,ctx,skill,(name,x,y,size)=>this.sequence(name,x,y,size),p=>this.goldContact(p));
+    }
     const palette=CLASS_ENERGY[skill.classId];
     this.audio.play(skill.classId,skill.ultimate?1:.5,true);
     const chargeMs=skill.strikes[0]!.atMs;
@@ -106,8 +119,9 @@ export class SkillFx {
       bow.lineStyle(1,0xfff7d2,.8).lineBetween(15,-39,-18,0).lineBetween(-18,0,15,39);
       bow.setScale(ctx.facing,1);this.fade(bow,chargeMs);
       this.kit.burst(ctx.x,ctx.y-28,0xffd080,.55,8,ctx.facing===1?0:Math.PI);
-    }else{
-      const seal=this.track(createSkillWeapon(this.scene,'fuma',ctx.x,ctx.y-CHEST,100)).setAlpha(.3);
+    }else if(skill.id!=='skill_0032'){
+      const kind=skill.id==='skill_0035'?'crescent':skill.id==='skill_0046'?'split':'fuma';
+      const seal=this.track(createSkillWeapon(this.scene,kind,ctx.x,ctx.y-CHEST,85)).setAlpha(.25);
       this.fade(seal,chargeMs,{scaleX:seal.scaleX*.4,scaleY:seal.scaleY*.4});
     }
     if(skill.id==='skill_0043'){this.reaperBeat=0;this.kit.cinematic(skill.strikes.at(-1)!.atMs+1400);}
@@ -115,25 +129,35 @@ export class SkillFx {
   }
 
   release(skill: SkillDef, ctx: SkillFxContext): void {
-    const color=CLASS_ENERGY[skill.classId].color;
+    const color=skillEnergyColor(skill);
     this.kit.burst(ctx.x+ctx.facing*18,ctx.y-CHEST,color,.45,6,ctx.facing===1?0:Math.PI);
   }
 
   projectileTrail(skill: SkillDef,sprite: Phaser.GameObjects.Sprite,angle:number):void {
     const now=this.scene.time.now;
-    if(now-(this.trailTimes.get(sprite)??-Infinity)<32)return;
+    if(now-(this.trailTimes.get(sprite)??-Infinity)<(skill.classId==='assassin'?90:32))return;
     this.trailTimes.set(sprite,now);
     this.kit.trail(sprite.x,sprite.y,CLASS_ENERGY[skill.classId].color,angle,skill.classId==='mage');
+    if(skill.classId==='assassin'){
+      const wind=this.gfx(sprite.x,sprite.y);
+      drawBladeArc(wind,30,angle-.9,angle+1.2,0xff6880,2);
+      this.fade(wind,180,{scaleX:1.4,scaleY:1.4});
+      this.kit.burst(sprite.x,sprite.y,0xff9caa,.22,2,angle+Math.PI);
+    }
   }
 
   contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
     const feel=impactFeel(skill,index);
     this.audio.play(skill.classId,feel.strength);
-    for(const t of ctx.targets.filter(t=>t.x>=ctx.view.x-80&&t.x<=ctx.view.x+ctx.view.w+80).slice(0,feel.last?10:5))this.kit.classImpact(skill.classId,t.x,t.y,feel.strength);
+    for(const t of ctx.targets.filter(t=>t.x>=ctx.view.x-80&&t.x<=ctx.view.x+ctx.view.w+80).slice(0,feel.last?10:5)){
+      if(['skill_0031','skill_0032','skill_0035','skill_0046'].includes(skill.id))this.goldContact(t);
+      else if(skill.classId==='assassin')this.kit.burst(t.x,t.y,skillEnergyColor(skill),feel.strength,6);
+      else this.kit.classImpact(skill.classId,t.x,t.y,feel.strength);
+    }
     if(skill.ultimate&&feel.last)this.kit.veil(CLASS_ENERGY[skill.classId].shadow,260,.22);
     if(skill.strikes.length>1){
       this.comboLabel?.destroy();
-      const color=`#${CLASS_ENERGY[skill.classId].color.toString(16).padStart(6,'0')}`;
+      const color=`#${skillEnergyColor(skill).toString(16).padStart(6,'0')}`;
       const caption={warrior:'連斬',mage:'連鎖',archer:'連射',assassin:'連刃'}[skill.classId];
       const label=this.track(this.scene.add.text(ctx.x+ctx.facing*48,ctx.y-100,`${index+1} ${caption}`,{fontFamily:'Segoe UI, sans-serif',fontSize:feel.last?'24px':'19px',fontStyle:'bold',color,stroke:'#101020',strokeThickness:4})).setDepth(DEPTH.numbers+4).setOrigin(.5).setResolution(2);
       this.comboLabel=label;label.once(Phaser.GameObjects.Events.DESTROY,()=>{if(this.comboLabel===label)this.comboLabel=null;});
@@ -163,7 +187,7 @@ export class SkillFx {
       case 'rising':
         return this.rising(ctx);
       case 'wave':
-        return this.wave(ctx);
+        return this.tiger?.bite(ctx.targets);
       case 'lightning':
         return this.lightning(ctx);
       case 'meteor':
@@ -183,7 +207,7 @@ export class SkillFx {
       case 'arrowFan':
         return this.fan(ctx, 'arrow', 7);
       case 'bladeFan':
-        return this.fan(ctx, 'shuriken', 7);
+        return this.storm?.strike(ctx.targets);
       case 'shadowSlash':
         return this.shadowSlash(ctx);
       case 'pathSlash':
@@ -222,7 +246,7 @@ export class SkillFx {
       case 'shurikenStorm':
         return this.shurikenStorm(ctx);
       case 'shurikenSpin':
-        return this.pointRings(ctx, 0xbff0ff);
+        return this.pointRings(ctx);
       case 'shadowClones':
         return this.shadowClones(ctx);
       case 'cloneSlash':
@@ -278,6 +302,9 @@ export class SkillFx {
   }
 
   clear(): void {
+    this.tiger?.destroy();this.tiger=null;
+    this.storm?.destroy();this.storm=null;
+    this.goldContacts=[];
     this.activeReaper = null;
     this.activeDragon = null;
     this.reaperBeat=0;
@@ -350,28 +377,23 @@ export class SkillFx {
       for(const t of ctx.targets)this.kit.classImpact('archer',t.x,t.y,1.1);
       return;
     }
-    const area = ctx.area;
-    const y = ctx.y - CHEST;
-    const x1 = area ? area.x : ctx.x;
-    const x2 = area ? area.x + area.w : ctx.x + ctx.facing * 300;
-    for(let i=0;i<3;i++){
-      const along=(i+.5)/3;
-      const x=ctx.facing===1?x1+(x2-x1)*along:x2-(x2-x1)*along;
-      const ground=ctx.groundAt(x,ctx.y-40)??ctx.y;
-      this.sequence('earth',x,ground+8,275,i*45).setOrigin(.5,.96).setDisplaySize(245,275).setFlipX(ctx.facing===-1);
+    const area=ctx.area;
+    const from=ctx.origin?.x??ctx.x-ctx.facing*120;
+    const end=ctx.x+ctx.facing*100;
+    const center=(from+end)/2,y=ctx.y-CHEST;
+    // One horizontal pressure lance; rock eruptions belong to Ground Cleave.
+    const pressure=this.sequence('thrust',center,y,540).setDisplaySize(Math.max(480,(area?.w??280)*1.65),300).setFlipX(ctx.facing===-1);
+    this.scene.tweens.add({targets:pressure,x:center+ctx.facing*70,duration:700,ease:'Cubic.Out'});
+    const collar=this.gfx(from+ctx.facing*35,y);
+    collar.lineStyle(5,0x8dcfff,.45).strokeEllipse(0,0,26,124);
+    collar.lineStyle(1,0xf2fbff,.8).strokeEllipse(0,0,32,136);
+    this.fade(collar,600,{x:from+ctx.facing*110,scaleY:1.5});
+    for(let i=0;i<4;i++){
+      const x=from+(end-from)*i/3,ground=ctx.groundAt(x,ctx.y-40)??ctx.y;
+      this.kit.smoke(x,ground,0x617283,.7);
+      this.kit.burst(x,y,0xb1dfff,.55,4,ctx.facing===1?Math.PI:0);
     }
-    const thick = Math.max(10, (area?.h ?? 30) * 0.4);
-    const g = this.gfx(0, 0);
-    const start=ctx.facing===1?x1:x2, end=ctx.facing===1?x2:x1;
-    g.fillStyle(ctx.tint === 0xffffff ? 0xbff0ff : ctx.tint,.28).fillTriangle(start,y-thick/2,start,y+thick/2,end,y);
-    g.fillStyle(0xeafff4,.9).fillTriangle(start,y-2,start,y+2,end,y);
-    for(let i=0;i<9;i++)this.kit.burst(start+(end-start)*i/9,y,0x9be8d3,.35,2,ctx.facing===1?0:Math.PI);
-    this.fade(g, 260);
-    const tip = ctx.facing === 1 ? Math.max(x1, x2) : Math.min(x1, x2);
-    const head = this.gfx(tip, y);
-    head.fillStyle(0xffffff, 1).fillTriangle(0, -thick * 0.7, 0, thick * 0.7, ctx.facing * thick * 1.6, 0);
-    this.fade(head, 260);
-    this.flash(tip, y, 0xcff4ff, 150, 1.5, 240);
+    this.flash(end,y,0x9cdaff,210,1.3,500);
   }
 
   /** 昇龍斬：往上的月牙刀光（大小跟著判定半徑）。 */
@@ -387,16 +409,17 @@ export class SkillFx {
     this.flash(ctx.x,ctx.y-80,0x9bddff,240,2,250);
   }
 
-  /** 劍氣斬：每一段範圍飛過一道月牙劍氣（高度跟著範圍）。 */
-  private wave(ctx: SkillFxContext): void {
-    const area = ctx.area;
-    if (!area) return;
-    this.crescent(ctx.facing === 1 ? area.x : area.x + area.w, ctx.y - CHEST, area.h / 2, ctx.facing, ctx.facing * area.w, 90, ctx.tint === 0xffffff ? 0xa8f0ff : ctx.tint);
+  /** Called before Player.step so presentation and strike positions share one fixed clock. */
+  step(dt:number):void {
+    this.tiger?.step(dt);
+    if(this.tiger&&!this.tiger.sprite.active)this.tiger=null;
+    this.storm?.step(dt);
+    if(this.storm&&!this.storm.active)this.storm=null;
   }
 
-  // ---------------------------------------------------------------------------
-  // 法師
-  // ---------------------------------------------------------------------------
+  tigerHitRect(index:number):Rect|null {return this.tiger?.hitRect(index)??null;}
+  tigerFloorAt(x:number):number|null {return this.tiger?.floorAt(x)??null;}
+  get tigerImpactX():number|undefined{return this.tiger?.sprite.x;}
 
   /** 雷電術：每隻目標從天而降一道閃電；沒打到也在範圍內落雷。 */
   private lightning(ctx: SkillFxContext): void {
@@ -530,6 +553,46 @@ export class SkillFx {
     }
   }
 
+  /** One contact burst per completed revolution; live monster positions, no extra damage. */
+  private followBlade(blade:Phaser.GameObjects.Sprite,ctx:SkillFxContext,power:number,color:number,period:number,quiet=false):void {
+    let tick=0;
+    const timer=this.scene.time.addEvent({delay:period,loop:true,callback:()=>{
+      if(!blade.active||blade.alpha<.15)return;
+      const ghost=this.track(this.scene.add.sprite(blade.x,blade.y,blade.texture.key,blade.frame.name)).setDepth(DEPTH.fx-1).setDisplaySize(blade.displayWidth,blade.displayHeight).setRotation(blade.rotation).setTint(color).setAlpha(.1);
+      this.fade(ghost,period*.65);
+      const contacts=ctx.targetsAt?.(blade.x,blade.y,blade.displayWidth*.45)??[];
+      for(const p of contacts.slice(0,2))this.goldContact(p);
+      if(++tick%3===0&&!quiet){
+        const ground=ctx.groundAt(blade.x,blade.y)??ctx.y;
+        if(Math.abs(ground-blade.y)<100)this.kit.smoke(blade.x,ground,0x65505c,power);
+      }
+    }});
+    blade.once(Phaser.GameObjects.Events.DESTROY,()=>timer.remove());
+  }
+
+  private bladeContact(p:FxPoint,color:number,power:number):void {
+    this.sequence('rend',p.x,p.y,120+power*50).setTint(color).setAlpha(.85).setAngle(rand(-35,35));
+    this.kit.burst(p.x,p.y,color,power,5);
+  }
+
+  private goldContact(p:FxPoint):void {
+    const now=this.scene.time.now;
+    this.goldContacts=this.goldContacts.filter(hit=>now-hit.at<90);
+    if(this.goldContacts.some(hit=>Math.hypot(hit.x-p.x,hit.y-p.y)<28))return;
+    this.goldContacts.push({...p,at:now});
+    this.sequence('goldHit',p.x,p.y,140).setAngle(rand(-20,20));
+  }
+
+  /** Retarget every frame so a moving player catches the returning blade. */
+  private returnBlade(blade:Phaser.GameObjects.Sprite,ctx:SkillFxContext,duration=520):void {
+    const start={x:blade.x,y:blade.y},progress={t:0};
+    const tween=this.scene.tweens.add({targets:progress,t:1,duration,ease:'Sine.InOut',onUpdate:()=>{
+      const end=ctx.playerAt?.()??{x:ctx.x,y:ctx.y-CHEST};
+      blade.setPosition(start.x+(end.x-start.x)*progress.t,start.y+(end.y-start.y)*progress.t-Math.sin(progress.t*Math.PI)*42);
+    },onComplete:()=>{this.kit.glow(blade.x,blade.y,0xbeeaff,65,140,.4);this.fade(blade,100);}});
+    blade.once(Phaser.GameObjects.Events.DESTROY,()=>tween.stop());
+  }
+
   /** 影襲：從上一個位置到這裡一道暗影，在目標身上交叉斬。 */
   private shadowSlash(ctx: SkillFxContext): void {
     if (ctx.from) {
@@ -545,30 +608,25 @@ export class SkillFx {
   private pathSlash(ctx: SkillFxContext): void {
     const from = ctx.origin ?? { x: ctx.x - ctx.facing * 200, y: ctx.y };
     const y = ctx.y - CHEST;
-    const steps = Math.max(4, Math.round(Math.abs(ctx.x - from.x) / 60));
+    const steps = Math.min(8,Math.max(4, Math.round(Math.abs(ctx.x - from.x) / 75)));
     for (let i = 0; i < steps; i += 1) {
       const x = from.x + ((ctx.x - from.x) * (i + 0.5)) / steps;
-      if(i%2===0)this.sequence('shadow',x,y,85).setAlpha(.7);
-      const g = this.gfx(x, y + rand(-8, 8));
-      g.lineStyle(6, ctx.tint === 0xffffff ? 0xd6c2ff : ctx.tint, 0.4).lineBetween(-18, 22, 18, -22);
-      g.lineStyle(2, 0xffffff, 1).lineBetween(-17, 20, 17, -20);
-      g.setScale(0.2, 1);
-      this.fade(g, 240, { scaleX: 1 }, i * 20);
+      this.sequence('shadow',x,y,175,i*18).setAlpha(.8).setFlipX(ctx.facing===-1);
     }
+    for(const t of ctx.targets.slice(0,5))this.bladeContact(t,0xc7a0ff,.8);
+    this.kit.smoke(ctx.x,ctx.y,0x675580,.8);
   }
 
   /** 迴旋刃（cue）：大飛刃飛出去再飛回來（距離 = 技能射程）。 */
   private boomerang(ctx: SkillFxContext): void {
     const x = ctx.x + ctx.facing * 12;
     const y = ctx.y - CHEST;
-    const blade = this.fxSprite('shuriken', x, y);
-    if (!blade) return;
-    blade.setDisplaySize(168,168);
-    this.scene.tweens.add({ targets: blade, angle: 1440, duration: 440 });
-    let trailAt=0;
-    this.scene.tweens.add({ targets: blade, x: x + ctx.facing * ctx.reach, duration: 210, ease: 'Sine.Out', yoyo: true,
-      onUpdate:()=>{if(this.scene.time.now-trailAt<40)return;trailAt=this.scene.time.now;this.kit.burst(blade.x,blade.y,0xb79aff,.35,3);},
-      onComplete: () => blade.destroy() });
+    const blade=this.track(createSkillWeapon(this.scene,'crescent',x,y,150));
+    this.followBlade(blade,ctx,.7,0x8dffb6,bladeSpinMs('crescent'));
+    // 600 ms outward, 180 ms at the far edge, 600 ms returning.
+    this.scene.tweens.add({targets:blade,x:x+ctx.facing*ctx.reach,duration:600,hold:180,ease:'Sine.InOut',yoyo:true,
+      onUpdate:(tween)=>{blade.y=y-Math.sin(tween.progress*Math.PI)*20;},
+      onComplete:()=>this.fade(blade,100)});
   }
 
   // ---------------------------------------------------------------------------
@@ -760,13 +818,10 @@ export class SkillFx {
     const x = ctx.x + ctx.facing * 14;
     const y = ctx.y - CHEST;
     for (const p of ctx.points) {
-      const blade = this.fxSprite('shuriken', x, y);
-      if (!blade) continue;
-      blade.setDisplaySize(190,190);
-      this.kit.glow(p.x,p.y,0xff3454,160,ctx.remainingMs,.4);
-      this.scene.tweens.add({ targets: blade, x: p.x, y: p.y, duration: 260, ease: 'Sine.Out' });
-      this.scene.tweens.add({ targets: blade, angle: 360, duration: 160, repeat: -1 });
-      this.fade(blade, 220, {}, ctx.remainingMs);
+      const blade = this.track(createSkillWeapon(this.scene,'split',x,y,152));
+      blade.setDisplaySize(152,152);
+      this.scene.tweens.add({ targets: blade, x: p.x, y: p.y, duration: 260, hold:Math.max(0,ctx.remainingMs-250-260),ease:'Sine.Out',onComplete:()=>this.returnBlade(blade,ctx) });
+      this.followBlade(blade,ctx,.5,0xffd481,bladeSpinMs('fuma'),true);
     }
     this.ring(x, y, 6, 50, 0xbff0ff, 3, 220);
   }
@@ -791,12 +846,8 @@ export class SkillFx {
   }
 
   /** 散射點上的環（分身飛鏢旋轉中）。 */
-  private pointRings(ctx: SkillFxContext, color: number): void {
-    for (const p of ctx.points) {
-      this.ring(p.x, p.y, 8, 60, color, 2, 180);
-      const wind=this.gfx(p.x,p.y);drawBladeArc(wind,95,0,Math.PI*1.6,0xff3c62,5);this.fade(wind,160,{angle:120});
-      this.kit.burst(p.x,p.y,0xff5677,.7,6);
-    }
+  private pointRings(ctx: SkillFxContext): void {
+    for(const p of ctx.targets.slice(0,8))this.goldContact(p);
   }
 
   /** 每隻被打中的怪身上一道斬痕（全地圖技能）。 */
@@ -821,7 +872,7 @@ export class SkillFx {
     return g;
   }
 
-  private sequence(name: Exclude<SkillAtlasName,'reaper'>,x:number,y:number,size:number,delay=0): Phaser.GameObjects.Sprite {
+  private sequence(name: Exclude<SkillAtlasName,'reaper'|'tiger'>,x:number,y:number,size:number,delay=0): Phaser.GameObjects.Sprite {
     const sprite=this.track(this.scene.add.sprite(x,y,atlasKey(name),0)).setDepth(DEPTH.fx).setDisplaySize(size,size);
     sprite.play({key:`${atlasKey(name)}-burst`,delay});
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE,()=>sprite.destroy());

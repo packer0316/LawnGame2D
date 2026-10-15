@@ -7,17 +7,22 @@ export const CLASS_ENERGY = {
   assassin: { color: 0xff4567, core: 0xffd6e1, shadow: 0x2e0d1b },
 } as const;
 
+export function skillEnergyColor(skill:SkillDef):number {
+  return skill.id==='skill_0032'?0x8bdfff:skill.id==='skill_0035'?0x8dffb6:skill.id==='skill_0034'?0xc7a0ff:skill.id==='skill_0046'?0xffd481:CLASS_ENERGY[skill.classId].color;
+}
+
 /** 表現層節奏：不改判定、傷害或扣注時間；連段保留流動感，末段才有重停頓。 */
 export function impactFeel(skill: SkillDef, index: number) {
   const last = index === skill.strikes.length - 1;
   const repeated = skill.strikes.length > 1;
   const fast = skill.chain || (skill.strikes[index + 1]?.atMs ?? Infinity) - skill.strikes[index]!.atMs <= 100;
-  const stop = repeated && !last ? Math.min(skill.hitStopMs, fast ? 10 : 22) : Math.min(skill.ultimate ? 105 : 115, skill.hitStopMs + (skill.ultimate && last ? 35 : 0));
+  const heavy = skill.id === 'skill_0006' || skill.id === 'skill_0007';
+  const stop = repeated && !last ? Math.min(skill.hitStopMs, heavy ? 48 : fast ? 10 : 22) : Math.min(skill.ultimate ? 105 : 115, skill.hitStopMs + (skill.ultimate && last ? 35 : 0));
   return {
     stopMs: stop,
     pixels: Math.min(7, skill.shake * (repeated && !last ? 0.45 : skill.ultimate ? 1.25 : 1)),
-    durationMs: last && skill.ultimate ? 180 : repeated && !last ? 65 : 110,
-    strength: skill.ultimate ? (last ? 1.65 : 0.85) : skill.kind === 'basic' ? 0.45 : repeated && !last ? 0.65 : 1,
+    durationMs: heavy ? 160 : last && skill.ultimate ? 180 : repeated && !last ? 65 : 110,
+    strength: heavy ? (last ? 1.5 : 1.1) : skill.ultimate ? (last ? 1.65 : 0.85) : skill.kind === 'basic' ? 0.45 : repeated && !last ? 0.65 : 1,
     last,
   };
 }
