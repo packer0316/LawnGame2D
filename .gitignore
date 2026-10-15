@@ -13,3 +13,6 @@ game/art-review/
 
 # Claude Code 執行期檔案
 .claude/scheduled_tasks.lock
+
+# build-sfx.py 下載的音效來源快取
+game/.sfx-cache/

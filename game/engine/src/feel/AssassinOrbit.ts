@@ -2,6 +2,24 @@
 export const STORM_ORBIT={count:6,firstMs:340,periodMs:1440,flightMs:620,radius:76,squash:.72,releaseAngle:-Math.PI/2+.4,distance:380} as const;
 export const stormLaunchMs=(index:number)=>STORM_ORBIT.firstMs+index*STORM_ORBIT.periodMs/STORM_ORBIT.count;
 
+export interface StormFlight{x:number;y:number;angle:number;age:number;speed:number;hit:boolean}
+/** Tangent coast first, then bounded steering and acceleration; stable even across a target crossing. */
+export function stepStormFlight(state:StormFlight,dt:number,target?:{x:number;y:number}):StormFlight{
+  const age=state.age+dt;
+  let angle=state.angle;
+  if(target&&!state.hit&&age>90){
+    const desired=Math.atan2(target.y-state.y,target.x-state.x);
+    const error=Math.atan2(Math.sin(desired-angle),Math.cos(desired-angle));
+    const turn=dt*.009*Math.min(1,(age-90)/120);
+    angle+=Math.max(-turn,Math.min(turn,error));
+  }
+  const speed=Math.min(1.5,.32+age*.0021),distance=speed*dt;
+  const x=state.x+Math.cos(angle)*distance,y=state.y+Math.sin(angle)*distance;
+  const projection=target?Math.max(0,Math.min(1,((target.x-state.x)*(x-state.x)+(target.y-state.y)*(y-state.y))/Math.max(.001,distance*distance))):0;
+  const hit=state.hit||!!(target&&age>90&&Math.hypot(target.x-state.x-(x-state.x)*projection,target.y-state.y-(y-state.y)*projection)<36);
+  return {x,y,angle,age,speed,hit};
+}
+
 export function stormBladePose(index:number,elapsed:number,facing:1|-1){
   const c=STORM_ORBIT,launch=stormLaunchMs(index),flight=elapsed-launch;
   const theta=c.releaseAngle+(elapsed-launch)*Math.PI*2/c.periodMs;

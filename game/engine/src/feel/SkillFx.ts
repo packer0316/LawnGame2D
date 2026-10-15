@@ -15,10 +15,14 @@ import { SkillAudio } from './SkillAudio';
 import { MoonExecution } from './MoonExecution';
 import { loadMoonExecutionArt } from './MoonExecutionArt';
 import { MOON_SKILL } from './MoonExecutionTiming';
+import { loadWarriorBladeArt } from './WarriorBladeArt';
+import { WarriorBladeEffects } from './WarriorBladeEffects';
 import type { SheetAsset } from '../content/bundle';
 import { bladeFlipX, bladeSpinMs, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
 
 export interface FxPoint {
+  /** Stable identity for cosmetic collision deduplication. */
+  id?: string;
   x: number;
   y: number;
 }
@@ -85,6 +89,7 @@ export class SkillFx {
   private tiger:TigerSummon|null=null;
   private storm:AssassinStorm|null=null;
   private moon:MoonExecution|null=null;
+  private readonly warriorBlades:WarriorBladeEffects;
   private readonly rains = new Set<FallingRain>();
   private readonly rainWaves = new Map<string, FallingRain[]>();
   private activeDragon:Phaser.GameObjects.Sprite|null=null;
@@ -94,6 +99,7 @@ export class SkillFx {
   static async preload(scene: Phaser.Scene): Promise<void> {
     await loadSkillAtlases(scene);
     await loadMoonExecutionArt(scene);
+    await loadWarriorBladeArt(scene);
   }
 
   constructor(
@@ -105,13 +111,18 @@ export class SkillFx {
   ) {
     this.kit = new SkillVfxKit(scene);
     this.audio = new SkillAudio(scene);
+    this.warriorBlades=new WarriorBladeEffects(scene,()=>{
+      this.audio.play('warrior',.8);
+      this.scene.cameras.main.shake(55,1.5/Math.max(1,this.scene.cameras.main.height),false);
+    });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count + (this.moon?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
+  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
+    this.warriorBlades.begin(skill.id);
     if(skill.id===MOON_SKILL){this.moon?.destroy();this.moon=new MoonExecution(this.scene,ctx,this.audio);return;}
     this.prepareRain(skill, ctx);
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
@@ -125,10 +136,12 @@ export class SkillFx {
     const chargeMs=skill.strikes[0]!.atMs;
     if(skill.classId==='mage')this.kit.charge(ctx.x,ctx.y,palette.color,chargeMs,!!skill.ultimate);
     else if(skill.classId==='warrior'){
-      const g=this.gfx(ctx.x,ctx.y-CHEST);
-      for(let i=0;i<5;i++)g.lineStyle(1,0xb8e8ff,.6).lineBetween(-70-i*8,18+i*5,-12,8);
-      g.setScale(ctx.facing,1);this.fade(g,chargeMs);
-      this.kit.glow(ctx.x+ctx.facing*24,ctx.y-30,0x94d4ff,80,chargeMs,.45);
+      if(skill.id!=='skill_0004'&&skill.id!=='skill_0040'){
+        const g=this.gfx(ctx.x,ctx.y-CHEST);
+        for(let i=0;i<5;i++)g.lineStyle(1,0xb8e8ff,.6).lineBetween(-70-i*8,18+i*5,-12,8);
+        g.setScale(ctx.facing,1);this.fade(g,chargeMs);
+      }
+      this.kit.glow(ctx.x+ctx.facing*24,ctx.y-30,skill.id==='skill_0040'?0xffdfa0:0x94d4ff,70,chargeMs,.3);
     }else if(skill.classId==='archer'){
       const bow=this.gfx(ctx.x+ctx.facing*18,ctx.y-28);
       bow.lineStyle(3,0xffcc70,.85).beginPath().arc(0,0,42,-1.2,1.2).strokePath();
@@ -183,10 +196,17 @@ export class SkillFx {
       }
       else if(['skill_0031','skill_0032','skill_0035','skill_0046'].includes(skill.id))this.goldContact(t,true);
       else if(skill.classId==='assassin')this.kit.burst(t.x,t.y,skillEnergyColor(skill),feel.strength,6);
+      else if(skill.id==='skill_0004'||skill.id==='skill_0040'){
+        const hit=this.gfx(t.x,t.y),r=feel.last?26:18,color=skill.id==='skill_0040'?0xffdc8c:0xa5e5ff;
+        hit.fillStyle(color,.75).fillTriangle(-r,8,r,-8,0,4);
+        hit.fillStyle(0xfffcf0,1).fillTriangle(-r*.8,4,r*.8,-4,0,2);
+        this.fade(hit,feel.last?170:110);
+      }
       else this.kit.classImpact(skill.classId,t.x,t.y,feel.strength);
     }
-    if(skill.ultimate&&feel.last)this.kit.veil(CLASS_ENERGY[skill.classId].shadow,260,.22);
-    return feel;
+    if(skill.ultimate&&feel.last&&skill.id!=='skill_0040')this.kit.veil(CLASS_ENERGY[skill.classId].shadow,260,.22);
+    // The traveling moon owns its local hit hold; map-wide damage beats must not stop both blades.
+    return skill.id==='skill_0040'?{...feel,stopMs:0,pixels:0}:feel;
   }
 
   basicMelee(skill:SkillDef,ctx:SkillFxContext):void {
@@ -245,7 +265,7 @@ export class SkillFx {
       case 'holyWave':
         return this.holyWave(ctx);
       case 'holyHit':
-        return this.targetCuts(ctx, 0xffe08a);
+        return; // Actual accepted contacts already render one clean hit in contact().
       case 'swordRain':
         return this.swordRain(ctx);
       case 'meteorShower':
@@ -325,6 +345,7 @@ export class SkillFx {
   }
 
   clear(): void {
+    this.warriorBlades.clear();
     this.moon?.destroy();this.moon=null;
     for (const rain of this.rains) rain.destroy();
     this.rainWaves.clear();
@@ -350,15 +371,7 @@ export class SkillFx {
 
   /** 旋風斬：身體周圍轉一圈的刀光環（半徑 = 判定半徑）。 */
   private whirl(ctx: SkillFxContext): void {
-    const r = (ctx.area?.w ?? 180) / 2;
-    this.sequence('blade',ctx.x,ctx.y-CHEST,r*2.5).setFlipX(bladeFlipX(ctx.facing)).setAngle(-35*ctx.facing).setAlpha(.95);
-    const g = this.gfx(ctx.x, ctx.y - CHEST);
-    for (let i = 0; i < 2; i += 1) {
-      const start = (i / 3) * Math.PI * 2;
-      drawBladeArc(g,r*.95,start,start+1.8,0x8bddff,8);
-    }
-    g.setScale(0.6, 0.45);
-    this.fade(g, 260, { rotation: -ctx.facing * Math.PI * 1.4, scaleX: 1.25, scaleY: 0.9 });
+    this.warriorBlades.whirl(ctx);
   }
 
   /** 拔刀斬：起點到終點一道白光，在每隻怪身上爆開斬痕。 */
@@ -437,6 +450,7 @@ export class SkillFx {
 
   /** Called before Player.step so presentation and strike positions share one fixed clock. */
   step(dt:number):void {
+    this.warriorBlades.step(dt);
     this.moon?.step(dt);
     if(this.moon&&!this.moon.active)this.moon=null;
     for (const rain of this.rains) rain.step(dt);
@@ -625,7 +639,17 @@ export class SkillFx {
       const ghost=this.track(this.scene.add.sprite(blade.x,blade.y,blade.texture.key,blade.frame.name)).setDepth(DEPTH.fx-1).setDisplaySize(blade.displayWidth,blade.displayHeight).setRotation(blade.rotation).setTint(color).setAlpha(.1);
       this.fade(ghost,period*.65);
       const contacts=ctx.targetsAt?.(blade.x,blade.y,blade.displayWidth*.45)??[];
-      for(const p of contacts.slice(0,2))this.goldContact(p);
+      for(const p of contacts.slice(0,2)){
+        this.goldContact(p);
+        if(!quiet){
+          this.kit.burst(p.x,p.y,0xbaffde,1.15,18,blade.rotation);
+          this.kit.burst(p.x,p.y,0xffefa8,.65,8,blade.rotation+Math.PI);
+        }
+      }
+      if(!quiet){
+        this.kit.burst(blade.x,blade.y,0xc8ffe7,.45,5,blade.rotation);
+        this.kit.trail(blade.x,blade.y,0xe5fff1,blade.rotation,false);
+      }
       if(++tick%3===0&&!quiet){
         const ground=ctx.groundAt(blade.x,blade.y)??ctx.y;
         if(Math.abs(ground-blade.y)<100)this.kit.smoke(blade.x,ground,0x65505c,power);
@@ -714,25 +738,7 @@ export class SkillFx {
 
   /** 聖劍斬（cue）：巨大的金色劍氣從角色往左右兩邊飛到地圖盡頭。 */
   private holyWave(ctx: SkillFxContext): void {
-    const r = 190;
-    const y = ctx.y - CHEST - 20;
-    const duration = 520;
-    for (const dir of [1, -1] as const) {
-      const distance = dir === 1 ? ctx.bounds.x + ctx.bounds.w - ctx.x : ctx.x - ctx.bounds.x;
-      const wave = this.crescent(ctx.x + dir * 10, y, r, dir, dir * distance, duration, 0xffe08a);
-      const trail = this.scene.time.addEvent({
-        delay: 40,
-        repeat: Math.floor(duration / 40) - 1,
-        callback: () => {
-          const ghost = this.gfx(wave.x, wave.y);
-          drawCrescent(ghost, r * 0.95, dir, 0xfff1c8, 0.25);
-          this.fade(ghost, 200);
-        },
-      });
-      wave.once(Phaser.GameObjects.Events.DESTROY, () => trail.remove());
-    }
-    this.flash(ctx.x, y, 0xffe08a, 300, 2.6, 320);
-    this.skyFlash(0xfff1c8);
+    this.warriorBlades.holy(ctx);
   }
 
   /** 天劍降臨：巨劍從天而降插滿整張地圖的地面。 */

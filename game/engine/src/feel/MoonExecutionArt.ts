@@ -5,8 +5,9 @@ import moon from '../../../assets/skills/moon-execution/moon-v1.png?url';
 import sheath from '../../../assets/skills/moon-execution/sheath-v1.png?url';
 import blades from '../../../assets/skills/moon-execution/moonblades-v4.png?url';
 import shadow from '../../../assets/skills/moon-execution/shadow-clone-v4.png?url';
+import execution from '../../../assets/skills/moon-execution/execution-v5.png?url';
 
-export const MOON_ART = {portrait:{url:portrait,rows:3},moon:{url:moon,rows:2},sheath:{url:sheath,rows:3},blades:{url:blades,rows:4},shadow:{url:shadow,rows:2}};
+export const MOON_ART = {portrait:{url:portrait,rows:3},moon:{url:moon,rows:2},sheath:{url:sheath,rows:3},blades:{url:blades,rows:4},shadow:{url:shadow,rows:2},execution:{url:execution,rows:4}};
 export const moonKey=(name:keyof typeof MOON_ART)=>`moon-execution-${name}`;
 export async function loadMoonExecutionArt(scene:Phaser.Scene):Promise<void>{
   await loadImages(scene,{imageUrl:async path=>path,json:async()=>{throw Error('Bundled moon art');}},Object.entries(MOON_ART).map(([name,a])=>({key:moonKey(name as keyof typeof MOON_ART),path:a.url})));

@@ -7,6 +7,7 @@ export { AUTO_ROOM, DEFAULT_AUTO_CONFIG } from './auto/AutoHunt';
 export type { Action, SkillAction } from './core/input';
 export { SKILL_ACTIONS } from './core/input';
 export { SKILL_ICONS } from './ui/skillIcons';
+export { sfx } from './audio/Sfx';
 export type { GameServer, MonsterSpawn, Snapshot, AttackReq, AttackResult } from './server/types';
 export { LocalServer } from './server/LocalServer';
 export * from './inventory/catalog';

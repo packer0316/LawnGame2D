@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-16",
+  "mode": "built-in image_gen",
+  "asset": "warrior-moonblade-v12.png",
+  "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-7be07f07-7815-4967-ad64-9ef1b3c5485d.png",
+  "reference": "User supplied crescent moon silhouette, opening right with a deep circular cutout.",
+  "layout": {
+    "columns": 4,
+    "rows": 2,
+    "frames": 8
+  },
+  "prompt": "Use case: stylized-concept. Asset type: transparent 2D action RPG VFX animation sprite atlas. Use the attached moon ONLY as silhouette reference: a fat almost-circular crescent, a very deep clean circular bite removed from its right side, leaving a broad curved left body and two sharp horns on the right. Create a luminous holy crescent WIND BLADE, not a realistic moon, not a sword, not a thin parenthesis arc. Warm ivory white cutting edge with pale champagne gold translucent energy body, restrained blue-white glints. Strong readable thick crescent silhouette. Premium hand-painted pixel-informed fantasy action RPG effect, crisp edges at small size. Layout: exactly 4 columns by 2 rows of equal SQUARE cells, overall 2:1 aspect ratio. Eight sequential shimmer frames, same crescent in same orientation opening RIGHT in every cell, identical center, identical bounding size, stationary (rotation will be done in engine). Circle diameter 78 percent of each cell width, transparent generous padding. Frames 1-8 form a seamless flowing energy shimmer loop along crescent body, with a small traveling bright edge highlight. Keep the full crescent body visible and consistent in ALL eight frames; no fade in or dissolve frames. No surrounding circles, no secondary crescent, no long trail, no scattered particles, no radiating beams, no busy lightning. Interior bite must be truly transparent as must whole background. No black fill, no white circular disk in opening, no grid, no borders, no labels, no text. Each crescent entirely inside its cell. The crescent outer shape resembles the reference moon's round strong silhouette, with the opening on right and broad blade mass on left."
+}

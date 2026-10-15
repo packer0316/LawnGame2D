@@ -1,0 +1,20 @@
+{
+  "mode": "built-in image_gen",
+  "date": "2026-10-16",
+  "assets": [
+    {
+      "file": "warrior-whirl-v11.png",
+      "prompt": "Production 2D game VFX sprite sheet. Actual TRANSPARENT alpha background. EXACT 4 columns by 4 rows, 16 equal cells, chronological left-to-right then next row. ONE elegant BLUE-WHITE sword wind crescent spinning clockwise around an EMPTY central character space on a horizontal elliptical plane, like a swordsman spinning a sword around the waist. Fixed perspective and fixed size in ALL frames: ellipse is wide 80% cell width and shallow 48% cell height, same center every frame. A single bright leading tip and one smooth tapering curved blade tail of about 140 degrees around the ellipse, no full solid disk. Frame1 tip at front-left, successive frames advance evenly clockwise one complete revolution, frame16 just before frame1. In the back half the arc is behind the empty center; in front it sweeps below the center. ONE stroke only per frame, a clear white cutting edge with restrained icy blue translucent edge, no overlapping rings, no extra spirals, no cyclone or tornado, no sparks, no debris, no energy balls. Sophisticated clean cel-painted fantasy RPG slash effect, crisp curved silhouette, beautiful luminous blue edge, negative space always clear for the hero. Every effect fits well inside its cell with transparent padding, no text or guides or background. Make the 16 sequential poses distinct and physically coherent. Square canvas.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-ab3d7398-60ae-4f70-a145-7d43292e5ee0.png",
+      "columns": 4,
+      "rows": 4
+    },
+    {
+      "file": "warrior-holy-wave-v11.png",
+      "prompt": "Production polished 2D fantasy game sword VFX spritesheet, true transparent alpha background. EXACT 4 columns by 2 rows, eight equal square cells, chronological sequence left-to-right then next row. ONE upright GOLDEN crescent sword energy wave pointing and travelling RIGHT. Fixed center, fixed orientation and fixed camera in every cell. The outer convex cutting edge bulges RIGHT, the hollow concave opening faces LEFT, like a clean ')' curve. Tall slim silhouette, 78% cell height, only 40% cell width, plentiful transparent padding. A single elegant ivory-white sharp edge with a warm champagne gold body and a restrained amber rim. Clean smooth tapering tips, slight ornate light texture inside the blade but no physical sword. Frame1 thin emerging crescent, frame2 growing brightness, frames3-6 stable powerful blade with subtle changing golden light along its edge, frame7 thinner fading blade, frame8 sparse fading golden arc. All frames keep the same crescent geometry and right-facing direction. Absolutely ONLY ONE crescent per cell, no echo copies, no nested arcs, no multiple rings, no halos, no shield or orb, no sweeping sideways trails, no giant starburst, no extra debris, no dense particles, no scenery, no text, no grids. High quality detailed luminous anime fantasy game effect, dignified holy sword strike, strong visual clarity.",
+      "source": "C:/Users/jaorenhuang/.codex/generated_images/01a13e51-abb4-7891-a79c-07a8f29913c3/exec-e8acca54-4f7f-4fc4-b417-229187b11279.png",
+      "columns": 4,
+      "rows": 2
+    }
+  ]
+}

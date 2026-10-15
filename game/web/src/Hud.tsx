@@ -8,6 +8,7 @@ import { InventoryPanel } from './InventoryPanel';
 import { ComboHud } from './ComboHud';
 import { HudAction } from './HudAction';
 import { BASIC_SKILL, CLASS_DESCRIPTION, SKILL_DESCRIPTION } from './skillArt';
+import { useUiSounds } from './uiSounds';
 
 const BIG_WIN_TITLE = { big: 'BIG WIN', mega: 'MEGA WIN', super: 'SUPER WIN' } as const;
 
@@ -21,6 +22,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
   const [autoOpen, setAutoOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [betOpen, setBetOpen] = useState(false);
+  useUiSounds();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyI' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e.target instanceof HTMLElement && (e.target.isContentEditable || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)))) return;

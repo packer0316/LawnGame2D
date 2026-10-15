@@ -23,7 +23,7 @@ try{
   });
   await page.keyboard.press('7');
   await page.evaluate(()=>{s.update(0,17);if(s.player.attacking?.id!=='skill_0048')throw Error('Seventh skill did not start');});
-  for(const [label,at]of [['seal',420],['eyes',790],['moon-split',1220],['shadows-first',1820],['shadows-second',2150],['shadows-third',2530],['sheath',2940],['hits',3500],['finish',3930]]){
+  for(const [label,at]of [['seal',420],['eyes',790],['moon-split',1220],['shadows-first',1820],['shadows-second',2150],['shadows-third',2530],['sheath',2940],['hits',3500],['finish',3930],['finish-peak',4070]]){
     await page.evaluate(at=>{let steps=0;while(s.skillFx.moon&&s.skillFx.moon.elapsed<at&&steps++<700)s.update(0,1000/60);},at);
     if(label==='moon-split')assert.equal(await page.evaluate(()=>s.skillFx.moon.moon.displayHeight*s.cameras.main.zoom>s.cameras.main.height*1.9),true);
     if(label==='shadows-third')assert.equal(await page.evaluate(()=>{
@@ -32,6 +32,7 @@ try{
         &&fx.shadows.every(s=>s.clone.texture.key==='moon-execution-shadow')&&s.avatar.visible;
     }),true);
     if(label==='sheath')assert.equal(await page.evaluate(()=>s.skillFx.moon.shadows.every(s=>!s.clone.visible&&!s.slash.visible)&&!s.avatar.visible),true);
+    if(label==='finish-peak')assert.equal(await page.evaluate(()=>s.skillFx.moon.eclipse.visible&&Number(s.skillFx.moon.eclipse.frame.name)>=10),true);
     await page.screenshot({path:`art-review/moon-execution/${label}.png`});
   }
   await page.evaluate(()=>{for(let i=0;i<100;i++)s.update(0,1000/60);});

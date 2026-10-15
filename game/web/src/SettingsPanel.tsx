@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { GameCommand, GameMode, HudState, InventoryAction } from '@lawn/engine';
+import { sfx, type GameCommand, type GameMode, type HudState, type InventoryAction } from '@lawn/engine';
 import { Icon } from './Icons';
 
 const MODES: { id: GameMode; label: string; detail: string }[] = [
@@ -10,7 +10,7 @@ const MODES: { id: GameMode; label: string; detail: string }[] = [
 /** 設定金錢的快捷金額。 */
 const BALANCE_PRESETS = [1_000, 10_000, 100_000, 1_000_000];
 
-/** 右上角設定（SPEC §2.6）：遊戲模式、持有金幣。 */
+/** 右上角設定（SPEC §2.6）：遊戲模式、音效音量、持有金幣。 */
 export function SettingsPanel({ state, command, onClose }: { state: HudState; command: (cmd: GameCommand) => void; onClose: () => void }) {
   return (
     <div className="panel settings" role="dialog" aria-label="設定">
@@ -27,9 +27,35 @@ export function SettingsPanel({ state, command, onClose }: { state: HudState; co
           </button>
         ))}
       </div>
+      <SfxVolume />
       <BalanceSetter balance={state.balance} command={command} />
       <TestTools state={state} command={command} />
     </div>
+  );
+}
+
+/** 音效音量（技能、命中、介面；背景音樂另計）。放開滑桿時播一下命中聲試聽。 */
+function SfxVolume() {
+  const [volume, setVolume] = useState(() => Math.round(sfx.getVolume() * 100));
+  return (
+    <>
+      <span className="settings-label">音效音量<small>{volume === 0 ? '靜音' : `${volume}%`}</small></span>
+      <input
+        className="sfx-volume"
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={volume}
+        aria-label="音效音量"
+        onChange={(e) => {
+          const value = Number(e.target.value);
+          setVolume(value);
+          sfx.setVolume(value / 100);
+        }}
+        onPointerUp={() => sfx.play('hit:warrior')}
+      />
+    </>
   );
 }
 

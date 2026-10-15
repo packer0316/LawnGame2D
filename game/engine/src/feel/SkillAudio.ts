@@ -1,87 +1,18 @@
 import type * as Phaser from 'phaser';
 import type { ClassId } from '@lawn/shared';
+import { sfx } from '../audio/Sfx';
 
-/** 合成低頻撞擊與濾波噪聲；跟隨 Phaser mute／volume，不需要額外下載音源。 */
+/**
+ * 技能演出用的聲音入口。起手、揮刀、特效、命中的音效改由 GameScene 依 audio/sfxCues 播放真實素材的多層組合，
+ * 這裡的 play 保留給 SkillFx 呼叫但不再出聲（避免同一刀響兩次）；月斷的節拍（moon）對應 sfxCues 的 `moon:<段落>`。
+ */
 export class SkillAudio {
-  private context: AudioContext | null = null;
-  private noise: AudioBuffer | null = null;
-  private voices = new Set<AudioScheduledSourceNode>();
-  private lastHit = -Infinity;
-  private unlock = () => {
-    if(!this.context && typeof AudioContext!=='undefined') {
-      this.context=new AudioContext();
-      const c=this.context;
-      this.noise=c.createBuffer(1,c.sampleRate*.5,c.sampleRate);
-      const data=this.noise.getChannelData(0);
-      for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-    }
-    void this.context?.resume().catch(()=>undefined);
-  };
-  constructor(private scene:Phaser.Scene) {
-    window.addEventListener('pointerdown',this.unlock);
-    window.addEventListener('keydown',this.unlock);
+  constructor(_scene: Phaser.Scene) {}
+  play(_classId: ClassId, _power: number, _charge = false): void {}
+  clear(): void {}
+  /** 月斷・月下影殺每一拍：封印、睜眼、斬、衝刺、殘影、收刀、命中、終結 */
+  moon(stage: 'seal' | 'eye' | 'cut' | 'dash' | 'shadow' | 'sheath' | 'hit' | 'finish'): void {
+    sfx.play(`moon:${stage}`);
   }
-  play(classId:ClassId,power:number,charge=false):void {
-    const c=this.context;
-    if(!c||c.state!=='running'||this.scene.sound.mute||this.voices.size>=18)return;
-    const now=c.currentTime;
-    if(!charge&&now-this.lastHit<.055)return;
-    if(!charge)this.lastHit=now;
-    const volume=Math.min(1,this.scene.sound.volume)*Math.min(1.5,power);
-    if(volume<=0)return;
-    const duration=charge?.2:.1+power*.055;
-    const oscillator=c.createOscillator(),gain=c.createGain();
-    oscillator.type=classId==='assassin'?'triangle':'sine';
-    const pitch=classId==='warrior'?125:classId==='mage'?190:classId==='archer'?240:165;
-    oscillator.frequency.setValueAtTime(charge?pitch*.6:pitch,now);
-    oscillator.frequency.exponentialRampToValueAtTime(charge?pitch*2:Math.max(42,pitch*.28),now+duration);
-    gain.gain.setValueAtTime(.0001,now);
-    gain.gain.exponentialRampToValueAtTime(volume*(charge?.025:.09),now+.008);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    oscillator.connect(gain);gain.connect(c.destination);
-    this.voices.add(oscillator);
-    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.voices.delete(oscillator);};
-    oscillator.start(now);oscillator.stop(now+duration+.02);
-    if(charge||!this.noise)return;
-    const source=c.createBufferSource(),filter=c.createBiquadFilter(),ng=c.createGain();
-    source.buffer=this.noise;filter.type='bandpass';
-    filter.frequency.setValueAtTime(classId==='mage'?2200:classId==='archer'?3400:1600,now);
-    filter.frequency.exponentialRampToValueAtTime(350,now+duration);filter.Q.value=.65;
-    ng.gain.setValueAtTime(volume*.08,now);ng.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    source.connect(filter);filter.connect(ng);ng.connect(c.destination);
-    this.voices.add(source);
-    source.onended=()=>{source.disconnect();filter.disconnect();ng.disconnect();this.voices.delete(source);};
-    source.start(now);source.stop(now+duration+.02);
-  }
-  clear():void { for(const v of this.voices){try{v.stop();}catch{/* already ended */}} this.voices.clear(); }
-  /** Distinct seal/eye/cut/dash/sheath percussion; one voice per beat, never per monster. */
-  moon(stage:'seal'|'eye'|'cut'|'dash'|'shadow'|'sheath'|'hit'|'finish'):void {
-    const c=this.context;
-    if(!c||c.state!=='running'||this.scene.sound.mute||this.voices.size>=24)return;
-    const score={seal:[90,350,.65,.035],eye:[1300,580,.12,.04],cut:[800,70,.36,.10],dash:[520,90,.22,.065],shadow:[1100,460,.28,.025],sheath:[2400,900,.09,.05],hit:[180,48,.12,.10],finish:[100,30,.55,.15]}[stage]!;
-    const [from,to,duration,level]=score as [number,number,number,number];
-    const now=c.currentTime,volume=Math.min(1,this.scene.sound.volume);
-    if(volume<=0)return;
-    const oscillator=c.createOscillator(),gain=c.createGain();
-    oscillator.type=stage==='sheath'?'triangle':'sine';
-    oscillator.frequency.setValueAtTime(from,now);oscillator.frequency.exponentialRampToValueAtTime(to,now+duration);
-    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,level*volume),now+.008);
-    gain.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    oscillator.connect(gain);gain.connect(c.destination);this.voices.add(oscillator);
-    oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();this.voices.delete(oscillator);};
-    oscillator.start(now);oscillator.stop(now+duration+.02);
-    if(!this.noise||stage==='seal'||stage==='eye'||stage==='shadow')return;
-    const noise=c.createBufferSource(),filter=c.createBiquadFilter(),ng=c.createGain();
-    noise.buffer=this.noise;filter.type='bandpass';filter.Q.value=.8;
-    filter.frequency.setValueAtTime(stage==='sheath'?5000:stage==='dash'?3200:1800,now);
-    filter.frequency.exponentialRampToValueAtTime(240,now+duration);
-    ng.gain.setValueAtTime(level*volume,now);ng.gain.exponentialRampToValueAtTime(.0001,now+duration);
-    noise.connect(filter);filter.connect(ng);ng.connect(c.destination);this.voices.add(noise);
-    noise.onended=()=>{noise.disconnect();filter.disconnect();ng.disconnect();this.voices.delete(noise);};
-    noise.start(now);noise.stop(now+duration+.02);
-  }
-  destroy():void {
-    window.removeEventListener('pointerdown',this.unlock);window.removeEventListener('keydown',this.unlock);
-    this.clear();void this.context?.close().catch(()=>undefined);this.context=null;this.noise=null;
-  }
+  destroy(): void {}
 }

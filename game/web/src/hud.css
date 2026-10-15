@@ -61,6 +61,7 @@
 .mode-options small { font-size: 11px; line-height: 1.5; color: #a9bcae; }
 .hud .mode-options button.active { border-color: #d0bc79; background: #4a60394d; color: #f4dfa1; }
 .settings-label small { margin-left: 8px; font-size: 10px; color: #8fa596; }
+.sfx-volume { width: 100%; accent-color: #d6c795; cursor: pointer; }
 .balance-setter { display: flex; gap: 6px; }
 .balance-setter input { flex: 1; min-width: 0; padding: 6px 9px; border-radius: 5px; border: 1px solid #b4c6a43b; background: #081e2399; color: var(--text); font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; text-align: right; }
 .balance-setter input:focus { outline: 1px solid #d6c795; }

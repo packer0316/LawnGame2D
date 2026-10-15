@@ -18,6 +18,8 @@ import {
 } from '@lawn/shared';
 import { Player, type PlayerInput } from '../actor/Player';
 import { BgmPlayer } from '../audio/BgmPlayer';
+import { sfx, type SfxPlayOptions } from '../audio/Sfx';
+import { SFX_CUES } from '../audio/sfxCues';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
 import { loadHeroMotions, motionDuration } from '../avatar/motions';
@@ -164,9 +166,14 @@ export class GameScene extends Phaser.Scene {
     this.fx = new FxLayer(this, this.bundle);
     this.pickups = new Pickups(this, this.bundle);
     this.pickups.target = () => ({ x: this.player?.body.x ?? 0, y: (this.player?.body.y ?? 0) - 26 });
-    this.pickups.onCollect = (x, y, kind) => this.fx.spawn('hit_spark', x, y, { additive: true, scale: kind === 'item' ? 1.4 : 0.7 });
+    this.pickups.onCollect = (x, y, kind) => {
+      this.fx.spawn('hit_spark', x, y, { additive: true, scale: kind === 'item' ? 1.4 : 0.7 });
+      this.collectSound(kind);
+    };
     this.skillFx = new SkillFx(this, this.bundle, this.fx, () => this.opts.lighting !== false);
     this.bgm = new BgmPlayer(this.bundle.source);
+    // 音效左右聲道跟著鏡頭
+    sfx.listener = this.sfxListener;
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
@@ -225,6 +232,7 @@ export class GameScene extends Phaser.Scene {
         onRoll: () => this.onRoll(),
         resolveSlot: (slot) => this.resolveSlot(slot),
         onLand: (impact) => this.onLand(impact),
+        onJump: (air) => this.playSfx(air ? 'airJump' : 'jump'),
       },
     );
     this.applyLoadout();
@@ -320,6 +328,7 @@ export class GameScene extends Phaser.Scene {
     try {
       const camera = this.cameras.main;
       camera.fadeOut(200, 0, 0, 0);
+      this.playSfx('portal');
       const [snapshot] = await Promise.all([this.server.changeRoom({ toRoomId: roomId, via }), new Promise((r) => setTimeout(r, 220))]);
       await this.enterRoom(snapshot, arriveAt);
     } catch (error) {
@@ -523,6 +532,7 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.showToast(reason ? `自動冒險停止：${reason}` : '自動冒險停止');
     }
+    this.playSfx(on ? 'ui:autoOn' : 'ui:autoOff', { x: undefined });
   }
 
   /** 停止條件（SPEC §3.6）；單次派彩倍數在 onPayout 檢查。 */
@@ -569,14 +579,17 @@ export class GameScene extends Phaser.Scene {
         const levels = this.betLevels();
         const current = levels.indexOf(this.bet);
         const next = levels[Math.max(0, Math.min(levels.length - 1, current + cmd.delta))];
+        if (next !== undefined && next !== this.bet) this.playSfx(cmd.delta > 0 ? 'ui:betUp' : 'ui:betDown', { x: undefined });
         if (next !== undefined) this.betIndex = this.bundle.betLevels.findIndex((l) => l.bet === next);
         break;
       }
       case 'setBet':
+        this.playSfx(cmd.bet >= this.bet ? 'ui:betUp' : 'ui:betDown', { x: undefined });
         this.betIndex = Math.max(0, this.bundle.betLevels.findIndex((l) => l.bet === cmd.bet));
         this.clampBet();
         break;
       case 'setClass':
+        if (cmd.classId !== this.classId) this.playSfx('ui:class', { x: undefined });
         this.setClass(cmd.classId);
         break;
       case 'changeRoom':
@@ -698,7 +711,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onSkillStart(skill: SkillDef): boolean {
-    const begin = () => { this.skillFx.begin(skill,this.fxContext(skill,skill.strikes[0]!.area,[],null,0)); return true; };
+    const begin = () => {
+      this.skillFx.begin(skill,this.fxContext(skill,skill.strikes[0]!.area,[],null,0));
+      // 起手音：普攻只放自己定義的，技能沒定義就用職業共通的
+      this.playSfx(skill.kind === 'basic' ? [`cast:${skill.id}`] : [`cast:${skill.id}`, `cast:${skill.classId}`]);
+      return true;
+    };
     if (skill.chain?.blink) {
       // 影襲：第一刀的範圍內要有目標，不然不放（也不進冷卻）
       if (this.findTargets(skill.strikes[0]!.area, 1, false).length > 0) return begin();
@@ -749,6 +767,7 @@ export class GameScene extends Phaser.Scene {
   /** 技能位移發動：瞬移在這裡處理，衝刺與跳躍的物理在 Player，這裡只加殘影與塵土。 */
   private onMove(_skill: SkillDef, move: SkillMove): void {
     const body = this.player.body;
+    this.playSfx(`move:${move.kind}`);
     const ghost = () => {
       const frame = this.avatar.motionFrame;
       if (frame) this.skillFx.afterimage(frame, this.player.body.x, this.player.body.y, this.player.body.facing);
@@ -854,7 +873,9 @@ export class GameScene extends Phaser.Scene {
   /** 演出時點（隕石開始落下、迴旋刃飛出）。 */
   private onCue(skill: SkillDef, cue: SkillCue): void {
     const next = skill.strikes.find((strike) => strike.atMs >= cue.atMs) ?? skill.strikes[0]!;
-    this.skillFx.play(cue.fx, { ...this.fxContext(skill, next.area, [], null, cue.atMs), leadMs: next.atMs - cue.atMs });
+    const cues = skill.cues ?? [];
+    this.playSfx(`cue:${cue.fx}`, { index: cues.indexOf(cue), count: cues.length });
+    this.skillFx.play(cue.fx,{ ...this.fxContext(skill, next.area, [], null, cue.atMs), leadMs: next.atMs - cue.atMs });
   }
 
   private fxContext(skill: SkillDef, area: Area, targets: MonsterActor[], from: FxPoint | null, atMs: number): SkillFxContext {
@@ -876,7 +897,7 @@ export class GameScene extends Phaser.Scene {
       rainTerrain: this.world.segments,
       playerAt:()=>({x:this.player.body.x,y:this.player.body.y-26}),
       targetsAt:(x,y,radius)=>[...this.monsters.values()].filter(m=>m.alive&&circleRect(x,y,radius,m.hitbox()))
-        .map(m=>m.center()).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)),
+        .map(m=>({...m.center(),id:String(m.spawn.uid)})).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)),
       frame: this.avatar.motionFrame,
       remainingMs: Math.max(0, skill.strikes.at(-1)!.atMs - atMs) + 250,
       reach: this.skillReach(skill),
@@ -894,10 +915,27 @@ export class GameScene extends Phaser.Scene {
 
   private onRoll(): void {
     this.fx.spawn('dust', this.player.body.x, this.player.body.y - 10);
+    this.playSfx('roll');
   }
 
   private onLand(impact: number): void {
     if (impact > 300) this.fx.spawn('dust', this.player.body.x, this.player.body.y - 10);
+    if (impact > 120) this.playSfx(impact > 520 ? 'landHeavy' : 'land');
+  }
+
+  /** 播放音效（sfxCues）：給多個名稱時播第一個有定義的；位置預設是角色。 */
+  private playSfx(names: string | readonly string[], opts: SfxPlayOptions = {}): string | null {
+    return sfx.playFirst(typeof names === 'string' ? [names] : names, { x: this.player?.body.x, ...opts });
+  }
+
+  private readonly sfxListener = () => {
+    const view = this.cameras.main.worldView;
+    return { x: view.centerX, halfWidth: view.width / 2 };
+  };
+
+  /** 撿到金幣：固定音高的一聲（不要音階）；武器、卷軸撿到不出聲（使用者覺得吵）。 */
+  private collectSound(kind: 'coin' | 'item'): void {
+    if (kind === 'coin') this.playSfx('coin');
   }
 
   private onStrike(skill: SkillDef, index: number): void {
@@ -911,11 +949,14 @@ export class GameScene extends Phaser.Scene {
       const offset = skill.slashFx ? 22 : 30;
       this.fx.spawn(fxId, body.x + dir * offset, body.y - 26, { flipX: dir === 1, tint, additive: true, rainbow: this.betTier >= 5 });
     }
+    const beat = { index, count: skill.strikes.length };
     if (skill.projectile) {
+      this.playSfx([`launch:${skill.id}`, `launch:${skill.classId}`], beat);
       this.skillFx.release(skill,this.fxContext(skill,strike.area,[],null,strike.atMs));
       this.launchProjectile(skill, index, strike);
       return;
     }
+    this.playSfx(`swing:${skill.id}`, beat);
     let targets: MonsterActor[];
     let from: FxPoint | null = null;
     if (skill.chain) ({ targets, from } = this.chainTargets(skill, index, strike));
@@ -930,6 +971,8 @@ export class GameScene extends Phaser.Scene {
     else targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
     // Rain is launched during wind-up. Its landing and applyHits share this exact step.
     const rainLanded = this.skillFx.landRain(skill, index);
+    // 技能特效的聲音（雷擊、地裂、冰爆…）：沒打到怪也會響
+    if (strike.fx) this.playSfx([`fx:${strike.fx}:${skill.classId}`, `fx:${strike.fx}`], { ...beat, x: targets[0]?.x ?? body.x });
     if (strike.fx && !rainLanded) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
     this.applyHits(skill, index, targets);
   }
@@ -1244,6 +1287,16 @@ export class GameScene extends Phaser.Scene {
       this.fx.damage(c.x, m.hitbox().y - 2, damage, { crit, stack });
     }
     const feel=this.skillFx.contact(skill,index,{...this.fxContext(skill,skill.strikes[index]!.area,targets,null,skill.strikes[index]!.atMs),impactAngle});
+    // 命中音：技能（或職業）的打擊聲，力道大、一次打很多隻再各疊一層
+    if (targets.length > 0) {
+      const hit = { index, count: skill.strikes.length, x: targets.reduce((sum, m) => sum + m.x, 0) / targets.length };
+      const played = this.playSfx([`hit:${skill.id}`, `hit:${skill.classId}`], hit);
+      // 命中聲定義成空的（月斷由演出自己出聲）就不再疊
+      if (played && SFX_CUES[played]!.length > 0) {
+        if (feel.strength >= 1.1) this.playSfx('hit:heavy', hit);
+        if (targets.length >= 5) this.playSfx('hit:crowd', hit);
+      }
+    }
     this.hitStopMs = Math.max(this.hitStopMs, feel.stopMs);
     if (feel.pixels > 0) this.cameras.main.shake(feel.durationMs,new Phaser.Math.Vector2(feel.pixels/this.cameras.main.worldView.width,feel.pixels*.45/this.cameras.main.worldView.height));
 
@@ -1277,7 +1330,10 @@ export class GameScene extends Phaser.Scene {
       const c = monster.center();
       const floor = monster.y;
       const coins = Math.min(30, monster.def.fx.coinCount + Math.floor(outcome.multiplier / 10));
+      this.playSfx('kill', { x: c.x });
+      if (outcome.multiplier >= 10) this.playSfx('killRich', { x: c.x });
       monster.kill(() => {
+        this.playSfx('coinsSpill', { x: c.x });
         this.pickups.coins(c.x, c.y, coins, floor);
         for (const item of outcome.loot ?? []) this.pickups.item(item, c.x, c.y, floor);
         this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' });
@@ -1311,6 +1367,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.shake(200, 4 / this.cameras.main.worldView.width);
       const level = multiplier >= BIG_WIN.super ? 'super' : multiplier >= BIG_WIN.mega ? 'mega' : 'big';
       this.bigWin = { id: ++this.uiId, level, amount: payout, multiple: multiplier };
+      this.playSfx(`win:${level}`, { x: undefined });
     }
   }
 
@@ -1417,6 +1474,7 @@ export class GameScene extends Phaser.Scene {
     this.server?.dispose();
     this.keys?.dispose();
     this.bgm?.destroy();
+    if (sfx.listener === this.sfxListener) sfx.listener = null;
   }
 }
 
