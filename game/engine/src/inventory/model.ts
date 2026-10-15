@@ -30,7 +30,7 @@ export function parseProfile(raw: string | null): InventoryProfile | null {
     if (!p || p.version !== 1 || !integer(p.balance)) return null;
     const s = p.inventory;
     if (!s || !Array.isArray(s.items) || s.items.length > BAG_CAPACITY || !integer(s.nextId) || s.nextId < 1 || typeof s.demoGranted !== 'boolean' || !s.equipped || !s.scrolls) return null;
-    // Existing v1 saves receive the first outfit without resetting weapons, coins or scrolls.
+    // Existing v1 saves receive the costume collection without resetting their equipment.
     if (s.outfits === undefined && s.equippedOutfit === undefined) {
       s.outfits = OUTFITS.map(o => o.id); s.equippedOutfit = null;
     }
@@ -46,6 +46,8 @@ export function parseProfile(raw: string | null): InventoryProfile | null {
       const w = s.items.find((item) => item.uid === uid);
       if (!w || WEAPON_BY_ID.get(w.definitionId)?.classId !== classId) return null;
     }
+    // Demo outfits are complimentary. Grant newly released ones after validating ownership.
+    for (const outfit of OUTFITS) if (!s.outfits.includes(outfit.id)) s.outfits.push(outfit.id);
     return p;
   } catch { return null; }
 }

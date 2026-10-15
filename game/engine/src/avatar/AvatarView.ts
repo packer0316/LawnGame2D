@@ -16,7 +16,7 @@ import { HERO_MOTIONS_KEY, heroMotionsSheet } from './motions';
 import { motionDuration } from './motions';
 import type { WeaponDefinition } from '../inventory/catalog';
 import { weaponRig } from '../inventory/weaponRig';
-import { NINJA_BASE, NINJA_MOTIONS } from './outfits';
+import { OUTFIT_VISUALS } from './outfits';
 
 /** 角色需要的內容：原始人物 sheet 與武器部件；套服另由遊戲美術包提供。 */
 export interface AvatarContent {
@@ -44,8 +44,8 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private motionOn = false;
   private cosmetic: WeaponDefinition | null = null;
   private outfit: string | null = null;
-  private get base(): SheetAsset { return this.outfit === 'ninja-1' ? NINJA_BASE : this.content.base; }
-  private get motionKey(): string { return this.outfit === 'ninja-1' ? NINJA_MOTIONS.path : HERO_MOTIONS_KEY; }
+  private get base(): SheetAsset { return OUTFIT_VISUALS.get(this.outfit ?? '')?.base ?? this.content.base; }
+  private get motionKey(): string { return OUTFIT_VISUALS.get(this.outfit ?? '')?.motions.path ?? HERO_MOTIONS_KEY; }
   private readonly cosmeticSprite: Phaser.GameObjects.Sprite;
   /** body 合圖沒有獨立前手時，重畫握柄處的手掌，保留手指遮擋。 */
   private readonly gripOccluder: Phaser.GameObjects.Sprite;
@@ -135,7 +135,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** One full-body costume shared across classes; keep both animation clocks intact. */
   setOutfit(id: string | null): this {
-    const next = id === 'ninja-1' ? id : null;
+    const next = id && OUTFIT_VISUALS.has(id) ? id : null;
     if (this.outfit === next) return this;
     this.outfit = next;
     this.textureKeys.set('base', this.base.path);

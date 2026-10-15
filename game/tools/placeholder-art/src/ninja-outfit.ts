@@ -8,7 +8,9 @@ import { cellsOf, stamp } from './hero-motions';
 import { heroPlacement, heroPoses } from './painted';
 import { writeSheet, writePng, type SheetFrame } from './sheet';
 
-const root = fileURLToPath(new URL('../../../assets/outfits/ninja/', import.meta.url));
+const outfit = process.argv[2] ?? 'ninja';
+if (!['ninja', 'hood'].includes(outfit)) throw new Error(`Unknown outfit: ${outfit}`);
+const root = fileURLToPath(new URL(`../../../assets/outfits/${outfit}/`, import.meta.url));
 const content = JSON.parse(fs.readFileSync(new URL('../../../../content/avatar/base.sheet.json', import.meta.url), 'utf8'));
 const original = JSON.parse(fs.readFileSync(new URL('../../../assets/verdant/motions/export/motions.json', import.meta.url), 'utf8'));
 function read(file: string) {
@@ -33,7 +35,7 @@ for (const tag of content.meta.frameTags) {
   }
 }
 const out=path.join(root,'export');
-writeSheet(out,'ninja-base',{frames,tags:content.meta.frameTags,slices:content.meta.slices,layers:['body']});
+writeSheet(out,`${outfit}-base`,{frames,tags:content.meta.frameTags,slices:content.meta.slices,layers:['body']});
 writePng(path.join(out,'base-contact.png'),baseContact);
 
 const sourceCache=new Map<string,{image:Canvas;cells:ReturnType<typeof cellsOf>}>();
@@ -44,7 +46,13 @@ for(const clip of original.clips) {
   for(let i=0;i<clip.frames.length;i++) {
     const info=clip.frames[i],name=info.sourceImage.replace('hero-motion-','').replace('.png','');
     let source=sourceCache.get(name);
-    if(!source){const image=read(path.join(root,`${name}-v1.png`));source={image,cells:cellsOf(image)};sourceCache.set(name,source)}
+    if(!source){
+      const version=outfit==='hood'&&name==='slashes'?'v2':'v1';
+      const image=read(path.join(root,`${name}-${version}.png`));
+      try { source={image,cells:cellsOf(image)}; }
+      catch (error) { throw new Error(`${outfit}/${name}: ${error}`); }
+      sourceCache.set(name,source);
+    }
     const cell=source.cells[info.sourceFrame]!, ratio=source.image.width/1254, scale=info.scale/ratio;
     const hipX=info.registration.x*ratio;
     const airborne=info.registrationTarget.y!==120;
@@ -56,6 +64,6 @@ for(const clip of original.clips) {
     motionContact.draw(canvas,i*128,(tags.length-1)*128);
   }
 }
-writeSheet(out,'ninja-motions',{frames:motionFrames,tags,slices:[{name:'root',keys:[{frame:0,bounds:{x:64,y:120,w:1,h:1},pivot:{x:0,y:0}}]}]});
+writeSheet(out,`${outfit}-motions`,{frames:motionFrames,tags,slices:[{name:'root',keys:[{frame:0,bounds:{x:64,y:120,w:1,h:1},pivot:{x:0,y:0}}]}]});
 writePng(path.join(out,'motions-contact.png'),motionContact);
 console.log(JSON.stringify({baseFrames:frames.length,baseTags:content.meta.frameTags.length,motionFrames:motionFrames.length,motionTags:tags.length}));

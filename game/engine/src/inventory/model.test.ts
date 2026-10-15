@@ -3,6 +3,21 @@ import { BAG_CAPACITY, SCROLL_RATES, SCROLL_RULES, WEAPONS } from './catalog';
 import { addWeapon, inventoryAction, newProfile, parseProfile, rollLoot, sellValue } from './model';
 
 describe('cosmetic weapon economy', () => {
+  it('adds the hood outfit to a ninja save and switches costumes without affecting weapons or money', () => {
+    const old = newProfile(54321);
+    old.inventory.outfits = ['ninja-1']; old.inventory.equippedOutfit = 'ninja-1';
+    old.inventory.equipped.warrior = old.inventory.items[0]!.uid;
+    const p = parseProfile(JSON.stringify(old))!;
+    expect(p.inventory.outfits).toEqual(['ninja-1', 'hood-1']);
+    expect(p.inventory.equippedOutfit).toBe('ninja-1');
+    const before = structuredClone(p);
+    for (const outfitId of ['hood-1', 'ninja-1', 'hood-1']) {
+      expect(inventoryAction(p, {type:'equipOutfit',outfitId}, () => { throw Error('Costumes never roll'); }).kind).toBe('equipped');
+      expect(parseProfile(JSON.stringify(p))?.inventory.equippedOutfit).toBe(outfitId);
+    }
+    expect({...p.inventory, equippedOutfit: before.inventory.equippedOutfit}).toEqual(before.inventory);
+    expect(p.balance).toBe(before.balance);
+  });
   it('migrates existing saves without changing weapons or currency, and persists the shared outfit', () => {
     const p = newProfile(12345);
     inventoryAction(p, {type:'equip',uid:p.inventory.items[0]!.uid}, () => 0);
