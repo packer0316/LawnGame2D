@@ -1,9 +1,13 @@
 import * as Phaser from 'phaser';
-import type { Rect } from '@lawn/shared';
+import type { Rect, SkillDef } from '@lawn/shared';
 import type { ContentBundle } from '../content/bundle';
 import { DEPTH } from '../map/MapView';
 import { frameName } from '../render/sheets';
 import type { FxLayer } from './FxLayer';
+import { SkillVfxKit } from './SkillVfxKit';
+import { CLASS_ENERGY, impactFeel, VFX_BUDGET } from './SkillPresentation';
+import reaperUrl from '../../../assets/skills/reaper.png?url';
+import { SkillAudio } from './SkillAudio';
 
 export interface FxPoint {
   x: number;
@@ -49,12 +53,23 @@ const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
 /**
  * 技能的程式特效（SPEC §4.6）：閃電、隕石、衝擊波、箭雨、殘影、大絕招…
- * 目前是「示意」：用 Graphics + tween 畫出範圍與節奏，之後由美術（Codex）換成正式特效。
+ * 分層能量刀光、蓄力匯聚、命中星芒與餘燼；實際判定仍由技能資料與場景處理。
  * 大小都跟著判定範圍走，改技能範圍時特效會一起變。換房時 clear() 全部清掉。
  */
 export class SkillFx {
   private readonly objects = new Set<Phaser.GameObjects.GameObject>();
   private readonly lights = new Set<Phaser.GameObjects.Light>();
+  private readonly kit: SkillVfxKit;
+  private readonly audio: SkillAudio;
+
+  static async preload(scene: Phaser.Scene): Promise<void> {
+    if(scene.textures.exists('skill-reaper-v2'))return;
+    await new Promise<void>(resolve=>{
+      scene.load.image('skill-reaper-v2',reaperUrl);
+      scene.load.once(Phaser.Loader.Events.COMPLETE,resolve);
+      scene.load.start();
+    });
+  }
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -62,9 +77,38 @@ export class SkillFx {
     /** 播完就消失的 sprite 特效（塵土、火花、刀光）交給 FxLayer */
     private readonly oneShots: FxLayer,
     private readonly lit: () => boolean,
-  ) {}
+  ) {
+    this.kit = new SkillVfxKit(scene);
+    this.audio = new SkillAudio(scene);
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
+  }
+
+  get count(): number { return this.objects.size + this.kit.count; }
+
+  begin(skill: SkillDef, ctx: SkillFxContext): void {
+    if(skill.kind==='basic')return;
+    const palette=CLASS_ENERGY[skill.classId];
+    this.audio.play(skill.classId,skill.ultimate?1:.5,true);
+    this.kit.charge(ctx.x,ctx.y,skill.ultimate?0xffd58d:palette.color,skill.strikes[0]!.atMs,!!skill.ultimate);
+    if(skill.ultimate)this.kit.veil(palette.shadow,Math.min(650,skill.strikes[0]!.atMs),.3);
+  }
+
+  release(skill: SkillDef, ctx: SkillFxContext): void {
+    const color=CLASS_ENERGY[skill.classId].color;
+    this.kit.burst(ctx.x+ctx.facing*18,ctx.y-CHEST,color,.45,6,ctx.facing===1?0:Math.PI);
+  }
+
+  contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
+    const feel=impactFeel(skill,index);
+    this.audio.play(skill.classId,feel.strength);
+    const color=skill.ultimate?0xffdc9e:CLASS_ENERGY[skill.classId].color;
+    for(const t of ctx.targets.filter(t=>t.x>=ctx.view.x-80&&t.x<=ctx.view.x+ctx.view.w+80).slice(0,feel.last?10:5))this.kit.impact(t.x,t.y,color,feel.strength);
+    if(skill.ultimate&&feel.last)this.kit.veil(CLASS_ENERGY[skill.classId].shadow,260,.22);
+    return feel;
+  }
 
   play(name: string, ctx: SkillFxContext): void {
+    ctx={...ctx,targets:ctx.targets.filter(p=>p.x>=ctx.view.x-120&&p.x<=ctx.view.x+ctx.view.w+120&&p.y>=ctx.view.y-150&&p.y<=ctx.view.y+ctx.view.h+150).slice(0,VFX_BUDGET.targets)};
     switch (name) {
       case 'whirl':
         return this.whirl(ctx);
@@ -128,7 +172,7 @@ export class SkillFx {
       case 'arrowVolley':
         return this.arrowVolley(ctx);
       case 'screenArrowRain':
-        return this.arrowRain(ctx, ctx.bounds, 1.6);
+        return this.arrowRain(ctx, ctx.view, 1.6);
       case 'comet':
         return this.comet(ctx);
       case 'cometBurst':
@@ -160,17 +204,22 @@ export class SkillFx {
 
   /** 爆炸：explosion sprite + 衝擊環 + 光。 */
   explosion(x: number, y: number, scale: number, color: number): void {
+    this.kit.burst(x,y-12,color,scale*.8,22);
+    this.kit.smoke(x,y-8,0x343144,scale);
+    this.kit.glow(x,y-16,color,180*scale,400,.8);
     this.oneShots.spawn('explosion', x, y - 10, { scale, additive: true, tint: color });
     this.ring(x, y - 12, 10, 60 * scale, 0xffd08a, 4, 320);
     this.flash(x, y - 20, color, 160 * scale, 2.2, 380);
   }
 
   clear(): void {
+    this.kit.clear();
+    this.audio.clear();
     const objects = [...this.objects];
     this.scene.tweens.killTweensOf(objects);
     for (const object of objects) object.destroy();
     this.objects.clear();
-    for (const light of this.lights) this.scene.lights.removeLight(light);
+    for (const light of this.lights) { this.scene.tweens.killTweensOf(light); this.scene.lights.removeLight(light); }
     this.lights.clear();
   }
 
@@ -184,8 +233,7 @@ export class SkillFx {
     const g = this.gfx(ctx.x, ctx.y - CHEST);
     for (let i = 0; i < 3; i += 1) {
       const start = (i / 3) * Math.PI * 2;
-      g.lineStyle(8, ctx.tint, 0.35).beginPath().arc(0, 0, r * 0.8, start, start + 1.4).strokePath();
-      g.lineStyle(2, 0xffffff, 0.95).beginPath().arc(0, 0, r * 0.8, start + 0.2, start + 1.3).strokePath();
+      drawBladeArc(g,r*.88,start,start+1.8,0x8bddff,18);
     }
     g.setScale(0.6, 0.45);
     this.fade(g, 260, { rotation: -ctx.facing * Math.PI * 1.4, scaleX: 1.25, scaleY: 0.9 });
@@ -194,14 +242,17 @@ export class SkillFx {
 
   /** 拔刀斬：起點到終點一道白光，在每隻怪身上爆開斬痕。 */
   private iaido(ctx: SkillFxContext): void {
+    this.kit.veil(0x111a2e,240,.24);
+    this.kit.burst(ctx.x,ctx.y-CHEST,0x98e9ff,1.3,18,ctx.facing===1?0:Math.PI);
     const area = ctx.area;
     const y = ctx.y - CHEST;
     const x1 = area ? area.x : Math.min(ctx.origin?.x ?? ctx.x, ctx.x);
     const x2 = area ? area.x + area.w : Math.max(ctx.origin?.x ?? ctx.x, ctx.x);
     const h = area?.h ?? 70;
     const g = this.gfx(0, 0);
-    g.fillStyle(0x9fe8ff, 0.3).fillRect(x1, y - h * 0.12, x2 - x1, h * 0.24);
-    g.fillStyle(0xffffff, 1).fillRect(x1, y - 1.5, x2 - x1, 3);
+    g.fillStyle(0x9fe8ff, 0.16).fillTriangle(x1,y-h*.13,x2,y,x1,y+h*.13);
+    g.fillStyle(0xcaf7ff, .8).fillTriangle(x1,y-3,x2,y,x1,y+3);
+    g.lineStyle(1,0xffffff,1).lineBetween(x1,y,x2,y);
     this.fade(g, 340);
     for (const t of ctx.targets) {
       this.cut(t.x, t.y, 32, ctx.tint);
@@ -216,6 +267,8 @@ export class SkillFx {
     const area = ctx.area;
     if (!area) return;
     const count = Math.max(3, Math.round(area.w / 35));
+    this.kit.smoke(area.x+area.w/2,ctx.y,0x706052,1.8);
+    this.kit.burst(area.x+area.w/2,ctx.y-8,0xffbc68,1.2,14,-Math.PI/2);
     for (let i = 0; i < count; i += 1) {
       const x = area.x + ((i + 0.5) / count) * area.w + rand(-8, 8);
       const ground = ctx.groundAt(x, ctx.y - 30) ?? ctx.y;
@@ -257,8 +310,8 @@ export class SkillFx {
     const g = this.gfx(ctx.x + ctx.facing * 16, ctx.y - 40);
     const a0 = ctx.facing === 1 ? Math.PI * 0.35 : Math.PI * 0.65;
     const a1 = ctx.facing === 1 ? -Math.PI * 0.55 : Math.PI * 1.55;
-    g.lineStyle(12, ctx.tint, 0.35).beginPath().arc(0, 0, r, Math.min(a0, a1), Math.max(a0, a1)).strokePath();
-    g.lineStyle(3, 0xffffff, 1).beginPath().arc(0, 0, r, Math.min(a0, a1) + 0.1, Math.max(a0, a1) - 0.1).strokePath();
+    drawBladeArc(g,r,Math.min(a0,a1),Math.max(a0,a1),0x9bddff,24);
+    this.kit.burst(ctx.x,ctx.y-26,0x9bddff,.8,12,-Math.PI/2);
     this.fade(g, 280, { y: g.y - 40, scaleX: 1.15 });
     this.sparks(ctx.targets);
   }
@@ -282,6 +335,7 @@ export class SkillFx {
       this.bolt(p.x + rand(-30, 30), p.y - 300, p.x, p.y, 0x8fd8ff, 220);
       this.ring(p.x, p.y + 12, 4, 30, 0xc8f0ff, 2, 220);
       this.flash(p.x, p.y, 0x9fdcff, 140, 2.4, 220);
+      this.kit.burst(p.x,p.y,0x9ce7ff,.9,10);
     }
     this.sparks(ctx.targets);
   }
@@ -300,6 +354,7 @@ export class SkillFx {
   private meteor(ctx: SkillFxContext): void {
     const area = ctx.area;
     const impactX = area ? area.x + area.w / 2 : ctx.x + ctx.facing * 200;
+    this.kit.charge(impactX,ctx.y,0xffa451,ctx.leadMs,true);
     this.fallingMeteor(impactX - ctx.facing * 260, ctx.y - 400, impactX, ctx.y - 10, Math.max(120, ctx.leadMs), 1.3);
   }
 
@@ -335,6 +390,8 @@ export class SkillFx {
     const r = (ctx.area?.w ?? 280) / 2;
     const cx = ctx.x;
     const cy = ctx.y - CHEST;
+    this.kit.glow(cx,cy,0x77dbff,r*2,400,.65);
+    this.kit.burst(cx,cy,0xb7f4ff,1.4,24);
     this.ring(cx, cy, 16, r, 0xbff4ff, 6, 380, 0.6);
     this.ring(cx, cy, 10, r * 0.75, 0xffffff, 2, 320, 0.6);
     for (let i = 0; i < 16; i += 1) {
@@ -374,7 +431,10 @@ export class SkillFx {
       const arrow = this.fxSprite('arrow', x, top);
       if (!arrow) continue;
       arrow.setRotation(-Math.PI / 2).setAlpha(0).setScale(density > 1 ? 1.3 : 1);
-      this.scene.tweens.add({ targets: arrow, alpha: 1, y: land, duration: 150, delay: rand(0, 120), ease: 'Quad.In', onComplete: () => this.fade(arrow, 160) });
+      const tail=this.gfx(x,top);
+      tail.fillStyle(0x7ff2c3,.22).fillTriangle(-2,-65,2,-65,0,0);
+      this.scene.tweens.add({targets:tail,y:land,alpha:0,duration:190,ease:'Quad.In',onComplete:()=>tail.destroy()});
+      this.scene.tweens.add({ targets: arrow, alpha: 1, y: land, duration: 150, delay: rand(0, 100), ease: 'Quad.In', onComplete: () => { if(i%4===0)this.kit.burst(x,land,0xbaf7ce,.35,3,-Math.PI/2); this.fade(arrow, 160); } });
     }
     this.sparks(ctx.targets);
   }
@@ -435,13 +495,14 @@ export class SkillFx {
   }
 
   // ---------------------------------------------------------------------------
-  // 大絕招：全地圖（示意）
+  // 大絕招：全地圖判定，視野內保留清楚的演出層次
   // ---------------------------------------------------------------------------
 
   /** 全畫面閃一下。 */
   private skyFlash(color: number): void {
-    const c = Phaser.Display.Color.IntegerToColor(color);
-    this.scene.cameras.main.flash(220, c.red, c.green, c.blue);
+    const camera=this.scene.cameras.main,view=camera.worldView;
+    this.kit.veil(0x101629,300,.18);
+    this.kit.glow(view.centerX,view.centerY,color,Math.min(view.width,900),180,.25);
   }
 
   /** 聖劍斬（cue）：巨大的金色劍氣從角色往左右兩邊飛到地圖盡頭。 */
@@ -469,7 +530,7 @@ export class SkillFx {
 
   /** 天劍降臨：巨劍從天而降插滿整張地圖的地面。 */
   private swordRain(ctx: SkillFxContext): void {
-    const area = ctx.bounds;
+    const area = ctx.view;
     const count = Math.min(40, Math.round(area.w / 90));
     for (let i = 0; i < count; i += 1) {
       const x = area.x + ((i + Math.random()) / count) * area.w;
@@ -499,7 +560,7 @@ export class SkillFx {
 
   /** 隕石天降：整張地圖各處落下隕石，撞地爆炸。 */
   private meteorShower(ctx: SkillFxContext): void {
-    const area = ctx.bounds;
+    const area = ctx.view;
     const count = Math.max(4, Math.min(10, Math.round(area.w / 260)));
     for (let i = 0; i < count; i += 1) {
       const x = area.x + ((i + Math.random()) / count) * area.w;
@@ -535,24 +596,12 @@ export class SkillFx {
   private reaper(ctx: SkillFxContext): void {
     const x = ctx.x + ctx.facing * 200;
     const ground = ctx.groundAt(x, ctx.y - 40) ?? ctx.y;
-    const reaper = this.track(this.scene.add.container(x, ground + 40)).setDepth(DEPTH.fx);
-    const v = (px: number, py: number) => new Phaser.Math.Vector2(px, py);
-    const body = this.scene.add.graphics();
-    // 斗篷（下襬破碎）、兜帽、發光的眼睛
-    body.fillStyle(0x1b1030, 0.95).fillPoints([v(-34, -210), v(34, -210), v(80, 0), v(50, -20), v(25, 0), v(0, -24), v(-25, 0), v(-50, -20), v(-80, 0)], true);
-    body.fillStyle(0x24163f, 1).fillCircle(0, -220, 40);
-    body.fillStyle(0x0a0614, 1).fillCircle(0, -214, 28);
-    body.fillStyle(0xff4fd8, 1).fillCircle(-10, -216, 4).fillCircle(10, -216, 4);
-    body.lineStyle(3, 0x9b6bff, 0.8).strokeCircle(0, -220, 40);
-    const scythe = this.scene.add.graphics();
-    scythe.lineStyle(6, 0x6b4a2e, 1).lineBetween(0, 0, 0, -260);
-    scythe.fillStyle(0xd8d0ff, 1).fillPoints([v(0, -260), v(-150 * ctx.facing, -230), v(-190 * ctx.facing, -180), v(-120 * ctx.facing, -215)], true);
-    scythe.setPosition(60 * ctx.facing, -120).setAngle(-40 * ctx.facing);
-    reaper.add([body, scythe]);
-    reaper.setAlpha(0).setScale(1.2);
-    this.scene.tweens.add({ targets: reaper, y: ground, alpha: 0.95, duration: 380, ease: 'Sine.Out' });
-    this.scene.tweens.add({ targets: scythe, angle: 140 * ctx.facing, duration: 200, delay: Math.max(0, ctx.leadMs - 120), ease: 'Quad.In' });
-    this.fade(reaper, 260, { y: ground + 30 }, Math.max(0, ctx.remainingMs - 200));
+    this.kit.veil(0x160b2c,650,.32);
+    this.kit.smoke(x,ground,0x573079,3);
+    const reaper=this.track(this.scene.add.image(x,ground+35,'skill-reaper-v2')).setOrigin(.5,.94).setDepth(DEPTH.fx-1).setFlipX(ctx.facing===-1).setDisplaySize(260,390).setAlpha(0);
+    this.scene.tweens.add({targets:reaper,y:ground-12,alpha:.92,duration:Math.min(260,ctx.leadMs*.65),ease:'Cubic.Out'});
+    this.scene.tweens.add({targets:reaper,x:x+ctx.facing*28,angle:ctx.facing*8,duration:140,delay:Math.max(0,ctx.leadMs-80),ease:'Expo.In'});
+    this.fade(reaper,300,{y:ground-45},Math.max(ctx.leadMs+100,ctx.remainingMs-300));
   }
 
   /** 死神揮鐮：一道橫跨畫面的暗紫弧光，整張地圖的怪身上都出現斬痕。 */
@@ -678,8 +727,9 @@ export class SkillFx {
   // ---------------------------------------------------------------------------
 
   private track<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    if(this.objects.size>=VFX_BUDGET.ornaments)this.objects.values().next().value?.destroy();
     this.objects.add(object);
-    object.once(Phaser.GameObjects.Events.DESTROY, () => this.objects.delete(object));
+    object.once(Phaser.GameObjects.Events.DESTROY, () => { this.scene.tweens.killTweensOf(object); this.objects.delete(object); });
     return object;
   }
 
@@ -701,9 +751,10 @@ export class SkillFx {
 
   private ring(x: number, y: number, from: number, to: number, color: number, width: number, duration: number, squash = 1): void {
     const g = this.gfx(x, y);
-    g.lineStyle(width, color, 0.9).strokeCircle(0, 0, from);
-    g.setScale(1, squash);
-    this.fade(g, duration, { scaleX: to / from, scaleY: (to / from) * squash });
+    g.lineStyle(width, color, 0.7).strokeCircle(0, 0, to);
+    g.lineStyle(1,0xffffff,.7).strokeCircle(0,0,to*.97);
+    g.setScale(from/to,from/to*squash);
+    this.scene.tweens.add({targets:g,scaleX:1,scaleY:squash,alpha:0,duration,ease:'Cubic.Out',onComplete:()=>g.destroy()});
   }
 
   /** 月牙劍氣：從 x 往前飛 dx，飛完淡出。 */
@@ -735,6 +786,7 @@ export class SkillFx {
 
   /** 火球從 (x0,y0) 落到 (x1,y1)，撞地時可以順便爆炸。 */
   private fallingMeteor(x0: number, y0: number, x1: number, y1: number, duration: number, scale: number, explodeOnImpact = false): void {
+    this.kit.glow(x1,y1,0xff9a54,120*scale,duration,.45);
     const ball = this.gfx(x0, y0);
     ball.fillStyle(0xff7a2a, 0.35).fillCircle(0, 0, 30 * scale);
     ball.fillStyle(0xffb347, 0.8).fillCircle(0, 0, 18 * scale);
@@ -762,8 +814,10 @@ export class SkillFx {
   private bolt(x1: number, y1: number, x2: number, y2: number, color: number, duration: number): void {
     const points = jagged(x1, y1, x2, y2, 9, 14);
     const g = this.gfx(0, 0);
-    g.lineStyle(7, color, 0.45).strokePoints(points);
+    g.lineStyle(18, color, 0.08).strokePoints(points);
+    g.lineStyle(7, color, 0.35).strokePoints(points);
     g.lineStyle(2, 0xffffff, 1).strokePoints(points);
+    for(const i of [2,5,7]){const p=points[i]!;g.lineStyle(1,color,.65).strokePoints(jagged(p.x,p.y,p.x+rand(-48,48),p.y-35,4,8));}
     this.scene.tweens.add({ targets: g, alpha: 0.2, duration: 45, yoyo: true, repeat: 1 });
     this.fade(g, 120, {}, duration - 120);
   }
@@ -781,7 +835,7 @@ export class SkillFx {
   private flash(x: number, y: number, color: number, radius: number, intensity: number, duration: number): Phaser.GameObjects.Light | null {
     if (!this.lit()) return null;
     const lights = this.scene.lights;
-    if (lights.getLightCount() >= 14) return null;
+    if (lights.getLightCount() >= VFX_BUDGET.lights) return null;
     const light = lights.addLight(x, y, radius, color, intensity);
     this.lights.add(light);
     this.scene.tweens.add({
@@ -800,8 +854,22 @@ export class SkillFx {
 /** 月牙：朝 facing 方向凸出的弧（粗光暈 + 白色刀芯）。 */
 function drawCrescent(g: Phaser.GameObjects.Graphics, r: number, facing: 1 | -1, color: number, alpha: number): void {
   const a = facing === 1 ? 0 : Math.PI;
-  g.lineStyle(Math.max(8, r * 0.28), color, 0.4 * alpha).beginPath().arc(0, 0, r, a - 1.1, a + 1.1).strokePath();
-  g.lineStyle(Math.max(3, r * 0.08), 0xffffff, alpha).beginPath().arc(0, 0, r, a - 0.95, a + 0.95).strokePath();
+  drawBladeArc(g,r,a-1.4,a+1.2,color,Math.max(12,r*.25),alpha);
+}
+
+/** 尖尾月牙：厚度沿弧線變化，內外輪廓與光芯各一層，不把等寬線放大成粗圈。 */
+function drawBladeArc(g: Phaser.GameObjects.Graphics,r:number,start:number,end:number,color:number,width:number,alpha=1):void {
+  for(const [scale,tint,opacity] of [[1.7,color,.12],[1,color,.65],[.22,0xffffff,.95]]) {
+    const outer:{x:number;y:number}[]=[],inner:{x:number;y:number}[]=[];
+    for(let i=0;i<=28;i++) {
+      const t=i/28,a=start+(end-start)*t;
+      const w=Math.pow(Math.sin(t*Math.PI),.75)*width*scale!;
+      outer.push({x:Math.cos(a)*(r+w*.15),y:Math.sin(a)*(r+w*.15)});
+      inner.unshift({x:Math.cos(a)*(r-w),y:Math.sin(a)*(r-w)});
+    }
+    g.fillStyle(tint!,opacity!*alpha).fillPoints([...outer,...inner].map(p=>new Phaser.Math.Vector2(p.x,p.y)),true);
+  }
+  g.lineStyle(1,color,.4*alpha).beginPath().arc(0,0,r*1.08,start+.2,end-.2).strokePath();
 }
 
 /** 兩點之間的鋸齒線（閃電）。 */

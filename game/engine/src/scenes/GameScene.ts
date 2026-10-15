@@ -174,6 +174,7 @@ export class GameScene extends Phaser.Scene {
       ...bundle.fx.values(),
     ]);
     await loadHeroMotions(this);
+    await SkillFx.preload(this);
     await loadSkillIconTextures(this, [...bundle.skills.values()].flatMap((skill) => (skill.icon ? [skill.icon] : [])));
     if (this.dead) return;
     this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1, ...(this.opts.dropChance !== undefined ? { dropChance: this.opts.dropChance } : {}) });
@@ -359,6 +360,8 @@ export class GameScene extends Phaser.Scene {
         this.prevPlayer = { x: this.player.body.x, y: this.player.body.y };
         this.fixedStep();
         this.accumulator -= STEP_MS;
+        // 重擊發生的這一步立即停住，低幀率下也不會同一幀跑完後續數步。
+        if (this.hitStopMs > 0) { this.accumulator = 0; break; }
       }
     }
 
@@ -679,13 +682,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private onSkillStart(skill: SkillDef): boolean {
+    const begin = () => { this.skillFx.begin(skill,this.fxContext(skill,skill.strikes[0]!.area,[],null,0)); return true; };
     if (skill.chain?.blink) {
       // 影襲：第一刀的範圍內要有目標，不然不放（也不進冷卻）
-      if (this.findTargets(skill.strikes[0]!.area, 1, false).length > 0) return true;
+      if (this.findTargets(skill.strikes[0]!.area, 1, false).length > 0) return begin();
       this.showToast('附近沒有目標');
       return false;
     }
-    if (!skill.blink) return true;
+    if (!skill.blink) return begin();
     const body = this.player.body;
     let best: MonsterActor | null = null;
     for (const m of this.monsters.values()) {
@@ -697,7 +701,7 @@ export class GameScene extends Phaser.Scene {
       return false;
     }
     this.teleportBehind(best);
-    return true;
+    return begin();
   }
 
   /**
@@ -808,6 +812,7 @@ export class GameScene extends Phaser.Scene {
       this.fx.spawn(fxId, body.x + dir * offset, body.y - 26, { flipX: dir === 1, tint, additive: true, rainbow: this.betTier >= 5 });
     }
     if (skill.projectile) {
+      this.skillFx.release(skill,this.fxContext(skill,strike.area,[],null,strike.atMs));
       this.launchProjectile(skill, index, strike);
       return;
     }
@@ -1124,8 +1129,9 @@ export class GameScene extends Phaser.Scene {
       this.fx.damage(c.x, m.hitbox().y - 2, damage, { crit, stack });
       this.fx.spawn('hit_spark', c.x + (Math.random() - 0.5) * 8, c.y + (Math.random() - 0.5) * 8, { additive: true, tint: TIER_TINT[this.betTier] });
     }
-    this.hitStopMs = Math.max(this.hitStopMs, skill.hitStopMs);
-    if (skill.shake > 0) this.cameras.main.shake(90, skill.shake / this.cameras.main.worldView.width);
+    const feel=this.skillFx.contact(skill,index,this.fxContext(skill,skill.strikes[index]!.area,targets,null,skill.strikes[index]!.atMs));
+    this.hitStopMs = Math.max(this.hitStopMs, feel.stopMs);
+    if (feel.pixels > 0) this.cameras.main.shake(feel.durationMs,new Phaser.Math.Vector2(feel.pixels/this.cameras.main.worldView.width,feel.pixels*.45/this.cameras.main.worldView.height));
 
     const seq = ++this.seq;
     this.pendingCost += bet;

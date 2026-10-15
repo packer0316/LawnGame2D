@@ -1,6 +1,6 @@
 import { TILE } from './ldtkBuilder';
 import type { LightSpec, RoomSpec, SpawnZoneSpec } from './ldtkBuilder';
-import { battlePlatforms } from './platformLayouts';
+import { battlePlatforms, roomWidth, sectionCount, sectionLayout } from './platformLayouts';
 import landmarks from '../../../../game/assets/landmarks/catalog.json';
 
 /** 可重現的亂數（mulberry32）。 */
@@ -64,7 +64,8 @@ const HEIGHT = 34;
 export function generateRoom(roomId: number, scenic = false): RoomSpec {
   const r = rng(roomId * 7919);
   const info = themeOfRoom(roomId, scenic);
-  const W = 60 + (roomId % 4) * 15;
+  // 滿版且看得到頭尾：每房 1440px（SPEC §4.1）
+  const W = roomWidth(roomId);
   const H = HEIGHT;
   const g: string[][] = Array.from({ length: H }, () => Array.from({ length: W }, () => '.'));
   const set = (cx: number, cy: number, ch: string) => {
@@ -88,11 +89,14 @@ export function generateRoom(roomId: number, scenic = false): RoomSpec {
     [0, 1, 3, 4, 0], // 向右上升的梯田
     [0, 3, 0, 4, 0], // 非對稱谷地
   ];
-  const profile = terrainProfiles[(roomId - 1) % terrainProfiles.length]!;
+  // 寬地圖切成幾個區段，每段一種地形輪廓（跟該段的平台構圖一致），區段交界回到基準高度
+  const sections = sectionCount(W);
   const groundTop: number[] = new Array(W).fill(H - 4);
   let top = H - 4;
   for (let cx = 1; cx < W - 1; cx++) {
-    const fraction = cx / W;
+    const s = Math.min(sections - 1, Math.floor((cx / W) * sections));
+    const profile = terrainProfiles[sectionLayout(roomId, s)]!;
+    const fraction = (cx / W) * sections - s;
     const segment = fraction < 0.20 ? 0 : fraction < 0.40 ? 1 : fraction < 0.65 ? 2 : fraction < 0.82 ? 3 : 4;
     const target = H - 4 - profile[segment]!;
     if (target !== top) {
@@ -176,7 +180,8 @@ export function generateRoom(roomId: number, scenic = false): RoomSpec {
     { cx: 3, cy: surface(3) - 3, ...info.light },
     { cx: W - 4, cy: surface(W - 4) - 3, ...info.light },
   ];
-  for (const p of platforms) if (r.chance(0.5)) lights.push({ cx: p.x0 + Math.floor(p.len / 2), cy: p.row - 2, ...info.light });
+  // 平台光源最多 8 盞（遊戲同時最多 16 盞光，留給角色與技能）
+  for (const p of platforms) if (lights.length < 10 && r.chance(0.5)) lights.push({ cx: p.x0 + Math.floor(p.len / 2), cy: p.row - 2, ...info.light });
 
   // 裝飾
   const decorBack: [number, number, number][] = [];

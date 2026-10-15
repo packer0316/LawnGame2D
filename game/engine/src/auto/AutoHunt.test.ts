@@ -146,6 +146,21 @@ describe('自動掛機', () => {
     expect(player.body.ground).toBe(1);
   });
 
+  it('走下跳的邊卻掛在繩上：朝目標足場爬下來，不會乾等到逾時', () => {
+    const auto = new AutoHunt();
+    const player = new Player(world, 600, 240, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, { onStrike() {} });
+    // 從高台 fh3 下跳到地面途中，抓住了 x=600 的繩子（240–400）
+    Object.assign(player.body, { x: 600, y: 330, ground: null, climb: 1, vx: 0, vy: 0 });
+    Object.assign(auto, { run: { edge: { from: 3, to: 1, type: 'drop', x: 600, dir: 0 }, phase: 'act', ms: 0, started: true, left: false, up: false } });
+    let landedAt = -1;
+    for (let i = 0; i < 60 * 3 && landedAt < 0; i += 1) {
+      player.step(world, auto.step({ world, nav, map, player, monsters: [], basic: skills.get(warrior.basic)!, skills: [] }));
+      if (player.body.ground === 1) landedAt = i;
+    }
+    expect(landedAt).toBeGreaterThan(0);
+    expect(landedAt).toBeLessThan(60 * 1.5);
+  });
+
   it('打不到的怪不會卡住，改打別隻', () => {
     // 飛太高的怪（跳不到）＋地面的怪
     const targets = [monster(1, 400, 150, null), monster(2, 200, 400, 1)];

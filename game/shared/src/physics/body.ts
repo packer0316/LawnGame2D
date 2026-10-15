@@ -92,8 +92,8 @@ function tryGrab(world: FootholdWorld, body: BodyState, input: BodyInput): boole
   if (input.up) {
     const c = world.climbableAt(body.x, body.y, PHYSICS.climbGrab);
     if (c && body.y > c.yTop + 2) target = c;
-  } else if (input.down && body.ground !== null) {
-    // 站在繩梯頂端的平台上往下爬
+  } else if (input.down && body.ground !== null && body.jumpBufferMs === 0) {
+    // 站在繩梯頂端的平台上往下爬。↓ + 跳 是下跳穿過平台，不抓繩（導航圖的下跳邊也是這樣模擬的）
     const c = world.climbableAt(body.x, body.y, PHYSICS.climbGrab, 24);
     if (c && c.yTop >= body.y - 2 && world.isOneWay(body.ground)) target = c;
   }

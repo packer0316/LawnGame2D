@@ -83,6 +83,16 @@ describe('足場物理', () => {
     expect(body.y).toBe(200);
   });
 
+  it('站在梯子頂端的平台上按 ↓ + 跳：下跳穿過平台，不會抓住梯子掛在上面', () => {
+    const body = createBody(world, 70, 140);
+    expect(body.ground).toBe(2);
+    stepBody(world, body, input({ down: true, jumpPressed: true }));
+    expect(body.climb).toBeNull();
+    run(body, 60);
+    expect(body.ground).toBe(1);
+    expect(body.y).toBe(200);
+  });
+
   it('土狼時間：走出平台邊緣後仍可起跳', () => {
     const body = createBody(world, 86, 140);
     while (body.ground === 2) stepBody(world, body, input({ x: 1 }));

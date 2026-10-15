@@ -354,6 +354,11 @@ export class AutoHunt {
     if (body.ground === null && body.climb === null) run.left = true;
     // 落在別的足場：重新規劃
     if (run.left && body.ground !== null && body.ground !== edge.to) return this.abandonEdge();
+    // 保險：走的不是爬繩的邊卻掛在繩上，朝目標足場爬（跑、跳、下跳的輸入在繩上都沒作用，會乾等到逾時）
+    if (body.climb !== null && edge.type !== 'climb') {
+      const toY = ctx.world.footholdY(edge.to, edge.x ?? body.x);
+      return input(toY !== null && toY < body.y ? { up: true } : { down: true });
+    }
 
     const dir = edge.dir ?? 0;
     switch (edge.type) {
