@@ -21,6 +21,7 @@ export class MonsterActor {
   private shadow: Phaser.GameObjects.Ellipse | null = null;
   private hpBar: Phaser.GameObjects.Graphics | null = null;
   private readonly animator: SheetAnimator;
+  private readonly artScale: number;
   private readonly random: () => number;
   private body: BodyState | null = null;
   private fly: { baseY: number; phase: number } | null = null;
@@ -59,8 +60,10 @@ export class MonsterActor {
     this.y = spawn.y;
     this.dieFadeMs = (def.behavior.dieFadeSec ?? DEFAULT_DIE_FADE_SEC) * 1000;
     this.animator = new SheetAnimator(sheet.sheet, null, def.frameDurations ?? {});
+    this.artScale = sheet.presentation?.scale ?? 1;
     this.sprite = scene.add.sprite(spawn.x, spawn.y, sheet.path, frameName(null, 0)).setOrigin(0.5, 1).setDepth(DEPTH.monsters);
-    this.sprite.setLighting(lit);
+    this.sprite.setScale(this.artScale);
+    this.sprite.setLighting(lit && !sheet.presentation?.unlit);
     if (def.behavior.move !== 'fly') {
       this.shadow = scene.add.ellipse(spawn.x, spawn.y - 1, Math.max(12, def.hitbox.w * 0.85), 4, 0x092d29, 0.28).setDepth(DEPTH.monsters - 1);
     }
@@ -77,6 +80,7 @@ export class MonsterActor {
       this.body = createBody(world, spawn.x, spawn.y - 2, this.facing);
     }
     this.enterMode(this.random() < 0.5 ? 'idle' : 'move');
+    this.sprite.setFrame(frameName(null, this.animator.frame));
     // 出生淡入
     this.sprite.setAlpha(0);
     scene.tweens.add({ targets: this.sprite, alpha: 1, duration: 300 });
@@ -168,7 +172,7 @@ export class MonsterActor {
     const envelope=this.recoilMs/230;
     const compression=Math.sin((1-envelope)*Math.PI*3)*envelope*this.recoilPower;
     this.sprite.setPosition(Math.round(this.x+this.knockDir*envelope*7*this.recoilPower),Math.round(this.y-envelope*4*this.recoilPower));
-    this.sprite.setScale(1-compression*.12,1+compression*.09).setAngle(this.knockDir*envelope*6*this.recoilPower);
+    this.sprite.setScale(this.artScale*(1-compression*.12),this.artScale*(1+compression*.09)).setAngle(this.knockDir*envelope*6*this.recoilPower);
     this.shadow?.setPosition(Math.round(this.x), Math.round(this.y) - 1).setVisible(this.alive);
     this.sprite.setFlipX(this.facing === 1);
 

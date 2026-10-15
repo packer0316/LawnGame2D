@@ -27,12 +27,14 @@ import type { ContentBundle } from '../content/bundle';
 import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
 import { Pickups } from '../feel/Pickups';
+import { ComboTracker } from '../feel/ComboTracker';
 import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
 import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
 import { impactFeel } from '../feel/SkillPresentation';
 import type { GameCommand, GameMode, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
 import { MonsterActor } from '../monster/MonsterActor';
+import { isThemedMonsterSheet } from '../monster/themedRoster';
 import { loadSheetAssets } from '../render/sheets';
 import { LocalServer } from '../server/LocalServer';
 import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server/types';
@@ -92,9 +94,11 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private fx!: FxLayer;
   private readonly monsters = new Map<number, MonsterActor>();
+  private queuedMonsterSpawns: MonsterSpawn[] = [];
   private projectiles: Projectile[] = [];
   private accumulator = 0;
   private hitStopMs = 0;
+  private readonly comboTracker = new ComboTracker();
   private slowMoMs = 0;
   private ready = false;
   private switching = false;
@@ -172,7 +176,7 @@ export class GameScene extends Phaser.Scene {
     await loadSheetAssets(this, bundle.source, [
       bundle.base,
       ...[...bundle.items.values()].map((entry) => entry.sheet),
-      ...[...bundle.monsters.values()].map((entry) => entry.sheet),
+      ...[...bundle.monsters.values()].map((entry) => entry.sheet).filter(sheet => !isThemedMonsterSheet(sheet.path)),
       ...bundle.fx.values(),
     ]);
     await loadHeroMotions(this);
@@ -189,7 +193,10 @@ export class GameScene extends Phaser.Scene {
         if (snapshot.feedback?.kind === 'drop') this.showToast(snapshot.feedback.message);
         this.emitHud({});
       }),
-      this.server.on('monsterSpawn', (spawn) => this.spawnMonster(spawn)),
+      this.server.on('monsterSpawn', (spawn) => {
+        if (!this.ready || this.switching) this.queuedMonsterSpawns.push(spawn);
+        else this.spawnMonster(spawn);
+      }),
       this.server.on('monsterRemove', ({ uid }) => this.monsters.get(uid)?.destroy()),
     );
 
@@ -230,6 +237,7 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   private async enterRoom(snapshot: Snapshot, arriveAt: 'spawn' | 'next' | 'prev'): Promise<void> {
+    this.comboTracker.reset();
     const map = this.opts.mapOverride ?? (await this.bundle.loadMap(snapshot.mapId));
     const theme = this.bundle.themes.get(map.theme);
     await MapView.preload(this, this.bundle.source, map, theme);
@@ -244,6 +252,17 @@ export class GameScene extends Phaser.Scene {
     this.pickups.clear();
     this.skillFx.clear();
 
+    const roomMonsterIds = new Set([...map.spawnZones.flatMap(zone => zone.pool.map(entry => entry.mobId)), ...snapshot.monsters.map(spawn => spawn.typeId)]);
+    const room = this.bundle.rooms.find(r => r.id === snapshot.roomId);
+    for (const id of room?.lineup ?? []) roomMonsterIds.add(id);
+    for (const entry of room?.wave?.pool ?? []) roomMonsterIds.add(entry.mobId);
+    if (room?.boss) roomMonsterIds.add(room.boss.mobId);
+    const sheets = [...roomMonsterIds].flatMap(id => this.bundle.monsters.get(id)?.sheet ?? []);
+    const needed = new Set(sheets.map(sheet => sheet.path));
+    for (const key of this.textures.getTextureKeys()) if (isThemedMonsterSheet(key) && !needed.has(key)) this.textures.remove(key);
+    await loadSheetAssets(this, this.bundle.source, sheets);
+    if (this.dead) return;
+
     this.world = new FootholdWorld(map);
     // 編輯器預覽的地圖可能還沒產生導航圖：現場算一份
     this.nav = map.nav.edges.length > 0 ? map.nav : buildNavGraph(map);
@@ -256,7 +275,6 @@ export class GameScene extends Phaser.Scene {
     if (this.playerLight) this.lights.removeLight(this.playerLight);
     this.playerLight = this.opts.lighting === false ? null : this.lights.addLight(0, 0, 130, 0xfff2d6, 0.8);
 
-    const room = this.bundle.rooms.find((r) => r.id === snapshot.roomId);
     this.roomId = snapshot.roomId;
     this.roomName = room?.name ?? map.name;
     this.betRange = snapshot.betRange;
@@ -273,6 +291,9 @@ export class GameScene extends Phaser.Scene {
     this.player.climbTypeOf = (id) => this.world.climbables.find((c) => c.id === id)?.type ?? 'ladder';
 
     for (const spawn of snapshot.monsters) this.spawnMonster(spawn);
+    for (const spawn of this.queuedMonsterSpawns.splice(0)) {
+      if (!this.monsters.has(spawn.uid) && map.spawnZones.some(zone => zone.id === spawn.zoneId)) this.spawnMonster(spawn);
+    }
 
     const camera = this.cameras.main;
     const bounds = map.cameraBounds;
@@ -402,6 +423,7 @@ export class GameScene extends Phaser.Scene {
 
   private fixedStep(): void {
     if (this.inventoryOpen) { this.keys.clear(); return; }
+    this.comboTracker.step(STEP_MS);
     const k = this.keys;
     const manual: PlayerInput = {
       x: k.axisX(),
@@ -611,6 +633,7 @@ export class GameScene extends Phaser.Scene {
   private setClass(classId: ClassId): void {
     const classDef = this.bundle.classes.get(classId);
     if (!classDef || classId === this.classId) return;
+    this.comboTracker.reset();
     this.skillFx.clear();
     this.classId = classId;
     this.player.setClass(classDef);
@@ -1209,10 +1232,16 @@ export class GameScene extends Phaser.Scene {
     if (feel.pixels > 0) this.cameras.main.shake(feel.durationMs,new Phaser.Math.Vector2(feel.pixels/this.cameras.main.worldView.width,feel.pixels*.45/this.cameras.main.worldView.height));
 
     const seq = ++this.seq;
+    const comboGeneration = this.comboTracker.generation;
     this.pendingCost += cost;
     this.server
       .attack({ seq, skillId: skill.id, strike: index, bet, targets: targets.map((m) => m.spawn.uid), flat })
-      .then((result) => this.onAttackResult(result, cost))
+      .then((result) => {
+        if (!this.dead && !this.switching && comboGeneration === this.comboTracker.generation && !result.error) {
+          this.comboTracker.hit(new Set(result.results.map(hit => hit.uid)).size);
+        }
+        this.onAttackResult(result, cost);
+      })
       .catch(() => {
         this.pendingCost -= cost;
       });
@@ -1296,6 +1325,7 @@ export class GameScene extends Phaser.Scene {
       return { ...info(id), slot, key: String(slot + 1), ultimate: this.bundle.skills.get(id)?.ultimate ?? false };
     });
     this.opts.onHud({
+      combo: this.comboTracker.snapshot(),
       loading: !this.ready,
       inventory: this.inventoryState,
       inventoryOpen: this.inventoryOpen,

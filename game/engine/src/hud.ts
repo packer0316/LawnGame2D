@@ -1,6 +1,7 @@
 import type { ClassId } from '@lawn/shared';
 import type { InventoryAction, InventorySnapshot } from './inventory/model';
 import type { AutoConfig, AutoStatus } from './auto/AutoHunt';
+import type { ComboState } from './feel/ComboTracker';
 
 export type { AutoConfig, AutoStatus };
 
@@ -19,6 +20,7 @@ export interface HudSkill {
 
 /** 遊戲推給 HUD（React）的狀態。HUD 只顯示，所有操作透過 GameHandle 送回遊戲。 */
 export interface HudState {
+  combo?: ComboState;
   inventory?: InventorySnapshot;
   inventoryOpen?: boolean;
   loading: boolean;

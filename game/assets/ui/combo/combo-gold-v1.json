@@ -1,0 +1,112 @@
+{
+  "width": 768,
+  "height": 256,
+  "lineHeight": 128,
+  "glyphs": {
+    "0": {
+      "x": 0,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "1": {
+      "x": 96,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "2": {
+      "x": 192,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "3": {
+      "x": 288,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "4": {
+      "x": 384,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "5": {
+      "x": 480,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "6": {
+      "x": 576,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "7": {
+      "x": 672,
+      "y": 0,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "8": {
+      "x": 0,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "9": {
+      "x": 96,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "C": {
+      "x": 192,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "O": {
+      "x": 288,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "M": {
+      "x": 384,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "B": {
+      "x": 480,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    },
+    "+": {
+      "x": 576,
+      "y": 128,
+      "width": 96,
+      "height": 128,
+      "xadvance": 76
+    }
+  }
+}

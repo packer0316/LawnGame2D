@@ -5,6 +5,7 @@ import { Icon } from './Icons';
 import { SettingsPanel } from './SettingsPanel';
 import { RoomPicker } from './RoomPicker';
 import { InventoryPanel } from './InventoryPanel';
+import { ComboHud } from './ComboHud';
 import { HudAction } from './HudAction';
 import { BASIC_SKILL, CLASS_DESCRIPTION, SKILL_DESCRIPTION } from './skillArt';
 
@@ -60,6 +61,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
 
   return (
     <div className="hud">
+      {!state.inventoryOpen && <ComboHud combo={state.combo} />}
       <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
         <div className="world-title"><span className="eyebrow">LAWN / ADVENTURE</span><strong>{state.roomName}</strong></div>

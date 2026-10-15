@@ -30,6 +30,8 @@ import type { ContentSource } from '../content';
 
 /** 一張 Aseprite sheet：解析後的資料 + 圖片在 content/ 的路徑。 */
 export interface SheetAsset {
+  /** Optional game art-pack scale; original exported sheets keep their native scale. */
+  presentation?: { scale: number; unlit?: boolean };
   /** .sheet.json 的路徑，同時當作 Phaser 的 texture key。 */
   path: string;
   sheet: AseSheet;

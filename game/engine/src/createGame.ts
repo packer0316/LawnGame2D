@@ -5,8 +5,11 @@ import { loadContentBundle } from './content/bundle';
 import type { Action } from './core/input';
 import type { GameCommand, GameMode, HudState } from './hud';
 import { GameScene } from './scenes/GameScene';
+import { applyThemedRosters } from './monster/themedRoster';
 
 export interface CreateGameOptions {
+  /** Shipped game art pack; opt in so custom editor previews retain their own monsters. */
+  themedMonsters?: boolean;
   content: ContentSource;
   /** 起始房間（1–20）；未指定時從 1 號房開始。 */
   roomId?: number;
@@ -73,7 +76,8 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
   let insetBottom = 0;
 
   const start = async () => {
-    const bundle = await loadContentBundle(options.content);
+    const original = await loadContentBundle(options.content);
+    const bundle = options.themedMonsters && !options.mapOverride ? applyThemedRosters(original) : original;
     if (destroyed) return;
     game.scene.add('game', GameScene, true, {
       bundle,

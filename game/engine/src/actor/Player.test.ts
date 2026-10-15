@@ -28,6 +28,17 @@ function settle(player: Player): void {
 }
 
 describe('技能列與常駐小技能', () => {
+  it('普攻結束後停半秒，仍可銜接下一段', () => {
+    const player = makePlayer(); player.step(world, { ...IDLE, attack: true }); settle(player);
+    for (let i = 0; i < 30; i++) player.step(world, IDLE);
+    player.step(world, { ...IDLE, attack: true });
+    expect(player.attacking?.id).toBe(skills.get(warrior.basic)?.comboNext);
+  });
+  it('普攻停超過 650 ms 後，重新從第一段出手', () => {
+    const player = makePlayer(); player.step(world, { ...IDLE, attack: true }); settle(player);
+    for (let i = 0; i < 43; i++) player.step(world, IDLE);
+    player.step(world, { ...IDLE, attack: true }); expect(player.attacking?.id).toBe(warrior.basic);
+  });
   it('開發模式（沒有 resolveSlot）：照職業技能列、有冷卻', () => {
     const player = makePlayer();
     player.step(world, { ...IDLE, skill: 0 });

@@ -80,7 +80,6 @@ export class SkillFx {
   private readonly rains = new Set<FallingRain>();
   private readonly rainWaves = new Map<string, FallingRain[]>();
   private activeDragon:Phaser.GameObjects.Sprite|null=null;
-  private comboLabel:Phaser.GameObjects.Text|null=null;
   private readonly trailTimes = new WeakMap<Phaser.GameObjects.Sprite,number>();
   private goldContacts:{x:number;y:number;at:number}[]=[];
 
@@ -105,7 +104,6 @@ export class SkillFx {
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
     this.prepareRain(skill, ctx);
-    this.comboLabel?.destroy();this.comboLabel=null;
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
     if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
     if(skill.id==='skill_0032'){
@@ -177,14 +175,6 @@ export class SkillFx {
       else this.kit.classImpact(skill.classId,t.x,t.y,feel.strength);
     }
     if(skill.ultimate&&feel.last)this.kit.veil(CLASS_ENERGY[skill.classId].shadow,260,.22);
-    if(skill.strikes.length>1){
-      this.comboLabel?.destroy();
-      const color=`#${skillEnergyColor(skill).toString(16).padStart(6,'0')}`;
-      const caption={warrior:'連斬',mage:'連鎖',archer:'連射',assassin:'連刃'}[skill.classId];
-      const label=this.track(this.scene.add.text(ctx.x+ctx.facing*48,ctx.y-100,`${index+1} ${caption}`,{fontFamily:'Segoe UI, sans-serif',fontSize:feel.last?'24px':'19px',fontStyle:'bold',color,stroke:'#101020',strokeThickness:4})).setDepth(DEPTH.numbers+4).setOrigin(.5).setResolution(2);
-      this.comboLabel=label;label.once(Phaser.GameObjects.Events.DESTROY,()=>{if(this.comboLabel===label)this.comboLabel=null;});
-      this.fade(label,360,{y:label.y-16},feel.last?180:60);
-    }
     return feel;
   }
 

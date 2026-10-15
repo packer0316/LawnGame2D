@@ -18,7 +18,7 @@ export const FEEL = {
   /** 輸入緩衝 */
   bufferMs: 150,
   /** 攻擊動作結束後，多久內按攻擊仍可接下一段連擊 */
-  comboGraceMs: 250,
+  comboGraceMs: 650,
   roll: { durationMs: 350, distance: 100, cooldownMs: 600, cancelAfterMs: 100 },
   /** 落地壓扁姿勢顯示多久 */
   landMs: 90,

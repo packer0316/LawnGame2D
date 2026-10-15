@@ -30,6 +30,7 @@ export function App() {
     pickContentBase(params).then((base) => {
       if (disposed || !stageRef.current) return;
       handleRef.current = createGame(stageRef.current, {
+        themedMonsters: true,
         content: httpContentSource(base),
         ...(params.get('room') ? { roomId: Number(params.get('room')) } : {}),
         ...(params.get('class') ? { classId: params.get('class') as ClassId } : {}),

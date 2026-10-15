@@ -1,0 +1,27 @@
+.combo-hud { position: absolute; right: clamp(18px, 5vw, 100px); top: clamp(110px, 38vh, calc(100vh - 220px)); width: clamp(160px, 21vw, 300px); transform: translateY(-50%); text-align: center; pointer-events: none; --combo-light: #ffd778; --combo-power: .22; }
+.combo-backlight { position: absolute; inset: -20% -12%; background: radial-gradient(ellipse, #082131c7, #09223552 42%, transparent 68%); transform: rotate(-9deg); }
+.combo-beat { position: relative; display: flex; flex-direction: column; align-items: center; animation: combo-punch 300ms cubic-bezier(.16,.8,.3,1) both; }
+.combo-bitmap { display: flex; justify-content: center; flex-shrink: 0; filter: drop-shadow(0 3px 2px #00121bb0) drop-shadow(0 0 10px color-mix(in srgb, var(--combo-light) 30%, transparent)); }
+.combo-bitmap i { display: block; flex-shrink: 0; background-repeat: no-repeat; image-rendering: pixelated; }
+.combo-number { font-size: clamp(78px, 7.5vw, 120px); line-height: 1; }
+.combo-number-long { font-size: clamp(62px, 6vw, 94px); }
+.combo-word { font-size: clamp(36px, 3.2vw, 49px); margin-top: -22px; }
+.combo-impact { position: absolute; top: 15%; left: 2%; width: 96%; height: 64%; background: var(--combo-light); clip-path: polygon(0 55%, 36% 44%, 24% 0, 50% 33%, 87% 5%, 68% 45%, 100% 50%, 67% 61%, 81% 98%, 51% 72%, 13% 100%, 32% 65%); animation: combo-flare 340ms ease-out both; }
+.combo-window { position: relative; width: 110px; height: 3px; margin: -2px auto 0; transform: skewX(-15deg); background: #0a2336a8; box-shadow: 0 1px 0 #ffe5a233; overflow: hidden; }
+.combo-window i { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, #e68b35, #fff2bc); box-shadow: 0 0 6px #ffd679; transition: transform 100ms linear; }
+.combo-sparks { position: absolute; inset: 0; }
+.combo-sparks i { position: absolute; width: 5px; height: 5px; left: 50%; top: 40%; background: #ffedb5; transform: rotate(var(--spark-angle)); animation: combo-spark 430ms ease-out both; }
+.combo-tier-0 .combo-sparks { display: none; }
+.combo-tier-1 { --combo-power: .32; }
+.combo-tier-2 { --combo-power: .45; --combo-light: #ffb545; }
+.combo-tier-3 { --combo-power: .6; --combo-light: #ffeeb7; }
+.combo-tier-3 .combo-bitmap { filter: drop-shadow(0 3px 2px #00121b) drop-shadow(0 0 13px #ffd77f90); }
+.combo-urgent .combo-window i { background: #fff1af; }
+.combo-expired { animation: combo-exit 450ms ease-in forwards; }
+@keyframes combo-punch { 0% { transform: translateX(7px) scale(1.18); filter: brightness(1.35); } 45% { transform: translateX(-2px) scale(.98); } 100% { transform: none; filter: brightness(1); } }
+@keyframes combo-flare { 0% { opacity: var(--combo-power); transform: scale(.65) rotate(-9deg); } 100% { opacity: 0; transform: scale(1.2) rotate(-9deg); } }
+@keyframes combo-spark { from { opacity: .8; transform: rotate(var(--spark-angle)) translateX(28px) scale(1); } to { opacity: 0; transform: rotate(var(--spark-angle)) translateX(100px) scale(.25); } }
+@keyframes combo-exit { to { opacity: 0; transform: translate(10px, -40%) scale(.96); } }
+@media (max-width: 680px) { .combo-hud { right: 12px; width: 170px; } .combo-number { font-size: 78px; } .combo-number-long { font-size: 59px; } .combo-number-dense { font-size: 50px; } .combo-word { font-size: 36px; margin-top: -16px; } .combo-window { width: 90px; } }
+@media (max-height: 500px) { .combo-hud { top: 115px; right: 15px; } .combo-number { font-size: 76px; } .combo-word { font-size: 34px; margin-top: -17px; } }
+@media (prefers-reduced-motion: reduce) { .combo-beat, .combo-impact, .combo-sparks i { animation: none; } .combo-impact, .combo-sparks { display: none; } .combo-window i { transition: none; } .combo-expired { animation: none; opacity: .4; } }

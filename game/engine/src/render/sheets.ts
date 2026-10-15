@@ -45,6 +45,7 @@ export function registerSheetFrames(scene: Phaser.Scene, textureKey: string, she
 }
 
 export async function loadSheetAssets(scene: Phaser.Scene, source: ContentSource, assets: SheetAsset[]): Promise<void> {
+  assets = [...new Map(assets.map(asset => [asset.path, asset])).values()];
   await loadImages(
     scene,
     source,
