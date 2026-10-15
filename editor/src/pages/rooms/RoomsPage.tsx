@@ -1,5 +1,5 @@
 import { RoomFileVersioned, contentPaths } from '@lawn/shared';
-import type { MapDef, RoomDef, RoomFile } from '@lawn/shared';
+import type { MapDef, MonsterMathFile, RoomDef, RoomFile } from '@lawn/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { readJson } from '../../fs/projectFs';
 import type { ProjectFs } from '../../fs/projectFs';
@@ -11,7 +11,7 @@ import { setStatus, useStudio } from '../../state/studio';
 import { registerValidator } from '../../state/validation';
 import { Checkbox, Field, NumberInput, RangeInput, Section, Select, TextInput } from '../../ui/controls';
 import { loadExistingMaps, mapIdsInDocs, mapPath } from '../map/mapStore';
-import { monsterPath, scanMonsters, useMonsterPage } from '../monster/monsterStore';
+import { MATH_PATH, monsterPath, scanMonsters, useMonsterPage } from '../monster/monsterStore';
 import { registerPage } from '../registry';
 
 const PATH = contentPaths.rooms;
@@ -24,7 +24,9 @@ async function loadContext(fs: ProjectFs): Promise<RoomContext> {
   const maps = new Map(mapIdsInDocs(docs).map((id) => [id, docs[mapPath(id)]!.data as MapDef]));
   const monsters = new Set(useMonsterPage.getState().ids.filter((id) => docs[monsterPath(id)]));
   const bets = await readJson(fs, `content/${contentPaths.betLevels}`).then(parseBetLevels).catch(() => undefined);
-  return { maps, monsters, bets };
+  const math = docsStore.getState().docs[MATH_PATH]?.data as MonsterMathFile | undefined;
+  const tiers = math ? new Map(math.monsters.map((m) => [m.id, m.tier] as const)) : undefined;
+  return { maps, monsters, bets, ...(tiers ? { tiers } : {}) };
 }
 
 registerValidator('rooms', async ({ fs }) => {
@@ -60,7 +62,7 @@ function RoomsPage() {
         for (let id = 1; id <= ROOM_COUNT; id++) {
           const map = ctx.maps.get(roomMapId(id));
           if (!map) continue;
-          if (overwrite || !rooms.has(id)) rooms.set(id, defaultRoom(id, map, ctx.bets));
+          if (overwrite || !rooms.has(id)) rooms.set(id, defaultRoom(id, map, ctx));
         }
         return { schemaVersion: 1, rooms: [...rooms.values()].sort((a, b) => a.id - b.id) };
       },
@@ -131,7 +133,7 @@ function RoomsPage() {
                   PATH,
                   (f) => ({
                     schemaVersion: 1,
-                    rooms: [...(f?.rooms ?? []), defaultRoom(selected, ctx?.maps.get(roomMapId(selected)), ctx?.bets)].sort((a, b) => a.id - b.id),
+                    rooms: [...(f?.rooms ?? []), defaultRoom(selected, ctx?.maps.get(roomMapId(selected)), ctx ?? {})].sort((a, b) => a.id - b.id),
                   }),
                   `新增房間 ${selected}`,
                 )

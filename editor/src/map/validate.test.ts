@@ -41,14 +41,32 @@ describe('validateMaps', () => {
     expect(errors(map)).toHaveLength(1);
   });
 
-  it('導航圖：從出生點走不到的平台是警告', () => {
+  it('導航圖：從出生點走不到的平台是警告（節點 = 足場 ID，與 buildNavGraph 相同）', () => {
     const map = structuredClone(maps[0]!);
     const spawn = map.portals.find((p) => p.type === 'spawn')!;
     const ground = map.footholds.find((f) => footholdYAt(f, spawn.x) === spawn.y)!;
     const other = map.footholds.find((f) => f.id !== ground.id)!;
-    map.nav = { nodes: [{ id: 1, footholdIds: [ground.id] }, { id: 2, footholdIds: [other.id] }], edges: [] };
-    expect(validateMap(map, ids).filter((i) => i.target === 'nav:2')).toHaveLength(1);
-    map.nav.edges.push({ from: 1, to: 2, type: 'jump' });
-    expect(validateMap(map, ids).filter((i) => i.target === 'nav:2')).toHaveLength(0);
+    const nodes = map.footholds.map((f) => ({ id: f.id, footholdIds: [f.id] }));
+    // 只有一條無關的邊（不是空的，避免改用 buildNavGraph）
+    map.nav = { nodes, edges: [{ from: other.id, to: ground.id, type: 'drop' }] };
+    expect(validateMap(map, ids).filter((i) => i.target === `fh:${other.id}`)).toHaveLength(1);
+    map.nav.edges.push({ from: ground.id, to: other.id, type: 'jump' });
+    expect(validateMap(map, ids).filter((i) => i.target === `fh:${other.id}`)).toHaveLength(0);
+  });
+
+  it('自動掛機走不到「下一房」傳送點是錯誤', () => {
+    const map = structuredClone(maps[0]!);
+    const spawn = map.portals.find((p) => p.type === 'spawn')!;
+    const next = map.portals.find((p) => p.type === 'next')!;
+    const spawnFh = map.footholds.find((f) => footholdYAt(f, spawn.x) === spawn.y)!;
+    const nextFh = map.footholds.find((f) => footholdYAt(f, next.x) === next.y)!;
+    if (spawnFh.id === nextFh.id) {
+      // 同一條地面：把下一房傳送點搬到某個平台上
+      const plat = map.footholds.find((f) => f.id !== spawnFh.id)!;
+      next.x = (plat.points[0]![0] + plat.points[1]![0]) / 2;
+      next.y = footholdYAt(plat, next.x)!;
+    }
+    map.nav = { nodes: [], edges: [{ from: 999, to: 998, type: 'run' }] };
+    expect(errors(map).map((i) => i.message)).toEqual([expect.stringContaining('走不到「下一房」傳送點')]);
   });
 });

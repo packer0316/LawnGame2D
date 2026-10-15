@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "mob_0006",
+  "name": "古樹守衛",
+  "sheet": "monsters/mob_0006.sheet.json",
+  "tags": {
+    "move": "move",
+    "idle": "idle",
+    "hit": "hit",
+    "die": "die",
+    "appear": "appear"
+  },
+  "hitbox": {
+    "x": -50,
+    "y": -180,
+    "w": 100,
+    "h": 180
+  },
+  "labelOffset": {
+    "x": 0,
+    "y": -194
+  },
+  "mathId": "mob_0006",
+  "behavior": {
+    "move": "ground",
+    "speed": 10,
+    "idleSec": [
+      2,
+      4
+    ],
+    "moveSec": [
+      2,
+      4
+    ],
+    "knockback": 0
+  },
+  "fx": {
+    "hit": "hit_spark",
+    "die": "explosion",
+    "coinFrame": 4,
+    "coinCount": 30,
+    "light": {
+      "color": "#ffe066",
+      "radius": 120
+    }
+  },
+  "showHpBar": true
+}

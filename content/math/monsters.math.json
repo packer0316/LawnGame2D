@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "monsters": [
+    {
+      "id": "mob_0001",
+      "tier": "normal",
+      "multiplier": 2
+    },
+    {
+      "id": "mob_0002",
+      "tier": "normal",
+      "multiplier": [
+        3,
+        5
+      ]
+    },
+    {
+      "id": "mob_0003",
+      "tier": "normal",
+      "multiplier": [
+        5,
+        10
+      ]
+    },
+    {
+      "id": "mob_0004",
+      "tier": "elite",
+      "multiplier": [
+        30,
+        60
+      ]
+    },
+    {
+      "id": "mob_0005",
+      "tier": "special",
+      "multiplier": 15,
+      "feature": "bomb"
+    },
+    {
+      "id": "mob_0006",
+      "tier": "boss",
+      "multiplier": [
+        100,
+        300
+      ]
+    }
+  ]
+}

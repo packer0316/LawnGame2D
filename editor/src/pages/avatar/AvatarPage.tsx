@@ -1,9 +1,9 @@
 import { AVATAR_TAG_NAMES, AVATAR_TAGS } from '@lawn/shared';
-import type { AseSheet, AvatarItem, Expression } from '@lawn/shared';
+import type { AseSheet, AvatarItem } from '@lawn/shared';
 import { useEffect, useMemo, useState } from 'react';
-import { CATEGORIES, CATEGORY_LABEL } from '../../avatar/defaults';
+import { CLASSES, CLASS_LABEL } from '../../avatar/defaults';
 import { validateBase, validateItem } from '../../avatar/validate';
-import { isDirty, useDoc, useDocs, useDocsShallow } from '../../state/docs';
+import { isDirty, useDoc, useDocs } from '../../state/docs';
 import { useStudio } from '../../state/studio';
 import { Checkbox, Empty, Section } from '../../ui/controls';
 import { registerPage } from '../registry';
@@ -11,26 +11,29 @@ import './avatarChecks';
 import { AvatarCanvas } from './AvatarCanvas';
 import { itemPath, registerItem, scanAvatar, updateItem, useAvatarPage } from './avatarStore';
 import { ItemForm } from './ItemForm';
-import { PalettePanel } from './PalettePanel';
 import { TryOn } from './TryOn';
-import { defaultLoadout, useBase, useParts, usePalettes, useRenderer } from './useAvatarData';
+import { useBase, useParts, useRenderer } from './useAvatarData';
 
+/** 角色造型頁（STUDIO_SPEC §4，v0.3）：角色四職業共用、外觀固定，只有武器可以更換。 */
 function AvatarPage() {
   const fs = useStudio((s) => s.fs);
+  const contentVersion = useStudio((s) => s.contentVersion);
   const st = useAvatarPage();
   const [error, setError] = useState<string | null>(null);
   const { base, error: baseError } = useBase();
-  const palettes = usePalettes();
 
   useEffect(() => {
-    if (fs) scanAvatar(fs).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [fs]);
+    if (!fs) return;
+    scanAvatar(fs)
+      .then(() => useAvatarPage.setState((s) => ({ version: s.version + 1 })))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  }, [fs, contentVersion]);
   const focus = useStudio((s) => s.focus);
   useEffect(() => {
     if (focus?.page === 'avatar') useAvatarPage.setState({ selected: focus.target });
   }, [focus]);
 
-  // 播放：依身體幀的時間
+  // 播放：依角色幀的時間
   const tag = base?.sheet.tags.get(st.tag);
   const length = tag ? tag.to - tag.from + 1 : 0;
   useEffect(() => {
@@ -42,46 +45,65 @@ function AvatarPage() {
   }, [st.playing, st.frame, tag, base, length]);
   const absFrame = tag ? tag.from + Math.min(st.frame, Math.max(0, length - 1)) : 0;
 
-  const items = useDocs((s) =>
+  const rowsKey = useDocs((s) =>
     st.ids
       .map((id) => s.docs[itemPath(id)]?.data as AvatarItem | undefined)
       .filter((x): x is AvatarItem => !!x)
-      .map((i) => `${i.id}|${i.category}|${i.name}|${isDirty(s.docs[itemPath(i.id)]) ? 1 : 0}`)
-      .join(','),
+      .map((i) => [i.id, i.category, i.classId ?? '', i.name, isDirty(s.docs[itemPath(i.id)]) ? '1' : '0'].join('|'))
+      .join('\n'),
   );
-  const itemRows = items ? items.split(',').map((r) => { const [id, category, name, dirty] = r.split('|'); return { id: id!, category: category!, name: name!, dirty: dirty === '1' }; }) : [];
-  const isItem = !['base', 'palettes', 'tryon'].includes(st.selected);
+  const rows = rowsKey
+    ? rowsKey.split('\n').map((r) => {
+        const [id, category, classId, name, dirty] = r.split('|');
+        return { id: id!, category: category!, classId: classId!, name: name!, dirty: dirty === '1' };
+      })
+    : [];
+  const weapons = rows.filter((r) => r.category === 'weapon');
+  const legacy = rows.filter((r) => r.category !== 'weapon');
+
+  const Row = ({ r }: { r: (typeof rows)[number] }) => (
+    <div className={`tree-item ${st.selected === r.id ? 'selected' : ''}`} onClick={() => useAvatarPage.setState({ selected: r.id })}>
+      <span className={r.dirty ? 'dirty' : ''}>{r.id}</span>
+      {r.name !== r.id && <span className="hint">{r.name}</span>}
+    </div>
+  );
 
   return (
     <div className="page">
       <aside className="tree">
         <div className="panel-title">
-          角色造型
+          角色與武器
           <span className="spacer" />
           <button className="small" onClick={() => fs && void scanAvatar(fs).then(() => useAvatarPage.setState((s) => ({ version: s.version + 1 })))}>
             重新掃描
           </button>
         </div>
-        {(['base', 'palettes', 'tryon'] as const).map((k) => (
+        {(['base', 'tryon'] as const).map((k) => (
           <div key={k} className={`tree-item ${st.selected === k ? 'selected' : ''}`} onClick={() => useAvatarPage.setState({ selected: k })}>
-            {k === 'base' ? '基礎身體' : k === 'palettes' ? '調色盤' : '試穿'}
+            {k === 'base' ? '角色（四職業共用）' : '試穿'}
           </div>
         ))}
-        {CATEGORIES.map((c) => {
-          const rows = itemRows.filter((r) => r.category === c);
-          if (rows.length === 0) return null;
+        {CLASSES.map((c) => {
+          const list = weapons.filter((w) => w.classId === c);
           return (
             <div key={c}>
-              <div className="panel-title">{CATEGORY_LABEL[c]}</div>
-              {rows.map((r) => (
-                <div key={r.id} className={`tree-item ${st.selected === r.id ? 'selected' : ''}`} onClick={() => useAvatarPage.setState({ selected: r.id })}>
-                  <span className={r.dirty ? 'dirty' : ''}>{r.id}</span>
-                  {r.name !== r.id && <span className="hint">{r.name}</span>}
-                </div>
+              <div className="panel-title">
+                {CLASS_LABEL[c]}武器 <span className="badge">{list.length}</span>
+              </div>
+              {list.map((r) => (
+                <Row key={r.id} r={r} />
               ))}
             </div>
           );
         })}
+        {weapons.some((w) => !w.classId) && (
+          <>
+            <div className="panel-title">未設定職業</div>
+            {weapons.filter((w) => !w.classId).map((r) => (
+              <Row key={r.id} r={r} />
+            ))}
+          </>
+        )}
         {st.unregistered.length > 0 && (
           <>
             <div className="panel-title">未登錄</div>
@@ -93,25 +115,19 @@ function AvatarPage() {
             ))}
           </>
         )}
+        {legacy.length > 0 && (
+          <>
+            <div className="panel-title">不再使用（舊換裝部件）</div>
+            <div className="section hint">v0.3 起角色不換裝。這些部件遊戲不會使用，重新產出測試美術後會消失。</div>
+            {legacy.map((r) => (
+              <Row key={r.id} r={r} />
+            ))}
+          </>
+        )}
         {(error || baseError) && <div className="section hint" style={{ color: 'var(--error)' }}>{error ?? baseError}</div>}
       </aside>
 
-      {st.selected === 'palettes' ? (
-        <>
-          <section className="canvas" style={{ overflow: 'auto' }}>
-            <PalettePanel file={palettes} />
-          </section>
-          <aside className="props">
-            <PalettePreview base={base} />
-          </aside>
-        </>
-      ) : st.selected === 'tryon' ? (
-        <TryOn base={base} frame={absFrame} />
-      ) : st.selected === 'base' ? (
-        <BaseView base={base} frame={absFrame} />
-      ) : (
-        <ItemView id={st.selected} base={base} frame={absFrame} />
-      )}
+      {st.selected === 'tryon' ? <TryOn base={base} frame={absFrame} /> : st.selected === 'base' ? <BaseView base={base} frame={absFrame} /> : <ItemView id={st.selected} base={base} frame={absFrame} />}
 
       <div className="bottom">
         <span className="hint">動作</span>
@@ -143,7 +159,6 @@ function AvatarPage() {
             </option>
           ))}
         </select>
-        {isItem && <span className="hint">姿勢表與規格檢查在右側</span>}
       </div>
     </div>
   );
@@ -152,42 +167,30 @@ function AvatarPage() {
 function useViewToggles() {
   const [onion, setOnion] = useState(false);
   const [anchors, setAnchors] = useState(true);
-  const [expression, setExpression] = useState<Expression>('default');
   const toolbar = (
     <div className="canvas-toolbar">
       <div className="group">
         <Checkbox checked={onion} onChange={setOnion} label="洋蔥皮" />
         <Checkbox checked={anchors} onChange={setAnchors} label="錨點" />
-        <label>
-          表情
-          <select value={expression} onChange={(e) => setExpression(e.target.value as Expression)}>
-            <option value="default">預設</option>
-            <option value="blink">眨眼</option>
-            <option value="hit">受擊</option>
-            <option value="smile">微笑</option>
-          </select>
-        </label>
       </div>
     </div>
   );
-  return { onion, anchors, expression, toolbar };
+  return { onion, anchors, toolbar };
 }
 
 function BaseView({ base, frame }: { base: ReturnType<typeof useBase>['base']; frame: number }) {
-  const palettes = usePalettes();
-  const loadout = useMemo(() => defaultLoadout(palettes), [palettes]);
-  const renderer = useRenderer(base, useMemo(() => [], []), palettes, loadout);
+  const renderer = useRenderer(base, useMemo(() => [], []));
   const zoom = useAvatarPage((s) => s.zoom);
-  const { onion, anchors, expression, toolbar } = useViewToggles();
+  const { onion, anchors, toolbar } = useViewToggles();
   const issues = useMemo(() => validateBase(base?.sheet ?? null), [base]);
   return (
     <>
       <section className="canvas">
-        {renderer ? <AvatarCanvas renderer={renderer} frame={frame} zoom={zoom} onionSkin={onion} showAnchors={anchors} expression={expression} /> : <Empty>找不到 content/avatar/base.sheet.json</Empty>}
+        {renderer ? <AvatarCanvas renderer={renderer} frame={frame} zoom={zoom} onionSkin={onion} showAnchors={anchors} /> : <Empty>找不到 content/avatar/base.sheet.json</Empty>}
         {toolbar}
       </section>
       <aside className="props">
-        <div className="panel-title">基礎身體</div>
+        <div className="panel-title">角色</div>
         <IssueList issues={issues} />
         {base && <BaseInfo sheet={base.sheet} />}
       </aside>
@@ -204,7 +207,7 @@ function BaseInfo({ sheet }: { sheet: AseSheet }) {
             <th>Tag</th>
             <th>幀</th>
             <th>規格</th>
-            <th>視角</th>
+            <th>武器姿勢</th>
           </tr>
         </thead>
         <tbody>
@@ -217,7 +220,7 @@ function BaseInfo({ sheet }: { sheet: AseSheet }) {
                 <td className="mono">{t}</td>
                 <td style={{ color: ok ? undefined : 'var(--warn)' }}>{tag ? `${n}（${tag.from}–${tag.to}）` : '缺少'}</td>
                 <td>{AVATAR_TAGS[t].frames}</td>
-                <td>{AVATAR_TAGS[t].view === 'front' ? '正面' : '背面'}</td>
+                <td>{t === 'ladder' || t === 'rope' ? '收起' : AVATAR_TAGS[t].poses}</td>
               </tr>
             );
           })}
@@ -225,9 +228,9 @@ function BaseInfo({ sheet }: { sheet: AseSheet }) {
       </table>
       <div className="kv" style={{ marginTop: 8 }}>
         <span>圖層</span>
-        <span className="mono">{sheet.layers.filter(Boolean).join('、')}</span>
+        <span className="mono">{[...new Set(sheet.layers.filter(Boolean))].join('、')}</span>
         <span>錨點</span>
-        <span className="mono">{['head', 'torso', 'hand'].map((s) => `${s}（${sheet.slices.get(s)?.length ?? 0} 個 key）`).join('、')}</span>
+        <span className="mono">{['hand', 'torso', 'head'].map((s) => `${s}（${sheet.slices.get(s)?.length ?? 0} 個 key）`).join('、')}</span>
       </div>
     </Section>
   );
@@ -235,32 +238,14 @@ function BaseInfo({ sheet }: { sheet: AseSheet }) {
 
 function ItemView({ id, base, frame }: { id: string; base: ReturnType<typeof useBase>['base']; frame: number }) {
   const item = useDoc<AvatarItem>(itemPath(id))?.data;
-  const palettes = usePalettes();
   const zoom = useAvatarPage((s) => s.zoom);
-  const ids = useAvatarPage((s) => s.ids);
-  const allItems = useDocsShallow((s) => ids.map((x) => s.docs[itemPath(x)]?.data as AvatarItem | undefined).filter((x): x is AvatarItem => !!x));
-  const [context, setContext] = useState(true);
   const [dragMode, setDragMode] = useState(false);
-  const { onion, anchors, expression, toolbar } = useViewToggles();
-
-  // 搭配：預設臉與頭髮（讓部件有參考），同分類的換成目前部件
-  const contextIds = useMemo(() => {
-    if (!item) return [];
-    const pick = (c: string) => allItems.find((i) => i.category === c && i.category !== item.category)?.id;
-    return context ? [pick('face'), pick('hair'), item.id].filter((x): x is string => !!x) : [item.id];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.id, item?.category, context, allItems.map((i) => i.id).join(',')]);
-  const { parts, errors } = useParts(contextIds);
-  const loadout = useMemo(() => {
-    const l = defaultLoadout(palettes, contextIds);
-    const dye = palettes?.palettes.find((p) => p.group === 'dye');
-    if (item?.recolor === 'dye' && dye) l.dyes = { [item.id]: dye.id };
-    return l;
-  }, [palettes, contextIds, item?.recolor, item?.id]);
-  const renderer = useRenderer(base, parts, palettes, loadout);
+  const { onion, anchors, toolbar } = useViewToggles();
+  const partIds = useMemo(() => (item ? [item.id] : []), [item?.id]);
+  const { parts, errors } = useParts(partIds);
+  const renderer = useRenderer(base, parts);
   const part = parts.find((p) => p.item.id === id);
   const issues = useMemo(() => (item ? validateItem(item, part?.sheet ?? null, base?.sheet ?? null) : []), [item, part, base]);
-  const canDrag = item && (item.kind === 'anchor' || item.layers.some((l) => ['hair_back', 'head', 'face', 'face_acc', 'eye_acc', 'hair_front', 'hat'].includes(l)));
 
   if (!item) {
     return (
@@ -272,9 +257,9 @@ function ItemView({ id, base, frame }: { id: string; base: ReturnType<typeof use
               <br />
               <br />
               <button className="primary" onClick={() => void registerItem(id)}>
-                登錄這個部件
+                登錄這把武器
               </button>
-              <div className="hint" style={{ marginTop: 8 }}>會依 ID 與 sheet 的圖層自動判斷分類、圖層與換色群組。</div>
+              <div className="hint" style={{ marginTop: 8 }}>會依 sheet 畫了哪個職業的攻擊動作自動判斷職業。</div>
             </div>
           </Empty>
         </section>
@@ -293,74 +278,27 @@ function ItemView({ id, base, frame }: { id: string; base: ReturnType<typeof use
             zoom={zoom}
             onionSkin={onion}
             showAnchors={anchors}
-            expression={expression}
-            highlight={dragMode ? item.id : null}
-            onDragOffset={
-              dragMode
-                ? (dx, dy) => updateItem(item.id, (i) => ({ ...i, offset: { x: (i.offset?.x ?? 0) + dx, y: (i.offset?.y ?? 0) + dy } }), '錨點對齊')
-                : undefined
-            }
+            dragSource={dragMode ? item.id : null}
+            onDragOffset={dragMode ? (dx, dy) => updateItem(item.id, (i) => ({ ...i, offset: { x: (i.offset?.x ?? 0) + dx, y: (i.offset?.y ?? 0) + dy } }), '錨點對齊') : undefined}
           />
         ) : (
           <Empty>找不到 content/avatar/base.sheet.json</Empty>
         )}
         {toolbar}
-        <div className="canvas-toolbar" style={{ top: 44 }}>
-          <div className="group">
-            <Checkbox checked={context} onChange={setContext} label="搭配臉與頭髮" />
-            {canDrag && <Checkbox checked={dragMode} onChange={setDragMode} label="拖曳對齊（錨點部件）" />}
+        {item.category === 'weapon' && (
+          <div className="canvas-toolbar" style={{ top: 44 }}>
+            <div className="group">
+              <Checkbox checked={dragMode} onChange={setDragMode} label="拖曳對齊武器" />
+            </div>
           </div>
-        </div>
+        )}
       </section>
       <aside className="props">
-        <div className="panel-title">部件 {item.id}</div>
-        {errors.length > 0 && <IssueList issues={errors.map((m) => ({ severity: 'error' as const, page: 'avatar' as const, message: m }))} />}
+        <div className="panel-title">{item.category === 'weapon' ? '武器' : '舊部件'} {item.id}</div>
+        {errors.length > 0 && <IssueList issues={errors.map((m) => ({ severity: 'error' as const, message: m }))} />}
         <IssueList issues={issues} prefix={`${item.id}：`} />
-        <ItemForm item={item} sheet={part?.sheet ?? null} base={base?.sheet ?? null} />
+        {item.category === 'weapon' ? <ItemForm item={item} sheet={part?.sheet ?? null} base={base?.sheet ?? null} /> : null}
       </aside>
-    </>
-  );
-}
-
-function PalettePreview({ base }: { base: ReturnType<typeof useBase>['base'] }) {
-  const palettes = usePalettes();
-  const ids = useAvatarPage((s) => s.ids);
-  const allItems = useDocsShallow((s) => ids.map((x) => s.docs[itemPath(x)]?.data as AvatarItem | undefined).filter((x): x is AvatarItem => !!x));
-  const contextIds = useMemo(
-    () => ['face', 'hair', 'top', 'bottom', 'shoes'].map((c) => allItems.find((i) => i.category === c)?.id).filter((x): x is string => !!x),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allItems.map((i) => i.id).join(',')],
-  );
-  const { parts } = useParts(contextIds);
-  const [pick, setPick] = useState({ skin: 0, hair: 0, eye: 0, dye: 0 });
-  const byGroup = (g: 'skin' | 'hair' | 'eye' | 'dye') => palettes?.palettes.filter((p) => p.group === g) ?? [];
-  const loadout = useMemo(() => {
-    const l = defaultLoadout(palettes, contextIds);
-    l.skin = byGroup('skin')[pick.skin]?.id ?? l.skin;
-    l.hair = byGroup('hair')[pick.hair]?.id ?? l.hair;
-    l.eye = byGroup('eye')[pick.eye]?.id ?? l.eye;
-    const dye = byGroup('dye')[pick.dye]?.id;
-    if (dye) l.dyes = Object.fromEntries(contextIds.map((id) => [id, dye]));
-    return l;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [palettes, contextIds, pick]);
-  const renderer = useRenderer(base, parts, palettes, loadout);
-  return (
-    <>
-      <div className="panel-title">即時預覽</div>
-      <div style={{ position: 'relative', height: 300 }}>{renderer && <AvatarCanvas renderer={renderer} frame={base?.sheet.tags.get('stand')?.from ?? 0} zoom={4} />}</div>
-      <Section title="套用顏色">
-        {(['skin', 'hair', 'eye', 'dye'] as const).map((g) => (
-          <div key={g} style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', margin: '4px 0' }}>
-            <span className="hint" style={{ width: 36 }}>{{ skin: '膚', hair: '髮', eye: '瞳', dye: '染' }[g]}</span>
-            {byGroup(g).map((p, i) => (
-              <button key={p.id} className={`small ${pick[g] === i ? 'active' : ''}`} title={p.name} onClick={() => setPick({ ...pick, [g]: i })} style={{ padding: 2 }}>
-                <span style={{ display: 'inline-block', width: 16, height: 16, background: p.colors[Math.floor(p.colors.length / 2)] }} />
-              </button>
-            ))}
-          </div>
-        ))}
-      </Section>
     </>
   );
 }

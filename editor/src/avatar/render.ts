@@ -1,9 +1,9 @@
 /**
- * 紙娃娃的 Canvas 2D 繪製：擺放計算與換色都用 @lawn/shared（composeAvatarFrame、loadoutMapping、recolorPixels），
- * 跟遊戲的 AvatarView 算出來一模一樣。用在姿勢表逐幀檢查、錨點對齊、部件圖示。
+ * 角色＋武器的 Canvas 2D 繪製：擺放計算用 @lawn/shared 的 composeAvatarFrame（與遊戲一致）。
+ * 角色外觀固定、不換色（STUDIO_SPEC §4）。用在姿勢表逐幀檢查、錨點對齊、武器圖示。
  */
-import { AVATAR_CANVAS, composeAvatarFrame, loadoutMapping, recolorPixels, resolveLoadout } from '@lawn/shared';
-import type { AseSheet, AvatarItem, AvatarLoadout, ComposeOptions, DrawOp, PaletteFile, ResolvedLoadout } from '@lawn/shared';
+import { AVATAR_CANVAS, composeAvatarFrame, resolveLoadout } from '@lawn/shared';
+import type { AseSheet, AvatarItem, ComposeOptions, DrawOp, ResolvedLoadout } from '@lawn/shared';
 
 export interface SheetImage {
   sheet: AseSheet;
@@ -14,46 +14,17 @@ export interface RenderPart extends SheetImage {
   item: AvatarItem;
 }
 
-type Drawable = ImageBitmap | OffscreenCanvas;
-
-/** 換色後的圖（以「圖 + 對照表」快取）。 */
-const recolorCache = new WeakMap<ImageBitmap, Map<string, OffscreenCanvas>>();
-
-function recolored(image: ImageBitmap, palettes: PaletteFile | undefined, loadout: AvatarLoadout | null, item: AvatarItem | null): Drawable {
-  if (!palettes || !loadout) return image;
-  const mapping = loadoutMapping(palettes, loadout, item);
-  if (!mapping) return image;
-  const key = [...mapping].map(([k, v]) => `${k}:${v.join(',')}`).join('|');
-  let byKey = recolorCache.get(image);
-  if (!byKey) recolorCache.set(image, (byKey = new Map()));
-  let canvas = byKey.get(key);
-  if (!canvas) {
-    canvas = new OffscreenCanvas(image.width, image.height);
-    const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(image, 0, 0);
-    const data = ctx.getImageData(0, 0, image.width, image.height);
-    recolorPixels(data.data, mapping);
-    ctx.putImageData(data, 0, 0);
-    byKey.set(key, canvas);
-  }
-  return canvas;
-}
-
 export class AvatarRenderer {
   private readonly resolved: ResolvedLoadout;
-  private readonly sources = new Map<string, { sheet: AseSheet; image: Drawable | null }>();
+  private readonly sources = new Map<string, SheetImage>();
 
   constructor(
     readonly base: SheetImage,
     readonly parts: RenderPart[],
-    palettes?: PaletteFile,
-    loadout?: AvatarLoadout | null,
   ) {
     this.resolved = resolveLoadout(parts.map((p) => ({ item: p.item, sheet: p.sheet })));
-    this.sources.set('base', { sheet: base.sheet, image: base.image ? recolored(base.image, palettes, loadout ?? null, null) : null });
-    for (const p of parts) {
-      this.sources.set(p.item.id, { sheet: p.sheet, image: p.image ? recolored(p.image, palettes, loadout ?? null, p.item) : null });
-    }
+    this.sources.set('base', base);
+    for (const p of parts) this.sources.set(p.item.id, p);
   }
 
   ops(frame: number, options?: ComposeOptions): DrawOp[] {
@@ -62,7 +33,7 @@ export class AvatarRenderer {
 
   /**
    * 畫一幀：(footX, footY) 是腳底在畫布上的位置，scale 為整數倍。
-   * filter 可以只畫某些 DrawOp（例如只畫部件、做圖示）。
+   * filter 可以只畫某些 DrawOp（例如只畫武器、做圖示）。
    */
   draw(
     ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -70,7 +41,7 @@ export class AvatarRenderer {
     footX: number,
     footY: number,
     scale: number,
-    options: ComposeOptions & { filter?: (op: DrawOp) => boolean; alpha?: number } = {},
+    options: ComposeOptions & { filter?: (op: DrawOp) => boolean; alpha?: number; offset?: { source: string; dx: number; dy: number } } = {},
   ): void {
     ctx.imageSmoothingEnabled = false;
     const prevAlpha = ctx.globalAlpha;
@@ -80,15 +51,16 @@ export class AvatarRenderer {
       const src = this.sources.get(op.source);
       const fr = src?.sheet.frame(op.frameLayer, op.frameIndex);
       if (!src?.image || !fr) continue;
-      const x = footX + (op.dx + fr.sourceRect.x - AVATAR_CANVAS.footX) * scale;
-      const y = footY + (op.dy + fr.sourceRect.y - AVATAR_CANVAS.footY) * scale;
+      const extra = options.offset?.source === op.source ? options.offset : { dx: 0, dy: 0 };
+      const x = footX + (op.dx + extra.dx + fr.sourceRect.x - AVATAR_CANVAS.footX) * scale;
+      const y = footY + (op.dy + extra.dy + fr.sourceRect.y - AVATAR_CANVAS.footY) * scale;
       ctx.drawImage(src.image, fr.rect.x, fr.rect.y, fr.rect.w, fr.rect.h, x, y, fr.rect.w * scale, fr.rect.h * scale);
     }
     ctx.globalAlpha = prevAlpha;
   }
 }
 
-/** 範本畫布上某幀錨點的位置（相對腳底）。 */
+/** 角色檔上某幀錨點的位置（相對腳底）。 */
 export function anchorAt(base: AseSheet, slice: string, frame: number): { x: number; y: number } | null {
   const p = base.slicePivotAt(slice, frame);
   return p ? { x: p.x - AVATAR_CANVAS.footX, y: p.y - AVATAR_CANVAS.footY } : null;
@@ -97,7 +69,7 @@ export function anchorAt(base: AseSheet, slice: string, frame: number): { x: num
 export const ICON_SIZE = 32;
 
 /**
- * 部件圖示：用 stand 第一幀（錨點部件為正面視角）只畫這個部件，裁掉空白後置中；
+ * 武器圖示：只畫這把武器，裁掉空白後置中；
  * 盡量用整數倍放大，放不下時才最近鄰縮小（像素風，不模糊）。
  */
 export function renderIcon(renderer: AvatarRenderer, itemId: string, frame: number): OffscreenCanvas {

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "mob_0001",
+  "name": "嫩芽史萊姆",
+  "sheet": "monsters/mob_0001.sheet.json",
+  "tags": {
+    "move": "move",
+    "idle": "idle",
+    "hit": "hit",
+    "die": "die"
+  },
+  "hitbox": {
+    "x": -12,
+    "y": -20,
+    "w": 24,
+    "h": 20
+  },
+  "labelOffset": {
+    "x": 0,
+    "y": -24
+  },
+  "mathId": "mob_0001",
+  "behavior": {
+    "move": "ground",
+    "speed": 28,
+    "idleSec": [
+      1,
+      3
+    ],
+    "moveSec": [
+      2,
+      4
+    ],
+    "knockback": 6
+  },
+  "fx": {
+    "hit": "hit_spark",
+    "die": "dust",
+    "coinFrame": 2,
+    "coinCount": 2
+  },
+  "showHpBar": false
+}

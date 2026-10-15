@@ -2,7 +2,7 @@
 
 | 項目 | 內容 |
 |---|---|
-| 版本 | v0.2（草案） |
+| 版本 | v0.3（草案） |
 | 日期 | 2026-10-15 |
 | 上層文件 | [SPEC.md](SPEC.md)（遊戲本體規格）、[COLLAB.md](COLLAB.md)（分工與資料夾歸屬） |
 | 範圍 | 造型製作系統 LawnStudio：工具功能、素材流程，以及角色、怪物、地圖的美術製作規格與內容資料格式 |
@@ -14,6 +14,7 @@
 |---|---|
 | v0.1 | 初版 |
 | v0.2 | 路徑改為 COLLAB 配置（`editor/`、`game/shared`、`game/engine`、`editor/tools/`）；新增 §8.1 檔名與路徑慣例、Aseprite 匯出參數、`manifest.json`；§9 足場拆成地面／牆／天花板，補上座標慣例 |
+| v0.3 | **角色不換裝、不換色，只換武器**：§4 改為「角色與武器」（四職業共用一個主角），移除換裝部件、錨點部件、調色盤與換色；§8、§9 同步 |
 
 ---
 
@@ -23,14 +24,14 @@
 
 | 工具 | 負責 |
 |---|---|
-| Aseprite | 角色身體、換裝部件、怪物、特效、UI、地形 tileset 的繪製與動畫 |
+| Aseprite | 角色、武器、怪物、特效、UI、地形 tileset 的繪製與動畫 |
 | Laigter | 從地形與背景圖自動產生法線貼圖（之後手修） |
 | LDtk | 地圖繪製：碰撞格、自動拼貼、裝飾、實體（傳送點、生怪區、光源） |
-| **LawnStudio** | 部件登錄與設定、姿勢表、調色盤、怪物參數、地圖後處理（足場、導航圖、主題光影）、房間表、規格檢查、預覽與試玩 |
+| **LawnStudio** | 武器登錄與姿勢表、怪物參數、地圖後處理（足場、導航圖、主題光影）、房間表、規格檢查、預覽與試玩 |
 
 | 頁面 | 內容 | 章節 |
 |---|---|---|
-| 角色造型 | 紙娃娃：身體、頭髮、眼睛、膚色、裝備 | [§4](#4-角色造型) |
+| 角色造型 | 角色（四職業共用、外觀固定）與各職業的武器 | [§4](#4-角色與武器) |
 | 怪物 | 怪物動作、判定、行為、演出、數值 | [§5](#5-怪物製作) |
 | 地圖 | LDtk 匯入與後處理、主題、光影、導航圖、試玩 | [§6](#6-地圖) |
 | 房間表 | 20 房設定 | [§7](#7-房間表) |
@@ -68,19 +69,19 @@ aseprite -b art/monsters/mob_0001.aseprite \
   --sheet content/monsters/mob_0001.png --data content/monsters/mob_0001.sheet.json
 ```
 
-紙娃娃（身體 base 與部件；分圖層、略過空白幀。base 不加 `--ignore-layer _body`）：
+角色與武器（分圖層、略過空白幀。角色檔不加 `--ignore-layer _body`，`body` 就是它自己的圖層）：
 
 ```bash
-aseprite -b art/avatar/items/top_0001.aseprite \
+aseprite -b art/avatar/items/weapon_0001.aseprite \
   --format json-array --list-tags --list-slices --list-layers \
   --split-layers --ignore-empty --ignore-layer _body \
   --sheet-type packed --trim --shape-padding 1 \
   --filename-format "{layer}|{frame}" \
-  --sheet content/avatar/items/top_0001.png --data content/avatar/items/top_0001.sheet.json
+  --sheet content/avatar/items/weapon_0001.png --data content/avatar/items/weapon_0001.sheet.json
 ```
 
 - 名稱以 `_` 開頭的圖層是參考用（例如 `_guide`、`_body`），不會匯出：匯出腳本先用 `--list-layers` 讀出圖層，對每個 `_` 開頭的圖層加上 `--ignore-layer`。
-- `--filename-format`：一般 sheet 的 frame 名稱是時間軸幀號（從 0 起）；紙娃娃 sheet 是 `{圖層}|{幀號}`。動作（Tag）一律由 `frameTags` 的幀號區間推算，不從 frame 名稱解析。詳見 §8.1。
+- `--filename-format`：一般 sheet 的 frame 名稱是時間軸幀號（從 0 起）；角色與武器 sheet 是 `{圖層}|{幀號}`。動作（Tag）一律由 `frameTags` 的幀號區間推算，不從 frame 名稱解析。詳見 §8.1。
 - 匯出後由腳本把 `meta.image` 改成 PNG 檔名（不含資料夾），讓路徑與 Aseprite 執行時的工作目錄無關。
 - Aseprite 執行檔路徑由環境變數 `ASEPRITE_PATH` 指定。
 - `npm run art`（在 `editor/` 執行）匯出所有變更過的檔案；`npm run art:watch` 監看 `art/` 自動重新匯出，LawnStudio 偵測到 `content/` 更新會自動重新載入。
@@ -101,119 +102,87 @@ aseprite -b art/avatar/items/top_0001.aseprite \
 - 預覽可整數倍放大檢查像素，可切換光照預覽（明亮場景／暗場景）。
 - 復原／重做、自動存草稿。草稿存在瀏覽器的 IndexedDB，按「匯出」才寫入 `content/`；上次開啟的專案資料夾也記在 IndexedDB，下次開啟時只需再授權一次。
 - 驗證面板：錯誤擋匯出，警告不擋。
-- ID 規則：`{分類}_{4 位數}`，例如 `hair_0001`、`hat_0012`、`mob_0003`、`map_0001`。
+- ID 規則：`{分類}_{4 位數}`，例如 `weapon_0001`、`mob_0003`、`map_0001`、`theme_0001`。
 - 所有資料檔都帶 `schemaVersion`，改格式時寫 migration。
 
 ---
 
-## 4. 角色造型
+## 4. 角色與武器
 
-紙娃娃在遊戲中如何組裝與播放，見 [SPEC.md §4.3](SPEC.md#43-紙娃娃)。
+遊戲中只有**一個主角，四個職業共用**，外觀固定：不換裝、不換色。**只有武器可以更換**，每個職業可以有多把武器。角色在遊戲中如何組裝與播放，見 [SPEC.md §4.3](SPEC.md#43-紙娃娃)。
 
-**核心問題：** 動作要流暢（Dead Cells）就要很多幀，但手繪紙娃娃每件衣服都要跟著每一幀畫，美術量會爆。
+**做法：角色畫很多幀，武器只畫「姿勢」。** 角色 67 幀，動作接近 Dead Cells 的流暢度；武器每個動作只畫少數幾張姿勢，角色每一幀指定使用哪一張，並依 `hand` 錨點的位移對齊，中間幀自動沿用最接近的姿勢。刀光、殘影等流暢感來源放在通用特效層，不屬於武器。
 
-**解法：身體畫很多幀，換裝部件只畫「姿勢」。** 每一幀身體指定使用哪一張姿勢圖，並依錨點位移對齊，所以中間幀會自動沿用最接近的姿勢。刀光、殘影等流暢感來源放在通用特效層，不屬於任何部件。
+### 4.1 角色檔
 
-### 4.1 範本檔
-
-`art/avatar/avatar_base.aseprite`
+`art/avatar/avatar_base.aseprite`（匯出為 `content/avatar/base.png` + `base.sheet.json`）
 
 - 楓之谷式 Q 版 2.5 頭身，身高約 56–64 像素，頭部佔身高約 45%。
 - 畫布 128×128，腳底中心固定在 (64, 120)；匯出時用 `--trim` 去掉空白。
-- 每個動作是一個 Tag；身體分圖層畫：`body`（含後手臂）、`arm_front`（前手臂，要蓋在武器上）、`head`（頭）。`head` 只畫在兩個**視角幀**上，跟其他錨點部件一樣，執行時貼在每幀的 `head` 錨點上：
-  - 正面視角幀 = `stand` 的第一幀；背面視角幀 = `ladder` 的第一幀（`rope` 也用背面）。幀號由 Tag 推算，不寫死。
+- 每個動作是一個 Tag。分圖層畫：`body`（完整角色，含頭與後手臂）、`arm_front`（前手臂，要蓋在武器握把上；動作中前手臂沒有蓋到武器時可以不畫）。
 - 匯出時分圖層（`--split-layers`），因為武器要夾在 `body` 與 `arm_front` 之間。
 - 1 像素深色描邊，用同色系深色，不用純黑。
 - 錨點用 Slice 標記，逐幀設定 pivot：
 
 | Slice | 用途 |
 |---|---|
-| `head` | 頭、頭髮、臉、帽子、飾品的貼附點 |
-| `torso` | 衣服、鞋、手套等姿勢部件的對齊點 |
 | `hand` | 武器的對齊點；也是特效發射點（魔法彈、飛鏢、箭的起點） |
+| `torso` | 背在身後的武器部分（`weapon_back`：弓、箭袋、劍鞘）的對齊點 |
+| `head` | 選用：頭頂特效、名稱標籤的位置 |
 
 ### 4.2 動作與幀數預算
 
-| 動作 | Tag | 身體幀數 | 部件姿勢數 | 頭部視角 |
-|---|---|---|---|---|
-| 待機 | `stand` | 6 | 2 | 正面 |
-| 跑步 | `run` | 8 | 4 | 正面 |
-| 起跳 | `jump` | 2 | 1 | 正面 |
-| 下落 | `fall` | 2 | 1 | 正面 |
-| 落地 | `land` | 2 | 1 | 正面 |
-| 翻滾（滑衝） | `roll` | 6 | 3 | 正面 |
-| 趴下 | `prone` | 1 | 1 | 正面 |
-| 爬梯 | `ladder` | 4 | 2 | 背面 |
-| 爬繩 | `rope` | 4 | 2 | 背面 |
-| 劍士三連斬 | `swing1` `swing2` `swing3` | 5 × 3 | 2 × 3 | 正面 |
-| 法師攻擊 | `cast` | 6 | 3 | 正面 |
-| 弓箭手攻擊 | `shoot` | 6 | 3 | 正面 |
-| 刺客攻擊 | `throw` | 5 | 2 | 正面 |
-| **合計** | 15 個 Tag | **67** | **31** | |
+| 動作 | Tag | 角色幀數 | 武器姿勢數 |
+|---|---|---|---|
+| 待機 | `stand` | 6 | 2 |
+| 跑步 | `run` | 8 | 4 |
+| 起跳 | `jump` | 2 | 1 |
+| 下落 | `fall` | 2 | 1 |
+| 落地 | `land` | 2 | 1 |
+| 翻滾（滑衝） | `roll` | 6 | 3 |
+| 趴下 | `prone` | 1 | 1 |
+| 爬梯 | `ladder` | 4 | 0（收起武器） |
+| 爬繩 | `rope` | 4 | 0（收起武器） |
+| 劍士三連斬 | `swing1` `swing2` `swing3` | 5 × 3 | 2 × 3（只有劍士武器） |
+| 法師攻擊 | `cast` | 6 | 3（只有法師武器） |
+| 弓箭手攻擊 | `shoot` | 6 | 3（只有弓箭手武器） |
+| 刺客攻擊 | `throw` | 5 | 2（只有刺客武器） |
+| **合計** | 15 個 Tag | **67** | 通用 13 + 職業攻擊 2–6 |
 
-- 身體 67 幀，動作接近 Dead Cells 的流暢度；每件衣服只要畫 31 張姿勢圖。角色只有約 60 像素高，大多數姿勢只是小幅修改。
-- 翻滾設計成「壓低身體向前滑衝」，頭部保持正立，避免頭髮、帽子要多畫旋轉圖。
+- 角色 67 幀；每把武器只要畫 15–19 張姿勢圖（通用 13 張 + 自己職業的攻擊動作）。這是**最少**的數量：角色的手在幀間位移較大時（例如原畫主角在幾張關鍵姿勢間切換），可以每一幀都畫，規格檢查只要求每個需要的動作至少有一張。
+- 翻滾設計成「壓低身體向前滑衝」。
 - 技能沿用攻擊動作加特效，不另畫角色動作。
 
-### 4.3 圖層順序與部件類型
+### 4.3 圖層順序
 
 由後到前：
 
-| # | 圖層 | 部件 | 類型 | 換色 |
+| # | 圖層 | 內容 | 來源 | 對齊錨點 |
 |---|---|---|---|---|
-| 1 | `cape` | 披風 | 姿勢 | 染色 |
-| 2 | `hair_back` | 後髮 | 錨點 | 髮色 |
-| 3 | `weapon_back` | 弓、箭袋等背在後面的部分 | 姿勢 | – |
-| 4 | `body` | 身體 | 範本 | 膚色 |
-| 5 | `shoes` | 鞋子 | 姿勢 | 染色 |
-| 6 | `bottom` | 下衣 | 姿勢 | 染色 |
-| 7 | `top` | 上衣（套服同時取代 top + bottom） | 姿勢 | 染色 |
-| 8 | `head` | 頭（含耳朵） | 錨點 | 膚色 |
-| 9 | `face` | 臉／眼睛（含表情） | 錨點 | 瞳色 |
-| 10 | `face_acc` | 臉飾 | 錨點 | – |
-| 11 | `eye_acc` | 眼飾 | 錨點 | – |
-| 12 | `hair_front` | 前髮 | 錨點 | 髮色 |
-| 13 | `hat` | 帽子 | 錨點 | 染色 |
-| 14 | `weapon` | 主武器 | 姿勢 | – |
-| 15 | `arm_front` | 前手臂（蓋在武器握把上） | 範本 | 膚色 |
-| 16 | `sleeve` | 上衣前袖（跟 `top` 同一件，分層畫） | 姿勢 | 染色 |
-| 17 | `glove` | 手套 | 姿勢 | 染色 |
+| 1 | `weapon_back` | 背在身後的武器部分（弓、箭袋、劍鞘） | 武器 | `torso` |
+| 2 | `body` | 角色 | 角色檔 | – |
+| 3 | `weapon` | 主武器 | 武器 | `hand` |
+| 4 | `arm_front` | 前手臂（蓋在握把上） | 角色檔 | – |
 
-部件分類：臉型（眼睛）、髮型、帽子、上衣、下衣、套服、鞋子、手套、披風、武器（依職業）、臉飾、眼飾。膚色由調色盤處理，不是部件。
+### 4.4 武器製作流程
 
-### 4.4 部件製作流程
+- **畫在角色檔的複本上：** 複製角色檔 → 角色圖層改名為 `_body` 並鎖住當參考 → 新增 `weapon`（需要時加 `weapon_back`）圖層 → 每個 Tag 只在「姿勢幀」上畫 → 存成 `art/avatar/items/weapon_0001.aseprite`。所以武器 sheet 的幀號 = 角色的幀號，Tag 也相同。匯出時只輸出武器圖層，空白幀自動略過。
+- **要畫的動作：** 通用動作（`stand`、`run`、`jump`、`fall`、`land`、`roll`、`prone`）＋ 自己職業的攻擊動作。爬梯、爬繩時收起武器，不用畫；沒有畫姿勢的動作，遊戲會隱藏武器。
+- **姿勢表：** 一個 Tag 內，武器圖層實際有畫的幀就是它的姿勢。角色每一幀用哪個姿勢預設依時間平均分配（例：`run` 角色 8 幀、武器 4 姿勢 → 每 2 幀共用一個姿勢），可用 `poseMap` 逐幀改指定。武器跟著 `hand`（`weapon_back` 跟著 `torso`）相對於姿勢幀的位移移動。對不準的幀可在工具中改指定其他姿勢，或加畫一張。
+- **錨點對齊：** 工具中可拖曳設定整把武器的額外偏移（`offset`）。
+- **顏色固定：** 武器不換色。押注等級外觀（SPEC §3.2）由遊戲用刀光、發光等特效處理，不另畫武器。
 
-**所有部件都畫在範本檔的複本上**，所以部件 sheet 的幀號 = 範本的幀號，Tag 也相同。圖層名稱就是 §4.3 的圖層名稱。
-
-- **姿勢部件（衣服、鞋、手套、披風、武器）：** 複製範本檔 → 鎖住身體圖層當參考（改名為 `_body`）→ 在每個 Tag 中只在「姿勢幀」上畫部件 → 存成 `art/avatar/items/top_0001.aseprite`。匯出時只輸出部件圖層，空白幀自動略過。
-- **姿勢表：** 一個 Tag 內，部件圖層實際有畫的幀就是它的姿勢。身體每一幀用哪個姿勢預設依時間平均分配（例：`run` 身體 8 幀、部件 4 姿勢 → 每 2 幀共用一個姿勢），可用 `poseMap` 逐幀改指定。部件跟著錨點相對於姿勢幀的位移移動。對不準的幀可在工具中改指定其他姿勢，或加畫一張。
-- **每個圖層跟哪個錨點：** 頭部類（`hair_back`、`head`、`face`、`face_acc`、`eye_acc`、`hair_front`、`hat`）→ `head`；`weapon`、`glove` → `hand`；其他 → `torso`。
-- **武器：** 只需要畫該職業會用到的攻擊 Tag，加上通用動作。爬梯、爬繩（`ladder`、`rope`）時收起武器，不用畫；沒有畫姿勢的動作，遊戲會隱藏該圖層。
-- **錨點部件（頭、頭髮、臉、帽子、飾品）：** 只畫在兩個視角幀上（§4.1：正面 = `stand` 第一幀、背面 = `ladder` 第一幀）。每個圖層都要有正面圖；背面圖整件至少一個圖層有就好（例：從背後看，頭髮全部畫在 `hair_front`）。臉、臉飾、眼飾從背後看不到，不用畫背面。執行時依每幀 `head` 錨點相對視角幀的位移貼上，所以跑步時頭的上下晃動會自動跟著。工具中的「錨點對齊」只設定額外的微調偏移（`anchor.offset`）。
-- **變體用圖層名稱 `{圖層}@{變體}`：**
-  - 表情：`face` 是預設表情，另畫 `face@blink`、`face@hit`、`face@smile`；眨眼由遊戲每 3–6 秒隨機觸發。
-  - 戴帽髮型：`hair_front@underHat`、`hair_back@underHat`。
-- **遮蔽規則：** 帽子宣告 `hairMode: full | underHat | hidden`（`underHat` 時改用髮型的 `@underHat` 變體）；套服宣告隱藏 `bottom`；其他部件可用 `hidesLayers` 宣告要隱藏的圖層。
-
-### 4.5 換色
-
-- 膚色、髮色、瞳色、染色各保留一組固定的 **Key 色階**（例如膚色 4 階、髮色 5 階、瞳色 3 階），這些顏色只能用在需要換色的地方。
-- `palettes.json` 定義每種顏色對應的色階，例如「金髮」= 5 個顏色。
-- 遊戲執行時把 Key 色階逐像素替換成目標色階並快取。像素風顏色數少，替換結果完全精準。
-- 一款髮型可以直接出 N 種髮色、一件衣服可以出 N 種染色，不用重畫。
-
-### 4.6 工具功能
+### 4.5 工具功能
 
 | 功能 | 說明 |
 |---|---|
-| 基礎身體 | 載入 `avatar_base`，列出 Tag、幀數、錨點；檢查 67 幀與 `head`、`torso`、`hand` Slice 是否齊全 |
-| 調色盤 | 編輯 Key 色階與各顏色的色階（膚色、髮色、瞳色、染色）；即時預覽 |
-| 部件登錄 | 掃描新匯出的部件 → 設定分類、圖層、名稱、職業限制、換色群組、遮蔽規則 |
-| 姿勢表 | 顯示每個 Tag「身體幀 → 部件姿勢」的對應；預設自動分配，可逐幀改指定；逐幀播放檢查有沒有穿幫 |
-| 規格檢查 | 每個需要的 Tag 都要有姿勢圖（武器見 §4.4）；錨點部件要有正面圖、整件要有背面圖（臉、臉飾、眼飾除外）；圖中不能出現「接近 Key 色但不相等」的顏色（換色時不會被替換）；用到其他換色群組的 Key 色時警告；臉缺少 `@blink`／`@hit`／`@smile`、有帽子用 `underHat` 時髮型缺少 `@underHat` 都是警告 |
-| 錨點對齊 | 錨點部件拖曳設定相對 `head` 的偏移 |
-| 試穿 | 任意組合部件、顏色、職業、押注等級外觀、動作；隨機搭配（QA 用）；截圖 |
-| 圖示 | 部件自動渲染成 32×32 圖示（像素風，不縮放模糊） |
+| 角色 | 載入角色檔，列出 Tag、幀數、錨點；檢查 15 個 Tag 與 67 幀、`body` 圖層、`hand` 與 `torso` Slice |
+| 武器登錄 | 掃描新匯出的武器 → 設定名稱、職業 |
+| 姿勢表 | 顯示每個 Tag「角色幀 → 武器姿勢」的對應；預設自動分配，可逐幀改指定；逐幀播放檢查有沒有穿幫 |
+| 規格檢查 | 必須設定職業；通用動作與自己職業的攻擊動作都要有姿勢圖；只能使用 `weapon`、`weapon_back` 圖層 |
+| 錨點對齊 | 拖曳設定武器的偏移 |
+| 試穿 | 選職業、武器、動作；逐幀播放；截圖。遊戲預覽可看押注等級外觀與光照 |
+| 圖示 | 武器自動渲染成 32×32 圖示（像素風，不縮放模糊） |
 
 ---
 
@@ -360,11 +329,10 @@ content/
 ├─ manifest.json                       內容索引（匯出時產生，見 §9 ContentManifest）
 ├─ avatar/
 │  ├─ base.png / base.sheet.json       身體 sheet（含 Tag 與錨點 Slice）
-│  ├─ palettes.json                    Key 色階與各顏色色階
-│  └─ items/{itemId}.png               部件 sheet
-│     items/{itemId}.sheet.json        部件 sheet 資料（Aseprite 匯出）
-│     items/{itemId}.json              部件設定 AvatarItem（含姿勢表）
-│     items/{itemId}.icon.png          部件圖示 32×32（編輯器自動渲染；AvatarItem.icon 指向它）
+│  └─ items/{itemId}.png               武器 sheet
+│     items/{itemId}.sheet.json        武器 sheet 資料（Aseprite 匯出）
+│     items/{itemId}.json              武器設定 AvatarItem（含姿勢表）
+│     items/{itemId}.icon.png          武器圖示 32×32（編輯器自動渲染；AvatarItem.icon 指向它）
 ├─ class/                              classes.json、skills.json、bet-levels.json
 ├─ monsters/{mobId}.png / .sheet.json  怪物 sheet
 │  monsters/{mobId}.json               怪物設定 MonsterDef
@@ -389,9 +357,9 @@ content/
 | 法線貼圖 | 同名加 `_n`：`forest.png` → `forest_n.png`（Laigter 預設） |
 | JSON 內的路徑 | 一律**相對 `content/` 根目錄**、使用 `/`，例如 `"monsters/mob_0001.sheet.json"`。跟 `ContentSource.json(path)` 的 path 相同 |
 | 例外：`meta.image` | Aseprite sheet 資料裡的 `meta.image` 只有 PNG 檔名，相對於該 `.sheet.json` 所在的資料夾 |
-| frame 名稱 | 一般 sheet（怪物、特效、tileset、背景）：時間軸幀號字串 `"0"`、`"1"`…，`frames` 陣列依幀號排序。紙娃娃 sheet（身體 base 與所有部件）：`"{圖層}|{幀號}"`，例如 `"top|12"`、`"face@blink|0"`；因為 `--ignore-empty`，沒畫的幀不會出現 |
-| 紙娃娃匯出 | 身體 base 與部件都用分圖層參數（§2）；base 不加 `--ignore-layer _body`（`body` 就是它自己的圖層） |
-| 動作 | 由 `meta.frameTags[].from/to`（時間軸幀號，含頭尾）推算；部件幀依幀號落在哪個 Tag 區間決定屬於哪個動作 |
+| frame 名稱 | 一般 sheet（怪物、特效、tileset、背景）：時間軸幀號字串 `"0"`、`"1"`…，`frames` 陣列依幀號排序。角色與武器 sheet：`"{圖層}|{幀號}"`，例如 `"body|12"`、`"weapon|12"`；因為 `--ignore-empty`，沒畫的幀不會出現 |
+| 角色與武器匯出 | 都用分圖層參數（§2）；角色檔不加 `--ignore-layer _body`（`body` 就是它自己的圖層） |
+| 動作 | 由 `meta.frameTags[].from/to`（時間軸幀號，含頭尾）推算；武器幀依幀號落在哪個 Tag 區間決定屬於哪個動作 |
 | Slice | `meta.slices[].keys[]` 的 `frame` 是時間軸幀號，該 key 一直有效到下一個 key 為止；`bounds` 與 `pivot` 是**未裁切畫布座標**（`pivot` 相對 `bounds` 左上角） |
 | 裁切 | `--trim` 後每幀的 `spriteSourceSize` 是裁切後的圖在原畫布中的位置；組裝時一律換算回原畫布座標 |
 | 原點 | 身體範本：畫布 128×128，腳底 (64, 120)。怪物：畫布底邊中心。地圖：左上角 (0, 0)，y 向下，單位像素 |
@@ -407,32 +375,19 @@ content/
 ```ts
 type ClassId = 'warrior' | 'mage' | 'archer' | 'assassin';
 
-interface AvatarItem {
+interface AvatarItem {          // 武器（v0.3 起角色不換裝，只有武器）
   schemaVersion: number;
-  id: string;
+  id: string;                   // weapon_0001
   name: string;
-  category: 'face' | 'hair' | 'hat' | 'top' | 'bottom' | 'overall' | 'shoes'
-          | 'gloves' | 'cape' | 'weapon' | 'faceAcc' | 'eyeAcc';
-  classId?: ClassId;            // 武器限定職業
-  kind: 'pose' | 'anchor';      // 姿勢部件／錨點部件
+  category: 'weapon';
+  classId: ClassId;             // 必填：這把武器屬於哪個職業
+  kind: 'pose';
   sheet: string;                // 匯出的 sheet JSON
-  layers: string[];             // 佔用的圖層（例：上衣 = ['top', 'sleeve']）
-  poseMap?: Record<string, number[]>;   // 姿勢部件：每個 Tag 的「身體幀 → 姿勢」對應；未填則自動分配
-  anchor?: { offset: { x: number; y: number } };   // 額外微調偏移；跟哪個錨點由圖層決定（§4.4）
-  views?: { front?: number; back?: number };       // 覆寫錨點部件的視角幀號；不填用預設（stand／ladder 第一幀）
-  recolor?: 'hair' | 'eye' | 'dye';
-  hairMode?: 'full' | 'underHat' | 'hidden';
-  hidesLayers?: string[];
-  icon: string;
+  layers: ('weapon' | 'weapon_back')[];
+  poseMap?: Record<string, number[]>;   // 每個 Tag 的「角色幀 → 姿勢」對應；未填則自動分配
+  offset?: { x: number; y: number };    // 額外偏移；weapon 跟 hand、weapon_back 跟 torso
+  icon: string;                 // avatar/items/{id}.icon.png
 }
-
-interface Palette {
-  id: string;
-  group: 'skin' | 'hair' | 'eye' | 'dye';
-  name: string;
-  colors: string[];             // 依序對應該群組 Key 色階的每一階
-}
-
 interface MonsterDef {
   schemaVersion: number;
   id: string;
@@ -492,11 +447,11 @@ interface ThemeDef {
 interface ContentManifest {     // content/manifest.json，匯出時產生
   schemaVersion: number;
   generatedAt: string;          // ISO 時間
-  avatarItems: string[];        // itemId → avatar/items/{id}.json
+  avatarItems: string[];        // 武器 itemId → avatar/items/{id}.json
   monsters: string[];           // mobId → monsters/{id}.json
   maps: string[];               // mapId → maps/{id}.json
   fx: string[];                 // fxId → fx/{id}.sheet.json
-  // 固定路徑不列：avatar/base.sheet.json、avatar/palettes.json、themes/themes.json、rooms/rooms.json、class/*、math/*
+  // 固定路徑不列：avatar/base.sheet.json、themes/themes.json、rooms/rooms.json、class/*、math/*
 }
 
 interface RoomDef {
@@ -517,11 +472,11 @@ interface RoomDef {
 
 | 階段 | 工具相關內容 | 完成標準 |
 |---|---|---|
-| M0 | 紙娃娃技術驗證：姿勢表 + 錨點 + 換色，跑過全部 15 個 Tag（先用遊戲端測試頁，工具尚未開始） | 測試美術能正確組裝 |
+| M0 | 角色與武器技術驗證：姿勢表 + 錨點，跑過全部 15 個 Tag（先用遊戲端測試頁，工具尚未開始） | 測試美術能正確組裝 |
 | M1 | `npm run art` 匯出腳本 | Aseprite 存檔後遊戲自動拿到新素材 |
 | M2 | 工具 v1：共通介面、地圖頁、怪物頁 | 只用 LDtk 與工具就能做出新地圖與新怪物 |
 | M3 | 房間表 | 20 房設定都由工具產生 |
-| M5 | 角色造型頁：調色盤、部件登錄、姿勢表、規格檢查、錨點對齊、試穿 | 美術用 Aseprite 畫好一件裝備，不寫程式就能在遊戲中穿上 |
+| M5 | 角色造型頁：角色檢查、武器登錄、姿勢表、規格檢查、錨點對齊、試穿 | 美術用 Aseprite 畫好一把武器，不寫程式就能在遊戲中裝備 |
 
 ---
 
@@ -529,8 +484,8 @@ interface RoomDef {
 
 | 風險 | 對策 |
 |---|---|
-| 美術規格不一致（原點、錨點、Key 色階） | 規格檢查擋匯出；範本檔內附 `_guide` 參考圖層 |
-| 姿勢表自動分配對不準，部件穿幫 | 工具逐幀播放檢查；可改指定姿勢或加畫一張 |
+| 美術規格不一致（原點、錨點） | 規格檢查擋匯出；範本檔內附 `_guide` 參考圖層 |
+| 姿勢表自動分配對不準，武器穿幫 | 工具逐幀播放檢查；可改指定姿勢或加畫一張 |
 | Laigter 從亮度推算深度，對手繪像素圖可能判斷錯 | 只用在地形與背景；產生後手動修整 |
 | LDtk 自動拼貼規則的學習成本 | 先做好 1 套主題，其他主題複製後換圖 |
 | File System Access API 只支援 Chrome／Edge | 工具限定 Chrome／Edge；之後需要再用 Tauri 包成桌面版 |

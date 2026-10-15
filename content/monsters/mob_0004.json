@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "mob_0004",
+  "name": "符文石像",
+  "sheet": "monsters/mob_0004.sheet.json",
+  "tags": {
+    "move": "move",
+    "idle": "idle",
+    "hit": "hit",
+    "die": "die"
+  },
+  "hitbox": {
+    "x": -26,
+    "y": -86,
+    "w": 52,
+    "h": 86
+  },
+  "labelOffset": {
+    "x": 0,
+    "y": -92
+  },
+  "mathId": "mob_0004",
+  "behavior": {
+    "move": "ground",
+    "speed": 16,
+    "idleSec": [
+      1,
+      2
+    ],
+    "moveSec": [
+      3,
+      6
+    ],
+    "knockback": 2
+  },
+  "fx": {
+    "hit": "hit_spark",
+    "die": "dust",
+    "coinFrame": 3,
+    "coinCount": 8,
+    "light": {
+      "color": "#ff7a3d",
+      "radius": 60
+    }
+  },
+  "showHpBar": true
+}

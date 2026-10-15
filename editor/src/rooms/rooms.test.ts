@@ -50,6 +50,22 @@ describe('房間表', () => {
     expect(issues).toContainEqual(expect.objectContaining({ severity: 'warning', message: '房間 1 的押注 7 不在押注等級表中' }));
   });
 
+  it('Boss 不能出現在一般生怪區與怪潮（SPEC §3.8）', () => {
+    const tiers = new Map<string, 'normal' | 'boss'>([['mob_0001', 'normal'], ['mob_0006', 'boss']]);
+    const map = structuredClone(maps[0]!);
+    map.spawnZones[0]!.pool.push({ mobId: 'mob_0006', weight: 1 });
+    const room = { ...defaultRoom(1, map, { tiers }), wave: { everySec: [300, 400] as [number, number], durationSec: 30, pool: [{ mobId: 'mob_0006', weight: 1 }], maxMonsters: 100 } };
+    const errors = validateRooms({ schemaVersion: 1, rooms: [room] }, { maps: new Map([[map.id, map]]), monsters, tiers }).filter((i) => i.severity === 'error').map((i) => i.message);
+    expect(errors).toEqual(expect.arrayContaining([expect.stringContaining('生怪區的怪物池有 Boss mob_0006'), expect.stringContaining('房間 1 的怪潮怪物池有 Boss mob_0006')]));
+  });
+
+  it('預設怪潮不放 Boss', () => {
+    const tiers = new Map<string, 'normal' | 'boss'>([['mob_0001', 'boss']]);
+    const room = defaultRoom(5, maps[4]!, { tiers });
+    expect(room.wave?.pool.some((p) => p.mobId === 'mob_0001')).toBe(false);
+    expect(room.lineup?.includes('mob_0001')).toBe(false);
+  });
+
   it('parseBetLevels 用遊戲端的 schema', () => {
     expect(parseBetLevels({ schemaVersion: 1, levels: [{ bet: 10, visualTier: 2 }, { bet: 1, visualTier: 1 }] })).toEqual([1, 10]);
     expect(parseBetLevels([{ bet: 5 }])).toEqual([]);

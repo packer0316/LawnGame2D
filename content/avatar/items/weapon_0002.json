@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "weapon_0002",
+  "name": "木杖",
+  "category": "weapon",
+  "classId": "mage",
+  "kind": "pose",
+  "layers": [
+    "weapon"
+  ],
+  "sheet": "avatar/items/weapon_0002.sheet.json",
+  "icon": "avatar/items/weapon_0002.icon.png"
+}

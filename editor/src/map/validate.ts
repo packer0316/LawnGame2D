@@ -1,5 +1,5 @@
 /** 地圖驗證（STUDIO_SPEC §6.3）。 */
-import { MapDefSchema } from '@lawn/shared';
+import { MapDefSchema, buildNavGraph, reachableFrom } from '@lawn/shared';
 import type { MapDef } from '@lawn/shared';
 import type { Issue } from '../state/validation';
 import { footholdUnder } from './geometry';
@@ -53,26 +53,22 @@ export function validateMap(map: MapDef, mapIds: Set<string>): Issue[] {
   if (map.waveEntries.length === 0) warn('沒有怪潮湧入點（WaveEntry）');
   if (map.boss && !footholdUnder(map, map.boss.x, map.boss.y)) warn(`Boss 出生點 (${map.boss.x}, ${map.boss.y}) 不在地面上`, 'boss');
 
-  // 到不了的平台（需要導航圖）
-  if (map.nav.nodes.length > 0) {
-    const spawn = map.portals.find((p) => p.type === 'spawn');
-    const start = spawn ? footholdUnder(map, spawn.x, spawn.y) : undefined;
-    const startNode = start ? map.nav.nodes.find((n) => n.footholdIds.includes(start.id)) : undefined;
-    if (startNode) {
-      const reached = new Set([startNode.id]);
-      const queue = [startNode.id];
-      while (queue.length > 0) {
-        const id = queue.shift()!;
-        for (const e of map.nav.edges) {
-          if (e.from === id && !reached.has(e.to)) {
-            reached.add(e.to);
-            queue.push(e.to);
-          }
-        }
-      }
-      for (const n of map.nav.nodes) {
-        if (!reached.has(n.id)) warn(`平台（導航節點 ${n.id}）從出生點走不到`, `nav:${n.id}`);
-      }
+  // 可達性：用遊戲同一套導航圖（nav 為空時遊戲會現場 buildNavGraph，這裡也一樣）
+  const nav = map.nav.edges.length > 0 ? map.nav : buildNavGraph(map);
+  const spawn = map.portals.find((p) => p.type === 'spawn');
+  const start = spawn ? footholdUnder(map, spawn.x, spawn.y) : undefined;
+  if (start) {
+    const reached = reachableFrom(nav, start.id);
+    for (const p of map.portals) {
+      if (p.type === 'spawn') continue;
+      const fh = footholdUnder(map, p.x, p.y);
+      if (!fh || reached.has(fh.id)) continue;
+      // 自動掛機換房會走去「下一房」傳送點，走不到就會卡在這房
+      if (p.type === 'next') error(`自動掛機從出生點走不到「下一房」傳送點（足場 #${fh.id}）`, `portal:${p.id}`);
+      else warn(`從出生點走不到${p.type === 'prev' ? '「上一房」' : '指定房'}傳送點（足場 #${fh.id}）`, `portal:${p.id}`);
+    }
+    for (const fh of map.footholds) {
+      if (!reached.has(fh.id)) warn(`平台（足場 #${fh.id}）從出生點走不到`, `fh:${fh.id}`);
     }
   }
   return issues;

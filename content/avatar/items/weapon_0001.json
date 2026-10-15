@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "weapon_0001",
+  "name": "鐵劍",
+  "category": "weapon",
+  "classId": "warrior",
+  "kind": "pose",
+  "layers": [
+    "weapon"
+  ],
+  "sheet": "avatar/items/weapon_0001.sheet.json",
+  "icon": "avatar/items/weapon_0001.icon.png"
+}

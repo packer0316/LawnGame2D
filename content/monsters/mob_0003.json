@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "mob_0003",
+  "name": "紫耳蝙蝠",
+  "sheet": "monsters/mob_0003.sheet.json",
+  "tags": {
+    "move": "move",
+    "idle": "idle",
+    "hit": "hit",
+    "die": "die"
+  },
+  "hitbox": {
+    "x": -12,
+    "y": -30,
+    "w": 24,
+    "h": 20
+  },
+  "labelOffset": {
+    "x": 0,
+    "y": -34
+  },
+  "mathId": "mob_0003",
+  "behavior": {
+    "move": "fly",
+    "speed": 40,
+    "idleSec": [
+      0.5,
+      1.5
+    ],
+    "moveSec": [
+      2,
+      4
+    ],
+    "knockback": 8
+  },
+  "fx": {
+    "hit": "hit_spark",
+    "die": "dust",
+    "coinFrame": 1,
+    "coinCount": 3
+  },
+  "showHpBar": false
+}

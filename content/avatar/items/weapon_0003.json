@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "weapon_0003",
+  "name": "獵弓",
+  "category": "weapon",
+  "classId": "archer",
+  "kind": "pose",
+  "layers": [
+    "weapon",
+    "weapon_back"
+  ],
+  "sheet": "avatar/items/weapon_0003.sheet.json",
+  "icon": "avatar/items/weapon_0003.icon.png"
+}

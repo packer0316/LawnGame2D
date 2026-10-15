@@ -1,5 +1,3 @@
-import { AVATAR_SLICES } from '@lawn/shared';
-import type { DrawOp, Expression } from '@lawn/shared';
 import { useEffect, useRef, useState } from 'react';
 import { anchorAt } from '../../avatar/render';
 import type { AvatarRenderer } from '../../avatar/render';
@@ -7,8 +5,8 @@ import type { AvatarRenderer } from '../../avatar/render';
 const SLICE_COLORS: Record<string, string> = { head: '#f2c14e', torso: '#5ad1a6', hand: '#ff6b7a' };
 
 /**
- * 紙娃娃畫布：整數倍放大、腳底原點、可顯示洋蔥皮（前一幀）與錨點。
- * onDragOffset 有值時可以拖曳部件（錨點對齊），放開時回報像素位移。
+ * 角色＋武器畫布：整數倍放大、腳底原點、洋蔥皮（前一幀）與錨點。
+ * dragSource 有值時可以拖曳該武器（錨點對齊），放開時回報像素位移。
  */
 export function AvatarCanvas({
   renderer,
@@ -16,8 +14,7 @@ export function AvatarCanvas({
   zoom,
   onionSkin,
   showAnchors,
-  expression,
-  highlight,
+  dragSource,
   onDragOffset,
 }: {
   renderer: AvatarRenderer;
@@ -25,9 +22,7 @@ export function AvatarCanvas({
   zoom: number;
   onionSkin?: boolean;
   showAnchors?: boolean;
-  expression?: Expression;
-  /** 只讓這個部件不透明，其他半透明（方便看部件本身）。 */
-  highlight?: string | null;
+  dragSource?: string | null;
   onDragOffset?: (dx: number, dy: number) => void;
 }) {
   const host = useRef<HTMLDivElement>(null);
@@ -65,21 +60,12 @@ export function AvatarCanvas({
     ctx.lineTo(size.w, foot.y + 0.5);
     ctx.stroke();
 
-    const dx = drag ? drag.dx * zoom : 0;
-    const dy = drag ? drag.dy * zoom : 0;
-    if (onionSkin) {
-      const ops = renderer.ops(frame);
-      if (ops.length) renderer.draw(ctx, Math.max(0, frame - 1), foot.x, foot.y, zoom, { expression, alpha: 0.28 });
-    }
-    if (highlight) {
-      renderer.draw(ctx, frame, foot.x, foot.y, zoom, { expression, alpha: 0.35, filter: (op: DrawOp) => op.source !== highlight });
-      renderer.draw(ctx, frame, foot.x + dx, foot.y + dy, zoom, { expression, filter: (op: DrawOp) => op.source === highlight });
-    } else {
-      renderer.draw(ctx, frame, foot.x, foot.y, zoom, { expression });
-    }
+    if (onionSkin && frame > 0) renderer.draw(ctx, frame - 1, foot.x, foot.y, zoom, { alpha: 0.28 });
+    const offset = drag && dragSource ? { source: dragSource, dx: drag.dx, dy: drag.dy } : undefined;
+    renderer.draw(ctx, frame, foot.x, foot.y, zoom, offset ? { offset } : {});
 
     if (showAnchors) {
-      for (const s of AVATAR_SLICES) {
+      for (const s of ['hand', 'torso', 'head']) {
         const p = anchorAt(renderer.base.sheet, s, frame);
         if (!p) continue;
         const x = foot.x + p.x * zoom + zoom / 2;
@@ -97,7 +83,7 @@ export function AvatarCanvas({
         ctx.fillText(s, x + 8, y - 4);
       }
     }
-  }, [renderer, frame, zoom, onionSkin, showAnchors, expression, highlight, size, drag, foot.x, foot.y]);
+  }, [renderer, frame, zoom, onionSkin, showAnchors, size, drag, dragSource, foot.x, foot.y]);
 
   return (
     <div ref={host} className="canvas-host">

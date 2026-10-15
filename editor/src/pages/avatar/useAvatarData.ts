@@ -1,11 +1,11 @@
-import type { AvatarItem, AvatarLoadout, PaletteFile } from '@lawn/shared';
+import type { AvatarItem } from '@lawn/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { AvatarRenderer } from '../../avatar/render';
 import type { RenderPart, SheetImage } from '../../avatar/render';
 import { loadSheet, useSheet } from '../../content/sheets';
-import { useDoc, useDocs } from '../../state/docs';
+import { useDocs } from '../../state/docs';
 import { useStudio } from '../../state/studio';
-import { BASE_SHEET, PALETTES_PATH, itemPath, useAvatarPage } from './avatarStore';
+import { BASE_SHEET, itemPath, useAvatarPage } from './avatarStore';
 
 export function useBase(): { base: SheetImage | null; error: string | null } {
   const version = useAvatarPage((s) => s.version);
@@ -13,7 +13,7 @@ export function useBase(): { base: SheetImage | null; error: string | null } {
   return { base: data, error };
 }
 
-/** 讀入多個部件（設定檔 + sheet）。 */
+/** 讀入多個武器（設定檔 + sheet）。 */
 export function useParts(ids: string[]): { parts: RenderPart[]; errors: string[] } {
   const fs = useStudio((s) => s.fs);
   const version = useAvatarPage((s) => s.version);
@@ -50,16 +50,6 @@ export function useParts(ids: string[]): { parts: RenderPart[]; errors: string[]
   return state;
 }
 
-export function usePalettes(): PaletteFile | undefined {
-  return useDoc<PaletteFile>(PALETTES_PATH)?.data;
-}
-
-/** 預設外觀：每個群組第一個顏色。 */
-export function defaultLoadout(palettes: PaletteFile | undefined, items: string[] = []): AvatarLoadout {
-  const first = (g: 'skin' | 'hair' | 'eye') => palettes?.palettes.find((p) => p.group === g)?.id ?? `palette_000${g.length}`;
-  return { items, skin: first('skin'), hair: first('hair'), eye: first('eye'), dyes: {} };
-}
-
-export function useRenderer(base: SheetImage | null, parts: RenderPart[], palettes: PaletteFile | undefined, loadout: AvatarLoadout | null) {
-  return useMemo(() => (base ? new AvatarRenderer(base, parts, palettes, loadout) : null), [base, parts, palettes, loadout]);
+export function useRenderer(base: SheetImage | null, parts: RenderPart[]) {
+  return useMemo(() => (base ? new AvatarRenderer(base, parts) : null), [base, parts]);
 }

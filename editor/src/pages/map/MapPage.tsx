@@ -85,6 +85,12 @@ function MapPage() {
     return watchLdtk();
   }, [fs]);
 
+  // content/ 的圖更新（例如重新匯出 tileset）：清掉畫布的圖快取
+  const contentVersion = useStudio((s) => s.contentVersion);
+  useEffect(() => {
+    if (contentVersion > 0) clearMapImageCache();
+  }, [contentVersion]);
+
   // 驗證面板點擊跳轉
   const focus = useStudio((s) => s.focus);
   useEffect(() => {

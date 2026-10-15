@@ -1,0 +1,114 @@
+{
+ "frames": [
+  {
+   "filename": "0",
+   "frame": {
+    "x": 73,
+    "y": 0,
+    "w": 32,
+    "h": 58
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 9,
+    "y": 12,
+    "w": 32,
+    "h": 58
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 45
+  },
+  {
+   "filename": "1",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 31,
+    "h": 79
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 10,
+    "y": 12,
+    "w": 31,
+    "h": 79
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 45
+  },
+  {
+   "filename": "2",
+   "frame": {
+    "x": 32,
+    "y": 0,
+    "w": 40,
+    "h": 72
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 11,
+    "y": 24,
+    "w": 40,
+    "h": 72
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 45
+  },
+  {
+   "filename": "3",
+   "frame": {
+    "x": 0,
+    "y": 80,
+    "w": 25,
+    "h": 49
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 11,
+    "y": 47,
+    "w": 25,
+    "h": 49
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 45
+  }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "placeholder-art",
+  "image": "slash_swing1.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 128,
+   "h": 129
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "play",
+    "from": 0,
+    "to": 3,
+    "direction": "forward",
+    "color": "#000000ff"
+   }
+  ],
+  "layers": [],
+  "slices": []
+ }
+}

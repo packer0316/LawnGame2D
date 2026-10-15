@@ -237,7 +237,7 @@ function layerDef(identifier: string, type: string, uid: number, extra: Record<s
   };
 }
 
-export function buildLdtkProject(rooms: RoomSpec[], tilesets: TilesetSpec[]): LdtkProject {
+export function buildLdtkProject(rooms: RoomSpec[], tilesets: TilesetSpec[], profile: TileProfile = PROGRAMMER_PROFILE): LdtkProject {
   const tilesetDefs: (LdtkTilesetDef & Record<string, unknown>)[] = tilesets.map((t, i) => ({
     __cWid: Math.floor(t.pxWid / GRID),
     __cHei: Math.floor(t.pxHei / GRID),
@@ -329,7 +329,7 @@ export function buildLdtkProject(rooms: RoomSpec[], tilesets: TilesetSpec[]): Ld
 
   let worldX = 0;
   const levels = rooms.map((room, i) => {
-    const level = buildLevel(room, UID.levelBase + i * 100, worldX, tilesetUid.get(room.tileset) ?? UID.tilesetBase);
+    const level = buildLevel(room, UID.levelBase + i * 100, worldX, tilesetUid.get(room.tileset) ?? UID.tilesetBase, profile);
     worldX += level.pxWid + 64;
     return level;
   });
@@ -383,7 +383,78 @@ export function buildLdtkProject(rooms: RoomSpec[], tilesets: TilesetSpec[]): Ld
   } as unknown as LdtkProject;
 }
 
-function buildLevel(room: RoomSpec, uid: number, worldX: number, tilesetUid: number): LdtkLevel {
+/**
+ * 自動拼貼規則（等同 LDtk 的 auto-layer rules）：依 Collision 選 tileset 中的圖塊編號。
+ * 不同的 tileset 圖排列方式不同，所以規則跟著 tileset 走。
+ */
+export interface TileProfile {
+  name: string;
+  /** at(cx, cy) 回傳 Collision 值（地圖外 = 1）。 */
+  autotile(at: (cx: number, cy: number) => number, cx: number, cy: number): number | null;
+  /** 是否輸出 DecorBack／DecorFront 的裝飾圖塊（圖塊編號是 programmer 版 tileset 的）。 */
+  decor: boolean;
+}
+
+/** 編輯器自己的測試 tileset（tilesets.ts，8×2）。 */
+export const PROGRAMMER_PROFILE: TileProfile = {
+  name: 'programmer',
+  decor: true,
+  autotile(at, cx, cy) {
+    const v = at(cx, cy);
+    const above = at(cx, cy - 1);
+    if (v === 1) return above === 3 || above === 4 ? TILE.dirtUnderSlope : above === 1 ? TILE.dirt : TILE.grassTop;
+    if (v === 2) return TILE.plank;
+    if (v === 3) return TILE.slopeUp;
+    if (v === 4) return TILE.slopeDown;
+    if (v === 5) return TILE.rope;
+    if (v === 6) return TILE.ladder;
+    return null;
+  },
+};
+
+/**
+ * 遊戲端 placeholder-art 的「晨光魔法森林」tileset（game/dev-content/tilesets/*.png，8×6）。
+ * 圖塊排列：1–4 草地頂（中／左／右／單格）、5–8 泥土（中／左緣／右緣／底）、9／10 上坡／下坡、
+ * 11–13 平台（左／中／右）、14 梯子、15 繩索、17／18 斜坡下方的泥土、32–47 內部泥土（4×4 循環紋理）。
+ */
+export const VERDANT_PROFILE: TileProfile = {
+  name: 'verdant',
+  decor: false,
+  autotile(at, cx, cy) {
+    const v = at(cx, cy);
+    const ground = (dx: number, dy: number) => [1, 3, 4].includes(at(cx + dx, cy + dy));
+    switch (v) {
+      case 1: {
+        if (!ground(0, -1)) {
+          const l = ground(-1, 0);
+          const r = ground(1, 0);
+          return !l && !r ? 4 : !l ? 2 : !r ? 3 : 1;
+        }
+        const above = at(cx, cy - 1);
+        if (above === 3) return 17;
+        if (above === 4) return 18;
+        if (!ground(0, 1)) return 8;
+        if (!ground(-1, 0)) return 6;
+        if (!ground(1, 0)) return 7;
+        return 32 + (cy % 4) * 4 + (cx % 4);
+      }
+      case 2:
+        return at(cx - 1, cy) !== 2 ? 11 : at(cx + 1, cy) !== 2 ? 13 : 12;
+      case 3:
+        return 9;
+      case 4:
+        return 10;
+      case 5:
+        return 15;
+      case 6:
+        return 14;
+      default:
+        return null;
+    }
+  },
+};
+
+function buildLevel(room: RoomSpec, uid: number, worldX: number, tilesetUid: number, profile: TileProfile): LdtkLevel {
   const cHei = room.rows.length;
   const cWid = room.rows[0]!.length;
   const at = (cx: number, cy: number) => (cx < 0 || cy < 0 || cx >= cWid || cy >= cHei ? 1 : COLLISION[room.rows[cy]![cx]!] ?? 0);
@@ -402,16 +473,8 @@ function buildLevel(room: RoomSpec, uid: number, worldX: number, tilesetUid: num
   const terrain: LdtkTile[] = [];
   for (let cy = 0; cy < cHei; cy++) {
     for (let cx = 0; cx < cWid; cx++) {
-      const v = at(cx, cy);
-      const above = at(cx, cy - 1);
-      if (v === 1) {
-        const t = above === 3 || above === 4 ? TILE.dirtUnderSlope : above === 1 ? TILE.dirt : TILE.grassTop;
-        terrain.push(tile(cx, cy, t));
-      } else if (v === 2) terrain.push(tile(cx, cy, TILE.plank));
-      else if (v === 3) terrain.push(tile(cx, cy, TILE.slopeUp));
-      else if (v === 4) terrain.push(tile(cx, cy, TILE.slopeDown));
-      else if (v === 5) terrain.push(tile(cx, cy, TILE.rope));
-      else if (v === 6) terrain.push(tile(cx, cy, TILE.ladder));
+      const t = profile.autotile(at, cx, cy);
+      if (t !== null) terrain.push(tile(cx, cy, t));
     }
   }
 
@@ -516,13 +579,13 @@ function buildLevel(room: RoomSpec, uid: number, worldX: number, tilesetUid: num
   const entitiesLayer = { ...layerBase('Entities', 'Entities', UID.layerEntities, null), overrideTilesetUid: null, entityInstances: entities };
   const decorFront = {
     ...layerBase('DecorFront', 'Tiles', UID.layerDecorFront, tilesetUid),
-    gridTiles: room.decorFront.map(([cx, cy, t]) => tile(cx, cy, t)),
+    gridTiles: profile.decor ? room.decorFront.map(([cx, cy, t]) => tile(cx, cy, t)) : [],
   };
   const collision = { ...layerBase('Collision', 'IntGrid', UID.layerCollision, null), overrideTilesetUid: null, intGridCsv };
   const terrainLayer = { ...layerBase('Terrain', 'AutoLayer', UID.layerTerrain, tilesetUid), autoLayerTiles: terrain };
   const decorBack = {
     ...layerBase('DecorBack', 'Tiles', UID.layerDecorBack, tilesetUid),
-    gridTiles: room.decorBack.map(([cx, cy, t]) => tile(cx, cy, t)),
+    gridTiles: profile.decor ? room.decorBack.map(([cx, cy, t]) => tile(cx, cy, t)) : [],
   };
 
   return {

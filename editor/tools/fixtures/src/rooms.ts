@@ -44,7 +44,7 @@ const THEMES: ThemeInfo[] = [
   },
   {
     theme: 'theme_0003', tileset: 'ruins', bgm: 'bgm_ruins',
-    mobs: ['mob_0004:2', 'mob_0005:2', 'mob_0006:1'], boss: 'mob_0006',
+    mobs: ['mob_0004:2', 'mob_0005:2', 'mob_0003:1'], boss: 'mob_0006',
     light: { color: '#ffb14a', radius: 112, intensity: 1, flicker: 0.35 },
     decorBack: [TILE.lamp, TILE.rock, TILE.grass], decorFront: [TILE.grass],
   },

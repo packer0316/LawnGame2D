@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "weapon_0004",
+  "name": "拳刃",
+  "category": "weapon",
+  "classId": "assassin",
+  "kind": "pose",
+  "layers": [
+    "weapon"
+  ],
+  "sheet": "avatar/items/weapon_0004.sheet.json",
+  "icon": "avatar/items/weapon_0004.icon.png"
+}

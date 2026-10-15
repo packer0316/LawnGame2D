@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "themes": [
+    {
+      "id": "theme_0001",
+      "ambient": {
+        "color": "#ffffff",
+        "intensity": 1
+      },
+      "tileset": {
+        "image": "tilesets/forest.png",
+        "normal": "tilesets/forest_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/forest_painted.png",
+          "rx": 0.08,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0002",
+      "ambient": {
+        "color": "#c5d5f0",
+        "intensity": 0.74
+      },
+      "tileset": {
+        "image": "tilesets/cave.png",
+        "normal": "tilesets/cave_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/cave_painted.png",
+          "rx": 0.06,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    },
+    {
+      "id": "theme_0003",
+      "ambient": {
+        "color": "#b49ad8",
+        "intensity": 0.6
+      },
+      "tileset": {
+        "image": "tilesets/ruins.png",
+        "normal": "tilesets/ruins_n.png"
+      },
+      "backgrounds": [
+        {
+          "image": "backgrounds/cave_painted.png",
+          "rx": 0.1,
+          "ry": 0.03,
+          "tileX": false,
+          "tileY": false,
+          "y": 0
+        }
+      ]
+    }
+  ]
+}

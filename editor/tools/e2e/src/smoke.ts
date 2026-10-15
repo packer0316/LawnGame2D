@@ -169,46 +169,49 @@ async function runSteps(page: Page) {
     await shot(page, 'export-done');
   }
 
+  if (steps.has('mapview')) {
+    await page.getByRole('button', { name: '地圖', exact: true }).click();
+    await page.waitForTimeout(1500);
+    for (const id of ['map_0003', 'map_0012', 'map_0018']) {
+      await page.locator('.tree-item', { hasText: id }).click();
+      await page.waitForTimeout(800);
+      await shot(page, `mapview-${id}`);
+    }
+    await page.getByRole('button', { name: '光影預覽' }).click();
+    await page.waitForTimeout(3500);
+    await shot(page, 'mapview-preview');
+  }
+
   if (steps.has('avatar')) {
     await page.getByRole('button', { name: '角色造型', exact: true }).click();
     await page.waitForTimeout(1500);
-    await shot(page, 'avatar-base');
-    await page.locator('.tree-item', { hasText: '調色盤' }).click();
-    await page.waitForTimeout(1200);
-    await shot(page, 'avatar-palettes');
-    await page.locator('.tree-item', { hasText: 'top_0001' }).click();
-    await page.waitForTimeout(1200);
     await page.locator('.bottom select').first().selectOption('run');
+    await page.waitForTimeout(600);
+    await shot(page, 'avatar-base');
+    await page.locator('.tree-item', { hasText: 'weapon_0001' }).click();
+    await page.waitForTimeout(1200);
+    await page.locator('.bottom select').first().selectOption('swing1');
     await page.waitForTimeout(800);
-    await shot(page, 'avatar-top-run');
-    await page.locator('.tree-item', { hasText: 'hair_0001' }).click();
-    await page.waitForTimeout(1000);
-    await page.getByText('拖曳對齊（錨點部件）').click();
+    await shot(page, 'avatar-weapon-swing');
+    await page.getByText('拖曳對齊武器').click();
     const box = (await page.locator('.canvas canvas').first().boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.45);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height * 0.55);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height * 0.45 - 8, { steps: 4 });
+    await page.mouse.move(box.x + box.width / 2 + 8, box.y + box.height * 0.55 - 8, { steps: 4 });
     await page.mouse.up();
     await page.waitForTimeout(500);
-    await shot(page, 'avatar-hair-dragged');
-    const unreg = page.locator('.tree-item', { hasText: '未登錄' }).first();
-    if (await unreg.count()) {
-      await unreg.click();
-      await page.getByRole('button', { name: '登錄這個部件' }).click();
-      await page.waitForTimeout(1000);
-      await shot(page, 'avatar-registered');
-    }
+    await shot(page, 'avatar-weapon-dragged');
     await page.locator('.tree-item', { hasText: '試穿' }).click();
     await page.waitForTimeout(1200);
-    await page.getByRole('button', { name: /隨機搭配/ }).click();
-    await page.waitForTimeout(1200);
     await shot(page, 'avatar-tryon');
+    await page.getByRole('button', { name: '遊戲預覽' }).click();
+    await page.waitForTimeout(3000);
+    await shot(page, 'avatar-tryon-engine');
     await page.getByRole('button', { name: /^驗證/ }).click();
     await page.waitForTimeout(3000);
     console.log('驗證：', await status(page));
     await shot(page, 'avatar-validate');
   }
-
   if (steps.has('nav')) {
     await page.getByRole('button', { name: '地圖', exact: true }).click();
     await page.waitForTimeout(500);

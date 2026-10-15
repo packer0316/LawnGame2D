@@ -1,0 +1,202 @@
+{
+ "frames": [
+  {
+   "filename": "0",
+   "frame": {
+    "x": 138,
+    "y": 88,
+    "w": 21,
+    "h": 19
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 39,
+    "y": 40,
+    "w": 21,
+    "h": 19
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "1",
+   "frame": {
+    "x": 104,
+    "y": 88,
+    "w": 33,
+    "h": 31
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 33,
+    "y": 34,
+    "w": 33,
+    "h": 31
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "2",
+   "frame": {
+    "x": 58,
+    "y": 88,
+    "w": 45,
+    "h": 43
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 27,
+    "y": 28,
+    "w": 45,
+    "h": 43
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "3",
+   "frame": {
+    "x": 0,
+    "y": 88,
+    "w": 57,
+    "h": 53
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 21,
+    "y": 23,
+    "w": 57,
+    "h": 53
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "4",
+   "frame": {
+    "x": 176,
+    "y": 0,
+    "w": 69,
+    "h": 65
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 15,
+    "y": 17,
+    "w": 69,
+    "h": 65
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "5",
+   "frame": {
+    "x": 94,
+    "y": 0,
+    "w": 81,
+    "h": 77
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 9,
+    "y": 11,
+    "w": 81,
+    "h": 77
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "6",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 93,
+    "h": 87
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 3,
+    "y": 6,
+    "w": 93,
+    "h": 87
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  },
+  {
+   "filename": "7",
+   "frame": {
+    "x": 160,
+    "y": 88,
+    "w": 1,
+    "h": 1
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 1,
+    "h": 1
+   },
+   "sourceSize": {
+    "w": 96,
+    "h": 96
+   },
+   "duration": 55
+  }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "placeholder-art",
+  "image": "explosion.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 256,
+   "h": 141
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "play",
+    "from": 0,
+    "to": 7,
+    "direction": "forward",
+    "color": "#000000ff"
+   }
+  ],
+  "layers": [],
+  "slices": []
+ }
+}

@@ -1,0 +1,114 @@
+{
+ "frames": [
+  {
+   "filename": "0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 20,
+    "h": 15
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 1,
+    "y": 1,
+    "w": 20,
+    "h": 15
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 16
+   },
+   "duration": 60
+  },
+  {
+   "filename": "1",
+   "frame": {
+    "x": 21,
+    "y": 0,
+    "w": 20,
+    "h": 15
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 1,
+    "y": 1,
+    "w": 20,
+    "h": 15
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 16
+   },
+   "duration": 60
+  },
+  {
+   "filename": "2",
+   "frame": {
+    "x": 42,
+    "y": 0,
+    "w": 20,
+    "h": 15
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 1,
+    "y": 1,
+    "w": 20,
+    "h": 15
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 16
+   },
+   "duration": 60
+  },
+  {
+   "filename": "3",
+   "frame": {
+    "x": 0,
+    "y": 16,
+    "w": 20,
+    "h": 15
+   },
+   "rotated": false,
+   "trimmed": true,
+   "spriteSourceSize": {
+    "x": 1,
+    "y": 1,
+    "w": 20,
+    "h": 15
+   },
+   "sourceSize": {
+    "w": 24,
+    "h": 16
+   },
+   "duration": 60
+  }
+ ],
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "placeholder-art",
+  "image": "magic_bolt.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 64,
+   "h": 31
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "play",
+    "from": 0,
+    "to": 3,
+    "direction": "forward",
+    "color": "#000000ff"
+   }
+  ],
+  "layers": [],
+  "slices": []
+ }
+}

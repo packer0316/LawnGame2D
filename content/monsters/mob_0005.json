@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "mob_0005",
+  "name": "發條炸彈",
+  "sheet": "monsters/mob_0005.sheet.json",
+  "tags": {
+    "move": "move",
+    "idle": "idle",
+    "hit": "hit",
+    "die": "die"
+  },
+  "hitbox": {
+    "x": -12,
+    "y": -26,
+    "w": 24,
+    "h": 26
+  },
+  "labelOffset": {
+    "x": 0,
+    "y": -36
+  },
+  "mathId": "mob_0005",
+  "behavior": {
+    "move": "ground",
+    "speed": 26,
+    "idleSec": [
+      1,
+      2
+    ],
+    "moveSec": [
+      2,
+      4
+    ],
+    "knockback": 6
+  },
+  "fx": {
+    "hit": "hit_spark",
+    "die": "explosion",
+    "coinFrame": 1,
+    "coinCount": 5,
+    "light": {
+      "color": "#ffb347",
+      "radius": 40
+    }
+  },
+  "showHpBar": false
+}

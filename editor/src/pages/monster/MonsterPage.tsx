@@ -39,6 +39,7 @@ const ACTION_LABEL: Record<Action, string> = { move: '移動', idle: '待機', h
 
 function MonsterPage() {
   const fs = useStudio((s) => s.fs);
+  const contentVersion = useStudio((s) => s.contentVersion);
   const st = useMonsterPage();
   const def = useDoc<MonsterDef>(st.selected ? monsterPath(st.selected) : null)?.data;
   const dirtyKey = useDocs((s) => st.ids.filter((id) => isDirty(s.docs[monsterPath(id)])).join(','));
@@ -47,7 +48,7 @@ function MonsterPage() {
 
   useEffect(() => {
     if (fs) scanMonsters(fs).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [fs]);
+  }, [fs, contentVersion]);
 
   // 驗證面板點擊跳轉
   const focus = useStudio((s) => s.focus);
@@ -59,7 +60,7 @@ function MonsterPage() {
   const sheetPath = def?.sheet ?? (st.selected ? contentPaths.monsterSheet(st.selected) : null);
   useEffect(() => {
     if (fs && st.selected && sheetPath) loadSheet(fs, st.selected, sheetPath).catch(() => undefined);
-  }, [fs, st.selected, sheetPath]);
+  }, [fs, st.selected, sheetPath, contentVersion]);
   const loaded = st.selected ? st.sheets[st.selected] : undefined;
   const sheet = loaded && 'sheet' in loaded ? loaded.sheet : null;
   const image = loaded && 'sheet' in loaded ? loaded.image : null;

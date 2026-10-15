@@ -93,10 +93,13 @@ export async function updateNavEdits(mapId: string, fn: (e: NavEdits) => NavEdit
   });
 }
 
-/** 找專案中的 LDtk 檔：art/maps/*.ldtk，以及編輯器的測試檔。 */
+/**
+ * 找專案中的 LDtk 檔：art/maps/*.ldtk 優先，其次是編輯器的測試檔。
+ * 測試檔中 ldtk-verdant 用遊戲端的 tileset 圖塊排列；ldtk 是編輯器自己的 programmer tileset（匯入會覆蓋 content/tilesets）。
+ */
 export async function findLdtkFiles(fs: ProjectFs): Promise<string[]> {
   const found: string[] = [];
-  for (const dir of ['art/maps', 'editor/fixtures/ldtk']) {
+  for (const dir of ['art/maps', 'editor/fixtures/ldtk-verdant', 'editor/fixtures/ldtk']) {
     for (const e of await fs.list(dir)) if (e.kind === 'file' && e.name.endsWith('.ldtk')) found.push(`${dir}/${e.name}`);
   }
   return found;

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-15T07:08:54.798Z",
+  "avatarItems": [
+    "weapon_0001",
+    "weapon_0002",
+    "weapon_0003",
+    "weapon_0004"
+  ],
+  "monsters": [
+    "mob_0001",
+    "mob_0002",
+    "mob_0003",
+    "mob_0004",
+    "mob_0005",
+    "mob_0006"
+  ],
+  "maps": [
+    "map_0001",
+    "map_0002",
+    "map_0003",
+    "map_0004",
+    "map_0005",
+    "map_0006",
+    "map_0007",
+    "map_0008",
+    "map_0009",
+    "map_0010",
+    "map_0011",
+    "map_0012",
+    "map_0013",
+    "map_0014",
+    "map_0015",
+    "map_0016",
+    "map_0017",
+    "map_0018",
+    "map_0019",
+    "map_0020"
+  ],
+  "fx": [
+    "arrow",
+    "coin",
+    "dust",
+    "explosion",
+    "hit_spark",
+    "magic_bolt",
+    "shuriken",
+    "slash_cast",
+    "slash_swing1",
+    "slash_swing2",
+    "slash_swing3"
+  ]
+}
