@@ -91,8 +91,19 @@ function skillReach(skill: SkillDef): number {
 
 /** 換目標的門檻：新的打怪點分數要超過目前目標的幾倍才換（避免兩群差不多時來回跑）。 */
 const SWITCH_RATIO = 1.25;
+/** 高低差在這以內算同一層 */
+const SAME_TIER_PX = 40;
+/**
+ * 留在這一層的門檻：這層走得到的怪至少這麼多隻。跟主動換層的門檻（別層至少 2 隻）一致：
+ * 用技能換到一層之後，會先把那層打完再走，不會一落地又走回原本那層。
+ */
+const DENSE_MIN = 2;
 /** 在同一層待超過這麼久，換層技能好了就主動換層（毫秒） */
 const TIER_STAY_MS = 8000;
+/** 用技能換到一層之後，至少在那層待這麼久（那層還有怪就打那層的，毫秒） */
+const TIER_COMMIT_MS = 6000;
+/** 剛到一層至少待這麼久才會再主動換層（毫秒） */
+const TIER_MIN_DWELL_MS = 1500;
 /** 到了打怪點之後大約要花多久出手、清怪（秒）；分數的分母加上這段，近的單隻怪才不會永遠贏過遠一點的一群。 */
 const ENGAGE_SEC = 1.2;
 /** 「附近」的範圍：同一足場這個距離內的怪，打完眼前這群可以接著打，算一部分價值。 */
@@ -190,6 +201,13 @@ export class AutoHunt {
   /** 主動換層：現在站的足場、從什麼時候開始站在這一層 */
   private tierGround: number | null = null;
   private tierSince = 0;
+  /** 這一層有怪物密集區（pickTarget 算的）：有的話不會因為別層怪差不多多就換層 */
+  private denseHere = false;
+  /** 上一次站在地上時的高度：換層時立刻重新選目標 */
+  private lastGroundY: number | null = null;
+  /** 最近一次按下換層技能的時間、用技能換層後要留在新的一層到什麼時候 */
+  private hopAt = -Infinity;
+  private tierCommitUntil = 0;
   private readonly blacklist = new Map<number, number>();
   /** 沒有進行中的邊卻掛在繩上：往哪個方向爬下來 */
   private looseClimb: { up: boolean; lastY: number; stillMs: number } | null = null;
@@ -218,6 +236,8 @@ export class AutoHunt {
     this.reachableCount = 0;
     this.targetScore = 0;
     this.leaving = false;
+    this.lastGroundY = null;
+    this.tierGround = null;
     this.blacklist.clear();
     this.looseClimb = null;
     this.status = 'search';
@@ -241,6 +261,13 @@ export class AutoHunt {
 
     if (this.leaving) return this.goToPortal(ctx);
 
+    // 換到另一層（技能位移、跳躍、爬繩）：立刻重新選目標，不要拿著舊的那層的目標又走回去
+    if (this.lastGroundY !== null && Math.abs(body.y - this.lastGroundY) > SAME_TIER_PX) {
+      this.retargetMs = 0;
+      // 是技能帶過來的：在這一層至少待 TIER_COMMIT_MS
+      if (this.clock - this.hopAt < 2500) this.tierCommitUntil = this.clock + TIER_COMMIT_MS;
+    }
+    this.lastGroundY = body.y;
     this.retargetMs -= dt;
     if (!this.target || !this.target.alive || this.retargetMs <= 0) {
       this.pickTarget(ctx);
@@ -265,6 +292,7 @@ export class AutoHunt {
     const proactive = this.proactiveHop(ctx);
     if (proactive) {
       this.status = 'travel';
+      this.hopAt = this.clock;
       return input(proactive.press);
     }
 
@@ -275,6 +303,7 @@ export class AutoHunt {
       const hop = this.tierSkill(ctx, this.target);
       if (hop) {
         this.status = 'travel';
+        this.hopAt = this.clock;
         return input(hop.press);
       }
       // 跟選怪用同一套「以時間計」的路線：選的時候估多遠，就照那條路走
@@ -316,8 +345,11 @@ export class AutoHunt {
         }
       }
       const best = Math.max(0, ...there.values());
-      const stayed = this.clock - this.tierSince > TIER_STAY_MS;
-      if (best >= 2 && (best >= here * 0.8 || stayed)) return entry;
+      const dwell = this.clock - this.tierSince;
+      const stayed = dwell > TIER_STAY_MS;
+      // 這層有密集區就先打完（只在待太久時換層）；剛到一層至少待 TIER_MIN_DWELL_MS，避免一落地又跳走、來回彈
+      if (dwell < TIER_MIN_DWELL_MS) continue;
+      if (best >= 2 && ((!this.denseHere && best >= here * 0.8) || stayed)) return entry;
     }
     return null;
   }
@@ -414,11 +446,19 @@ export class AutoHunt {
       if (list) list.push(m);
       else byFoothold.set(fh, [m]);
     }
+    // 先看這一層：有怪物密集區就留在這層打，這層沒有密集區才考慮走去別層（SPEC §3.6）
+    const sameTier = (fh: number, m: MonsterActor) => fh === body.ground || Math.abs((ctx.world.footholdY(fh, m.x) ?? m.y) - body.y) <= SAME_TIER_PX;
+    const here = [...byFoothold].flatMap(([fh, list]) => list.filter((m) => sameTier(fh, m)));
+    // 這一層還有 DENSE_MIN 隻以上走得到的怪：留在這層打完；只剩 1 隻或沒有了，才走去別層。
+    // 剛用技能換到這一層：TIER_COMMIT_MS 內只要這層還有怪就留下
+    const stayOnTier = here.length >= DENSE_MIN || (here.length >= 1 && this.clock < this.tierCommitUntil);
+    this.denseHere = stayOnTier;
     let best: { m: MonsterActor; score: number } | null = null;
     let current = -Infinity;
     for (const [fh, list] of byFoothold) {
       const route = routes.get(fh)!;
       for (const m of list) {
+        if (stayOnTier && !sameTier(fh, m)) continue;
         // 遠程職業站在射程內就能打，不用走到怪旁邊
         const walk = Math.max(0, Math.abs(m.x - route.x) - standOff(reach)) / PHYSICS.runSpeed;
         const score = this.spotValue(m, list, window) / (route.time + walk + (m.flying ? 0.6 : 0) + ENGAGE_SEC);
@@ -539,8 +579,12 @@ export class AutoHunt {
     if (this.config.useSkills) {
       const behind = this.roomBehind(ctx);
       const keepWithin = standOff(reach) + 40;
-      for (const { skill, press, ready } of ctx.skills) {
+      // 貴的技能先放（價格高 = 範圍大、殺得多，SPEC §3.1）；同價照技能列順序
+      const byPrice = [...ctx.skills].sort((a, b) => (b.skill.price ?? 1) - (a.skill.price ?? 1));
+      for (const { skill, press, ready } of byPrice) {
         if (!ready) continue;
+        // 換層技能（昇龍斬、瞬移術）只拿來換層（tierSkill／proactiveHop）：打怪時放會被帶去怪最多的那層（通常是地面）
+        if (skill.move?.kind === 'tierLeap' || skill.move?.kind === 'tierBlink') continue;
         // 往後退的技能（後撤射擊、後空翻）：身後要有空間，退完也還在出手距離內才放。
         // 不然每放一次就要走回來，遠程職業會被一路推回牆角，或從平台邊緣掉下去
         const backoff = backoffOf(skill);
@@ -549,7 +593,11 @@ export class AutoHunt {
         const reach = skillReach(skill);
         const inRange = [...ctx.monsters].filter((m) => m.alive && (m.x - body.x) * body.facing >= -60 && Math.abs(m.x - body.x) <= reach + 20 && Math.abs(m.y - body.y) < 80).length;
         const worth = inRange >= 1 && (strike.maxTargets <= 1 || skill.chain !== undefined || inRange >= 2 || target.math?.tier === 'elite' || target.math?.tier === 'boss');
-        if (worth) return input(press);
+        if (worth) {
+          // 影襲之類會瞬移的連鎖：結束時落在哪一層，就照技能換層的規則留在那層
+          if (skill.chain?.blink) this.hopAt = this.clock;
+          return input(press);
+        }
       }
     }
     return input({ attack: true });

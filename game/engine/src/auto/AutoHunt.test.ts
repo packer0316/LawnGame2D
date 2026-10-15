@@ -196,6 +196,41 @@ describe('自動掛機', () => {
     expect(casted).toBe(true);
   });
 
+  it('換層後這一層有怪物密集區：留在這層打，不會走去別層怪更多的地方', () => {
+    // 角色在平台 fh2；平台上 3 隻（密集），地面 6 隻（更多）
+    const onPlatform = [220, 260, 300].map((x, i) => monster(1 + i, x, 330, 2));
+    const onGround = [420, 450, 480, 510, 540, 570].map((x, i) => monster(10 + i, x, 400, 1));
+    const result = hunt([...onPlatform, ...onGround], { x: 240, y: 330 }, 60 * 8);
+    expect(result.hits.slice(0, 3).sort()).toEqual([1, 2, 3]);
+  });
+
+  it('這一層沒有密集區（只剩 1 隻）：才走去別層的怪群', () => {
+    const lone = monster(1, 220, 330, 2);
+    const onGround = [420, 450, 480, 510].map((x, i) => monster(10 + i, x, 400, 1));
+    const result = hunt([lone, ...onGround], { x: 340, y: 330 }, 60 * 12);
+    expect(result.hits[0]).not.toBe(1);
+  });
+
+  it('同時有好幾個技能可以放：先放最貴的', () => {
+    const auto = new AutoHunt();
+    const player = new Player(world, 240, 400, warrior, skills, { pose: () => 300, motion: () => 0 }, avatar, { onStrike() {} });
+    const pack = [250, 262, 274, 286, 298].map((x, i) => monster(1 + i, x, 400, 1));
+    const cheap = skills.get('skill_0007')!; // 突刺衝鋒
+    const pricey = skills.get('skill_0004')!; // 旋風斬
+    expect(pricey.price ?? 1).toBeGreaterThan(cheap.price ?? 1);
+    const entries = [
+      { skill: cheap, press: { skill: 3 }, ready: true },
+      { skill: pricey, press: { skill: 0 }, ready: true },
+    ];
+    let pressed = -1;
+    for (let i = 0; i < 30 && pressed < 0; i += 1) {
+      const input = auto.step({ world, nav, map, player, monsters: pack, basic: skills.get(warrior.basic)!, skills: entries });
+      if (input.skill >= 0) pressed = input.skill;
+      player.step(world, { ...input, skill: -1, attack: false });
+    }
+    expect(pressed).toBe(0);
+  });
+
   it('打不到的怪不會卡住，改打別隻', () => {
     // 飛太高的怪（跳不到）＋地面的怪
     const targets = [monster(1, 400, 150, null), monster(2, 200, 400, 1)];
