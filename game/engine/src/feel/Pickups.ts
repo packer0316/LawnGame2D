@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import type { ContentBundle } from '../content/bundle';
 import { WEAPON_BY_ID } from '../inventory/catalog';
 import type { LootItem } from '../inventory/model';
+import { LOOT_SCROLL_KEY, LOOT_SCROLL_COLORS } from '../inventory/scrollArt';
 import { DEPTH } from '../map/MapView';
 import { SheetAnimator, frameName } from '../render/sheets';
 
@@ -13,6 +14,8 @@ interface Pickup {
   animator: SheetAnimator | null;
   /** 物品底下的光暈 */
   glow: Phaser.GameObjects.Ellipse | null;
+  /** 光暈的高度（貼著地板） */
+  glowY: number;
   x: number;
   y: number;
   vx: number;
@@ -34,8 +37,10 @@ const GRAVITY = 900;
 const MAGNET_ACCEL = 2600;
 const MAGNET_MAX = 900;
 const COLLECT_DISTANCE = 12;
+/** 掉落武器圖示的最長邊（px） */
+const WEAPON_SIZE = 40;
 
-const SCROLL_COLORS: Record<number, number> = { 10: 0xffcf5a, 60: 0x6fc7ff, 90: 0x8be08a };
+const SCROLL_SIZE = 34;
 
 /**
  * 掉落物（SPEC §4.6）：金幣、武器、卷軸從怪物身上噴出 → 落到地板 → 漂浮 1–1.5 秒 → 被吸到玩家身上。
@@ -78,15 +83,20 @@ export class Pickups {
       const key = def ? `wardrobe-${def.kind}` : '';
       if (!def || !this.scene.textures.exists(key)) return;
       sprite = this.scene.add.image(x, y, key, String(def.frame));
-      sprite.setScale(26 / Math.max(sprite.width, sprite.height));
+      // 武器：最長邊 40px、斜 45 度躺著，比卷軸醒目
+      sprite.setScale(WEAPON_SIZE / Math.max(sprite.width, sprite.height)).setAngle(45);
       color = 0xffd86a;
     } else {
-      sprite = this.scene.add.image(x, y, this.scrollTexture(loot.rate));
-      color = SCROLL_COLORS[loot.rate] ?? 0xffffff;
+      if (!this.scene.textures.exists(LOOT_SCROLL_KEY)) return;
+      sprite = this.scene.add.image(x, y, LOOT_SCROLL_KEY, String(loot.rate));
+      sprite.setScale(SCROLL_SIZE / Math.max(sprite.width, sprite.height));
+      color = LOOT_SCROLL_COLORS[loot.rate] ?? 0xffffff;
     }
     sprite.setDepth(DEPTH.fx + 2).setVisible(false);
-    const glow = this.scene.add.ellipse(x, floorY - 2, 26, 7, color, 0.35).setDepth(DEPTH.fx + 1).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
-    this.add(sprite, null, glow, x, y, floorY - 14, -120, (Math.random() - 0.5) * 120, -260);
+    const weapon = loot.kind === 'weapon';
+    const glow = this.scene.add.ellipse(x, floorY - 2, weapon ? 38 : 32, weapon ? 9 : 7, color, 0.35).setDepth(DEPTH.fx + 1).setBlendMode(Phaser.BlendModes.ADD).setVisible(false);
+    // 斜放的武器外框約 30px 高：中心抬高一點才不會插進地板
+    this.add(sprite, null, glow, x, y, floorY - (weapon ? 19 : 20), -120, (Math.random() - 0.5) * 120, -260, floorY - 2);
   }
 
   /** 每個畫面；頓幀時 frozen = true，全部停住。 */
@@ -146,7 +156,7 @@ export class Pickups {
 
       p.sprite.setPosition(Math.round(p.x), Math.round(p.y));
       if (p.glow) {
-        p.glow.setVisible(p.phase !== 'magnet').setPosition(Math.round(p.x), Math.round(p.restY + 12));
+        p.glow.setVisible(p.phase !== 'magnet').setPosition(Math.round(p.x), Math.round(p.glowY));
         p.glow.setAlpha(0.25 + Math.sin(this.elapsed / 180) * 0.1);
       }
       return true;
@@ -168,8 +178,9 @@ export class Pickups {
     delayMs: number,
     vx: number,
     vy: number,
+    glowY = restY + 12,
   ): void {
-    this.items.push({ sprite, animator, glow, x, y, vx, vy, restY, phase: 'fall', delayMs, floatMs: 0, floatFor: 1000 + Math.random() * 500, bob: Math.random() * Math.PI * 2, baseScale: sprite.scaleX });
+    this.items.push({ sprite, animator, glow, glowY, x, y, vx, vy, restY, phase: 'fall', delayMs, floatMs: 0, floatFor: 1000 + Math.random() * 500, bob: Math.random() * Math.PI * 2, baseScale: sprite.scaleX });
   }
 
   private destroy(p: Pickup): void {
@@ -177,20 +188,4 @@ export class Pickups {
     p.glow?.destroy();
   }
 
-  /** 卷軸圖示（程式畫）：捲起來的羊皮紙，中間的帶子用成功率的顏色。 */
-  private scrollTexture(rate: number): string {
-    const key = `loot-scroll-${rate}`;
-    if (this.scene.textures.exists(key)) return key;
-    const g = this.scene.make.graphics({ x: 0, y: 0 }, false);
-    const color = SCROLL_COLORS[rate] ?? 0xffffff;
-    g.fillStyle(0x6b4a2b, 1).fillRoundedRect(1, 3, 20, 14, 3);
-    g.fillStyle(0xf1e3bd, 1).fillRect(4, 4, 14, 12);
-    g.fillStyle(0xd9c48f, 1).fillRect(4, 13, 14, 2);
-    g.fillStyle(color, 1).fillRect(9, 3, 4, 14);
-    g.fillStyle(0x8b6a3e, 1).fillRect(0, 2, 3, 16).fillRect(19, 2, 3, 16);
-    g.lineStyle(1, 0x3a2614, 1).strokeRoundedRect(0.5, 2.5, 21, 15, 3);
-    g.generateTexture(key, 22, 20);
-    g.destroy();
-    return key;
-  }
 }

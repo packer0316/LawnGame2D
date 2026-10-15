@@ -1,7 +1,10 @@
 import * as Phaser from 'phaser';
 import { WEAPON_ART, SCABBARD_ART } from './art';
 import { isSceneAlive } from '../render/sheets';
+import { loadLootScrollArt } from './scrollArt';
 export async function loadInventoryArt(scene: Phaser.Scene): Promise<void> {
+  if (!isSceneAlive(scene)) return;
+  await loadLootScrollArt(scene);
   if (!isSceneAlive(scene)) return;
   const art = { ...WEAPON_ART, scabbard: SCABBARD_ART };
   const pending = Object.entries(art).filter(([kind]) => !scene.textures.exists(`wardrobe-${kind}`));
