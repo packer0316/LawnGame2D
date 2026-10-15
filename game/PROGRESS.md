@@ -38,6 +38,8 @@
 
 ## 決策紀錄
 
+- 2026-10-15：新增全職業共用套服欄位與「蒼影忍裝」（`game/assets/outfits/ninja/README.md`）。7 張原畫涵蓋同一角色全部 15 組／67 格基礎動作、12 組／96 格技能動作，握把遮擋與殘影跟隨套服。舊存檔自動補上首套收藏，武器、金幣與卷軸保留；套服不佔武器格、不衝卷、不增加戰力。150 測試、typecheck、build 與桌面／手機換裝、重載保存、四職業全姿勢檢查通過。
+
 - 2026-10-15：主題怪物美術已接入 20 張地圖，每圖 4 種、共 80 種，分小型／中型／飛行／大型，各有 idle 2、move 4、hit 2、die 4 格。`game/assets/monsters/README.md` 保存名冊與個性；`applyThemedRosters` 僅裝飾遊戲 bundle，保留原始 content 與倍率分布，換房只留該房圖集。Web 啟用 `themedMonsters`，編輯器預覽不受影響。已通過 146 測試、typecheck、build，以及 Chrome 20 房／80 隻／320 組動作檢查。
 
 - 2026-10-15：content/ 檔名與 Aseprite frame 命名照 STUDIO_SPEC §8.1。

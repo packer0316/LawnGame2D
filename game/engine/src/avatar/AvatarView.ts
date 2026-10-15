@@ -16,15 +16,16 @@ import { HERO_MOTIONS_KEY, heroMotionsSheet } from './motions';
 import { motionDuration } from './motions';
 import type { WeaponDefinition } from '../inventory/catalog';
 import { weaponRig } from '../inventory/weaponRig';
+import { NINJA_BASE, NINJA_MOTIONS } from './outfits';
 
-/** 角色需要的內容：人物 sheet 與武器部件。 */
+/** 角色需要的內容：原始人物 sheet 與武器部件；套服另由遊戲美術包提供。 */
 export interface AvatarContent {
   base: SheetAsset;
   items: Map<string, { item: AvatarItem; sheet: SheetAsset }>;
 }
 
 /**
- * 角色：四職業共用同一個人物，只換武器（SPEC v0.6 §4.3）。
+ * 角色：四職業共用同一個人物，武器與全身套服獨立換裝。
  * 每幀擺放由 @lawn/shared 的 composeAvatarFrame 計算（武器對齊 hand、weapon_back 對齊 torso），
  * 這裡只負責對到 Sprite。原點在腳底；美術面向左，facing = 1（右）時水平翻轉。
  */
@@ -42,6 +43,9 @@ export class AvatarView extends Phaser.GameObjects.Container {
   private readonly motionAnimator = new SheetAnimator(heroMotionsSheet);
   private motionOn = false;
   private cosmetic: WeaponDefinition | null = null;
+  private outfit: string | null = null;
+  private get base(): SheetAsset { return this.outfit === 'ninja-1' ? NINJA_BASE : this.content.base; }
+  private get motionKey(): string { return this.outfit === 'ninja-1' ? NINJA_MOTIONS.path : HERO_MOTIONS_KEY; }
   private readonly cosmeticSprite: Phaser.GameObjects.Sprite;
   /** body 合圖沒有獨立前手時，重畫握柄處的手掌，保留手指遮擋。 */
   private readonly gripOccluder: Phaser.GameObjects.Sprite;
@@ -77,13 +81,13 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 目前畫面上的整體動畫幀（殘影用）；沒有在播時為 null。 */
   get motionFrame(): { key: string; frame: string } | null {
-    if (this.motionOn && this.cosmetic) return { key: this.content.base.path, frame: frameName('body', this.animator.frame) };
-    return this.motionOn ? { key: HERO_MOTIONS_KEY, frame: frameName(null, this.motionAnimator.frame) } : null;
+    if (this.motionOn && this.cosmetic) return { key: this.base.path, frame: frameName('body', this.animator.frame) };
+    return this.motionOn ? { key: this.motionKey, frame: frameName(null, this.motionAnimator.frame) } : null;
   }
 
   /** 播放技能整體動畫；素材沒有這個 Tag（或圖還沒載入）時回傳 false，呼叫端改播紙娃娃動作。 */
   playMotion(tag: string, options: { speed?: number; loop?: boolean } = {}): boolean {
-    if (!this.scene.textures.exists(HERO_MOTIONS_KEY) || !this.motionAnimator.play(tag, { restart: true, loop: options.loop ?? false })) return false;
+    if (!this.scene.textures.exists(this.motionKey) || !this.motionAnimator.play(tag, { restart: true, loop: options.loop ?? false })) return false;
     this.motionAnimator.speed = options.speed ?? 1;
     this.motionOn = true;
     if (this.cosmetic) {
@@ -129,10 +133,21 @@ export class AvatarView extends Phaser.GameObjects.Container {
     return this;
   }
 
+  /** One full-body costume shared across classes; keep both animation clocks intact. */
+  setOutfit(id: string | null): this {
+    const next = id === 'ninja-1' ? id : null;
+    if (this.outfit === next) return this;
+    this.outfit = next;
+    this.textureKeys.set('base', this.base.path);
+    this.dirty = true;
+    this.refresh();
+    return this;
+  }
+
   /** 換武器（null = 空手）。 */
   setLoadout(loadout: AvatarLoadout): this {
     const parts: AvatarPart[] = [];
-    const keys = new Map<string, string>([['base', this.content.base.path]]);
+    const keys = new Map<string, string>([['base', this.base.path]]);
     const entry = loadout.weapon ? this.content.items.get(loadout.weapon) : undefined;
     if (entry) {
       parts.push({ item: entry.item, sheet: entry.sheet.sheet });
@@ -168,7 +183,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
     if (this.motionOn && !this.cosmetic) {
       this.gripOccluder.setVisible(false);
       for (const sprite of this.sprites.values()) sprite.setVisible(false);
-      this.motionSprite.setTexture(HERO_MOTIONS_KEY, frameName(null, this.motionAnimator.frame)).setVisible(true);
+      this.motionSprite.setTexture(this.motionKey, frameName(null, this.motionAnimator.frame)).setVisible(true);
       this.dirty = true; // 回到紙娃娃時重畫
       return;
     }
@@ -177,7 +192,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
     if (!this.dirty && f === this.lastFrame) return;
     this.lastFrame = f;
     this.dirty = false;
-    const ops = composeAvatarFrame(this.content.base.sheet, this.resolved, f);
+    const ops = composeAvatarFrame(this.base.sheet, this.resolved, f);
     const byLayer = new Map(ops.map((op) => [op.layer, op]));
     for (const layer of AVATAR_LAYERS) {
       const sprite = this.sprites.get(layer)!;
@@ -222,7 +237,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
       const coverGrip = rig.plane === 'front' && !hasFrontArm && def.kind !== 'claw' && !rig.sheathed;
       this.gripOccluder.setVisible(coverGrip);
       if (coverGrip) {
-        this.gripOccluder.setTexture(this.content.base.path, frameName('body', f))
+        this.gripOccluder.setTexture(this.base.path, frameName('body', f))
           .setCrop(hand.x - 4, hand.y - 4, 8, 9);
         this.bringToTop(this.gripOccluder);
       }

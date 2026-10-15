@@ -1,12 +1,13 @@
 import type { ClassId } from '@lawn/shared';
+import { OUTFITS, OUTFIT_BY_ID } from './outfits';
 import { BAG_CAPACITY, BASE_SELL_VALUE, DROP_RULES, SCROLL_RATES, SCROLL_RULES, UPGRADE_SLOTS, WEAPONS, WEAPON_BY_ID, type ScrollRate } from './catalog';
 
 export interface WeaponInstance { uid: string; definitionId: string; slotsLeft: number; successes: number; bonusValue: number }
-export interface InventoryState { items: WeaponInstance[]; equipped: Partial<Record<ClassId, string>>; scrolls: Record<ScrollRate, number>; nextId: number; demoGranted: boolean }
+export interface InventoryState { items: WeaponInstance[]; equipped: Partial<Record<ClassId, string>>; outfits: string[]; equippedOutfit: string | null; scrolls: Record<ScrollRate, number>; nextId: number; demoGranted: boolean }
 export interface InventoryProfile { version: 1; balance: number; inventory: InventoryState }
 export interface InventoryFeedback { id: number; kind: 'equipped' | 'success' | 'failed' | 'destroyed' | 'sold' | 'bought' | 'drop' | 'error'; message: string }
 export interface InventorySnapshot { inventory: InventoryState; feedback?: InventoryFeedback; storageError?: boolean }
-export type InventoryAction = { type: 'equip'; uid: string } | { type: 'unequip'; classId: ClassId } | { type: 'sell'; uid: string } | { type: 'upgrade'; uid: string; rate: ScrollRate } | { type: 'buyScroll'; rate: ScrollRate } | { type: 'demoCollection' } | TestToolAction;
+export type InventoryAction = { type: 'equipOutfit'; outfitId: string } | { type: 'unequipOutfit' } | { type: 'equip'; uid: string } | { type: 'unequip'; classId: ClassId } | { type: 'sell'; uid: string } | { type: 'upgrade'; uid: string; rate: ScrollRate } | { type: 'buyScroll'; rate: ScrollRate } | { type: 'demoCollection' } | TestToolAction;
 /** 設定面板的測試工具：不看模式、不限次數。 */
 export type TestToolAction = { type: 'grantAllWeapons' } | { type: 'grantScrolls'; count: number } | { type: 'reset' };
 export const sellValue = (w: WeaponInstance): number => BASE_SELL_VALUE + w.bonusValue;
@@ -17,7 +18,7 @@ export function addWeapon(state: InventoryState, definitionId: string): WeaponIn
   return item;
 }
 export function newProfile(balance = 100000): InventoryProfile {
-  const inventory: InventoryState = { items: [], equipped: {}, scrolls: { 10: 3, 60: 3, 90: 3 }, nextId: 1, demoGranted: false };
+  const inventory: InventoryState = { items: [], equipped: {}, outfits: OUTFITS.map(o => o.id), equippedOutfit: null, scrolls: { 10: 3, 60: 3, 90: 3 }, nextId: 1, demoGranted: false };
   for (const kind of ['sword', 'staff', 'bow', 'claw']) addWeapon(inventory, `${kind}-1`);
   return { version: 1, balance, inventory };
 }
@@ -29,6 +30,12 @@ export function parseProfile(raw: string | null): InventoryProfile | null {
     if (!p || p.version !== 1 || !integer(p.balance)) return null;
     const s = p.inventory;
     if (!s || !Array.isArray(s.items) || s.items.length > BAG_CAPACITY || !integer(s.nextId) || s.nextId < 1 || typeof s.demoGranted !== 'boolean' || !s.equipped || !s.scrolls) return null;
+    // Existing v1 saves receive the first outfit without resetting weapons, coins or scrolls.
+    if (s.outfits === undefined && s.equippedOutfit === undefined) {
+      s.outfits = OUTFITS.map(o => o.id); s.equippedOutfit = null;
+    }
+    if (!Array.isArray(s.outfits) || new Set(s.outfits).size !== s.outfits.length || s.outfits.some(id => !OUTFIT_BY_ID.has(id))) return null;
+    if (s.equippedOutfit !== null && (typeof s.equippedOutfit !== 'string' || !s.outfits.includes(s.equippedOutfit))) return null;
     const ids = new Set<string>();
     for (const w of s.items) {
       if (!w || !/^weapon-\d+$/.test(w.uid) || Number(w.uid.slice(7)) >= s.nextId || ids.has(w.uid) || !WEAPON_BY_ID.has(w.definitionId) || !integer(w.slotsLeft) || !integer(w.successes) || w.slotsLeft + w.successes > UPGRADE_SLOTS || !integer(w.bonusValue) || w.bonusValue > w.successes * 5000) return null;
@@ -45,6 +52,16 @@ export function parseProfile(raw: string | null): InventoryProfile | null {
 export function inventoryAction(profile: InventoryProfile, action: InventoryAction, random: () => number, allowDemo = false): Omit<InventoryFeedback, 'id'> {
   const s = profile.inventory;
   const result = (kind: InventoryFeedback['kind'], message: string) => ({ kind, message });
+  if (action.type === 'equipOutfit') {
+    const outfit = OUTFIT_BY_ID.get(action.outfitId);
+    if (!outfit || !s.outfits.includes(outfit.id)) return result('error', '尚未擁有這套套服。');
+    s.equippedOutfit = outfit.id;
+    return result('equipped', `已穿上${outfit.name}，所有職業共用。`);
+  }
+  if (action.type === 'unequipOutfit') {
+    s.equippedOutfit = null;
+    return result('equipped', '已換回森境旅人原裝。');
+  }
   if (action.type === 'demoCollection') {
     if (!allowDemo || s.demoGranted) return result('error', '展示收藏只限開發模式領取一次。');
     const missing = WEAPONS.filter((d) => !s.items.some((w) => w.definitionId === d.id));

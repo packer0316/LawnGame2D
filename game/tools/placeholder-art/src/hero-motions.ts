@@ -47,7 +47,7 @@ function readSource(name: string): Canvas {
   return result;
 }
 
-function cellsOf(image: Canvas) {
+export function cellsOf(image: Canvas) {
   // 刀尖與披風可跨過名義格線；以連通主體分離，避免切斷武器。
   const visited=new Uint8Array(image.width*image.height);
   const groups: { pixels:number[];x:number;y:number;w:number;h:number }[]=[];
@@ -87,7 +87,7 @@ function cellsOf(image: Canvas) {
 }
 
 /** 固定倍率、alpha 加權面積採樣；僅切格與對齊，沒有改畫原始角色。 */
-function stamp(target: Canvas, source: Canvas, offset: Point, scale: number): void {
+export function stamp(target: Canvas, source: Canvas, offset: Point, scale: number): void {
   const w = Math.ceil(source.width * scale), h = Math.ceil(source.height * scale);
   for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
     let r=0,g=0,b=0,a=0,n=0;

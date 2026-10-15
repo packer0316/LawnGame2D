@@ -11,7 +11,8 @@ export type { GameServer, MonsterSpawn, Snapshot, AttackReq, AttackResult } from
 export { LocalServer } from './server/LocalServer';
 export * from './inventory/catalog';
 export * from './inventory/model';
-export { WEAPON_ART, MERCHANT_ART } from './inventory/art';
+export * from './inventory/outfits';
+export { WEAPON_ART, MERCHANT_ART, OUTFIT_ART } from './inventory/art';
 export { loadContentBundle, type ContentBundle } from './content/bundle';
 export type {
   AvatarPreviewHandle,

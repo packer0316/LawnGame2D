@@ -20,6 +20,7 @@ import { Player, type PlayerInput } from '../actor/Player';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
 import { loadHeroMotions, motionDuration } from '../avatar/motions';
+import { loadOutfitArt } from '../avatar/outfits';
 import { loadInventoryArt } from '../inventory/loadArt';
 import { WEAPON_BY_ID } from '../inventory/catalog';
 import type { InventorySnapshot } from '../inventory/model';
@@ -181,6 +182,7 @@ export class GameScene extends Phaser.Scene {
     ]);
     await loadHeroMotions(this);
     await loadInventoryArt(this);
+    await loadOutfitArt(this);
     await SkillFx.preload(this);
     if (this.dead) return;
     this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1 });
@@ -642,11 +644,12 @@ export class GameScene extends Phaser.Scene {
     this.showToast(`切換職業：${classDef.name}`);
   }
 
-  /** 人物固定，只換成這個職業的武器（SPEC v0.6 §4.3）。 */
+  /** 職業武器分開保存，套服則由所有職業共用。 */
   private applyLoadout(): void {
     const classDef = this.bundle.classes.get(this.classId)!;
     this.avatar.setLoadout({ weapon: classDef.weapon });
     const state = this.inventoryState?.inventory;
+    this.avatar.setOutfit(state?.equippedOutfit ?? null);
     const item = state?.items.find((w) => w.uid === state.equipped[this.classId]);
     this.avatar.setCosmeticWeapon(item ? WEAPON_BY_ID.get(item.definitionId) ?? null : null);
   }

@@ -3,6 +3,27 @@ import { BAG_CAPACITY, SCROLL_RATES, SCROLL_RULES, WEAPONS } from './catalog';
 import { addWeapon, inventoryAction, newProfile, parseProfile, rollLoot, sellValue } from './model';
 
 describe('cosmetic weapon economy', () => {
+  it('migrates existing saves without changing weapons or currency, and persists the shared outfit', () => {
+    const p = newProfile(12345);
+    inventoryAction(p, {type:'equip',uid:p.inventory.items[0]!.uid}, () => 0);
+    const old = JSON.parse(JSON.stringify(p)); delete old.inventory.outfits; delete old.inventory.equippedOutfit;
+    const migrated = parseProfile(JSON.stringify(old))!;
+    expect(migrated).toEqual(p);
+    const weaponState = JSON.stringify({items:migrated.inventory.items,equipped:migrated.inventory.equipped,scrolls:migrated.inventory.scrolls,balance:migrated.balance});
+    expect(inventoryAction(migrated,{type:'equipOutfit',outfitId:'ninja-1'},()=>{throw new Error('No combat/economy roll for clothes');}).kind).toBe('equipped');
+    expect(parseProfile(JSON.stringify(migrated))?.inventory.equippedOutfit).toBe('ninja-1');
+    expect(JSON.stringify({items:migrated.inventory.items,equipped:migrated.inventory.equipped,scrolls:migrated.inventory.scrolls,balance:migrated.balance})).toBe(weaponState);
+    inventoryAction(migrated,{type:'unequipOutfit'},()=>0); expect(migrated).toEqual(p);
+  });
+  it('rejects unknown, duplicate or unowned outfits without changing a valid profile', () => {
+    const p = newProfile(), before=JSON.stringify(p);
+    expect(inventoryAction(p,{type:'equipOutfit',outfitId:'missing'},()=>0).kind).toBe('error');
+    expect(JSON.stringify(p)).toBe(before);
+    p.inventory.outfits=[];
+    expect(inventoryAction(p,{type:'equipOutfit',outfitId:'ninja-1'},()=>0).kind).toBe('error');
+    p.inventory.equippedOutfit='ninja-1'; expect(parseProfile(JSON.stringify(p))).toBeNull();
+    p.inventory.outfits=['ninja-1','ninja-1']; expect(parseProfile(JSON.stringify(p))).toBeNull();
+  });
   it('has ten distinct skins per class with no combat modifiers', () => {
     expect(new Set(WEAPONS.map((w) => w.id)).size).toBe(40);
     for (const c of ['warrior', 'mage', 'archer', 'assassin']) expect(WEAPONS.filter((w) => w.classId === c)).toHaveLength(10);
