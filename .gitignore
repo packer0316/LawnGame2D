@@ -16,3 +16,6 @@ game/art-review/
 
 # build-sfx.py 下載的音效來源快取
 game/.sfx-cache/
+
+# updateRelease.bat 產生的部署暫存（頁面檔、給 Claude 的指示、上傳結果）
+game/web/release/

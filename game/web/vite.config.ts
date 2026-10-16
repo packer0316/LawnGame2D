@@ -74,6 +74,8 @@ function bundleContent(): Plugin {
 }
 
 export default defineConfig({
+  // 相對路徑：建置結果放在任何子路徑（例如 claude.ai Artifact）都讀得到 JS、圖、音效與 content/
+  base: './',
   plugins: [
     react(),
     bundleContent(),
