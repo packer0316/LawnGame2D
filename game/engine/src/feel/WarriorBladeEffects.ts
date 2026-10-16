@@ -16,6 +16,8 @@ interface MoonBlade{
   sprite:Phaser.GameObjects.Sprite;ctx:SkillFxContext;dir:1|-1;
   age:number;artAge:number;start:number;end:number;duration:number;
   holdMs:number;recoverMs:number;contactCooldown:number;hit:Set<string>;
+  /** 判定已經掃到哪裡（age） */
+  checkedAge:number;
 }
 
 /** One continuous spin and one outward pair per cast, sampled on the gameplay clock. */
@@ -24,6 +26,8 @@ export class WarriorBladeEffects{
   private waves:MoonBlade[]=[];
   private sparks:{graphic:Phaser.GameObjects.Graphics;age:number}[]=[];
   private holyIssued=false;
+  /** 聖劍斬劍氣碰到的怪（id），GameScene 每幀取走來算命中 */
+  private holyContacts:string[]=[];
   constructor(private scene:Phaser.Scene,private onMoonImpact:(point:FxPoint)=>void=()=>{}){}
   get count():number{return (this.spin?.halves.length??0)+this.waves.length+this.sparks.length;}
   begin(skillId:string):void{
@@ -52,7 +56,7 @@ export class WarriorBladeEffects{
         .setDepth(DEPTH.fx).setDisplaySize(size,size).setFlipX(dir===-1).setAlpha(0);
       this.waves.push({sprite,ctx,dir,age:0,artAge:0,start,end,
         duration:Math.max(300,Math.abs(end-start)/Math.max(1,ctx.bounds.w)*1450),
-        holdMs:0,recoverMs:0,contactCooldown:0,hit:new Set()});
+        holdMs:0,recoverMs:0,contactCooldown:0,hit:new Set(),checkedAge:0});
     }
   }
   step(dt:number):void{
@@ -78,17 +82,22 @@ export class WarriorBladeEffects{
       const travel=moving-.55*(beforeRecovery**3-w.recoverMs**3)/(3*MOON_RECOVER_MS**2);
       const previous=w.age;w.age+=travel;
       const xAt=(age:number)=>w.start+(w.end-w.start)*clamp(age/w.duration);
-      // Sweep at most 24 px per sample, so low FPS cannot skip a small monster.
-      if(moving>0&&w.contactCooldown===0&&w.age>65){
-        const steps=Math.max(1,Math.ceil(Math.abs(xAt(w.age)-xAt(previous))/24));
+      // 判定（聖劍斬只打劍氣碰到的怪）：從上次檢查到的位置一路掃到現在，每步最多 24 px，
+      // 低 FPS 或卡肉冷卻中都不會漏掉。卡肉（停頓、火花、震動）才有冷卻。
+      if(moving>0&&w.age>65){
+        const from=w.checkedAge,to=w.age;
+        const steps=Math.max(1,Math.ceil(Math.abs(xAt(to)-xAt(from))/24));
         for(let i=1;i<=steps;i++){
-          const age=previous+(w.age-previous)*i/steps;
+          const age=from+(to-from)*i/steps;
+          w.checkedAge=age;
           const contacts=(w.ctx.targetsAt?.(xAt(age),w.sprite.y,96)??[])
             .filter(t=>!w.hit.has(this.targetKey(t)));
           if(!contacts.length)continue;
-          for(const t of contacts)w.hit.add(this.targetKey(t));
-          w.age=age;w.holdMs=MOON_HOLD_MS;w.recoverMs=MOON_RECOVER_MS;w.contactCooldown=180;
+          for(const t of contacts){w.hit.add(this.targetKey(t));if(t.id!==undefined)this.holyContacts.push(t.id);}
           for(const t of contacts.slice(0,4))this.moonSpark(t,w.dir);
+          // 卡肉只在這一幀走過的範圍內停（不把刀拉回冷卻中已經走過的地方）
+          if(w.contactCooldown>0||age<previous)continue;
+          w.age=age;w.checkedAge=age;w.holdMs=MOON_HOLD_MS;w.recoverMs=MOON_RECOVER_MS;w.contactCooldown=180;
           this.onMoonImpact(contacts[0]!);break;
         }
       }
@@ -99,6 +108,10 @@ export class WarriorBladeEffects{
         .setAlpha(clamp(w.age/70)*clamp((w.duration-w.age)/150));
       return true;
     });
+  }
+  /** 取走劍氣新碰到的怪（每隻每把劍氣只會出現一次）。 */
+  takeHolyContacts():string[]{
+    const ids=this.holyContacts;this.holyContacts=[];return ids;
   }
   private targetKey(t:FxPoint):string{return t.id??`${Math.round(t.x/32)}:${Math.round(t.y/32)}`;}
   private moonSpark(t:FxPoint,dir:1|-1):void{
@@ -131,7 +144,7 @@ export class WarriorBladeEffects{
     this.clearHoly();
   }
   private clearHoly():void{
-    this.waves.forEach(w=>w.sprite.destroy());this.waves=[];this.holyIssued=false;
+    this.waves.forEach(w=>w.sprite.destroy());this.waves=[];this.holyIssued=false;this.holyContacts=[];
     this.sparks.forEach(s=>s.graphic.destroy());this.sparks=[];
   }
 }

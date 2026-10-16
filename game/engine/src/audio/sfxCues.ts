@@ -136,12 +136,15 @@ export const SFX_CUES: Record<string, SfxCue> = {
   // 隕石天降：天空閃光 → 一陣陣隕石爆炸
   'cast:skill_0042': [...ULT_RISE, { s: 'charge_long', gain: -11 }, { s: 'fire_roar', gain: -9, at: 300 }],
   'fx:meteorShower': [{ s: 'explosion', gain: -4 }, { s: CRUNCH, gain: -7 }, { s: 'fire_hit', gain: -9 }, FINALE],
-  // 死神召喚：黑暗低鳴 → 法陣 → 死神現身 → 鐮刀橫掃與黑暗爆裂
+  // 死神召喚：抬頭凝視 → 蓄力留拍 → 唯一一刀 → 短促加速魂爆。
   'cast:skill_0043': [{ s: 'sub_drop', gain: -6 }, { s: 'dark_drone', gain: -9 }],
-  'cue:summonCircle': [{ s: 'dark_portal', gain: -4 }, { s: 'charge_long', gain: -15, rate: 0.6 }],
-  'cue:reaper': [{ s: 'shade_3', gain: -4 }, { s: 'dark_drone', gain: -7, rate: 0.8 }],
-  'fx:reaperSweep': [{ s: 'swing_heavy', gain: -2, rate: 0.7 }, { s: 'whoosh', gain: -6, rate: 0.6 }, { s: SHADE, gain: -12 }],
-  'fx:darkBurst': [{ s: 'explosion_low', gain: -4 }, { s: 'dark_drone', gain: -11, rate: 1.3 }, FINALE],
+  'hit:skill_0043': [], // 魂爆每拍只保留專屬脆響，避免職業命中音與怪群音蓋掉節奏。
+  'cue:reaperGaze': [{ s: 'shade_3', gain: -7, rate: .78, jitter: 0 }, { s: 'sub_drop', gain: -11 }],
+  'cue:reaperCharge': [{ s: 'charge_short', gain: -9, rate: .8 }, { s: 'dark_portal', gain: -13 }],
+  'cue:reaperCut': [{ s: 'swing_heavy', gain: -2, rate: .75, jitter: 0 }, { s: 'whoosh', gain: -7, rate: .7 }],
+  'cue:reaperSouls': [{ s: 'shade_1', gain: -12, rate: 1.1 }],
+  'fx:reaperSoulHit': [{ s: 'punch_h_2', gain: -4, rate: 1.28, jitter: 0 }, { s: 'glass_h_1', gain: -10, rate: 1.35, jitter: 0 }],
+  'fx:reaperSoulFinal': [{ s: 'explosion_low', gain: -4 }, { s: 'glass_h_2', gain: -6, rate: .85 }, FINALE],
 
   // ---------------------------------------------------------------- 弓箭手
   'launch:archer': [{ s: ['bow_release', 'bow_snap'], gain: -4 }, { s: 'arrow_loose', gain: -11, at: 10 }],

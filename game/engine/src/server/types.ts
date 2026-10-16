@@ -3,6 +3,7 @@
  */
 
 import type { InventoryAction, InventorySnapshot, LootItem } from '../inventory/model';
+import type { NetMob } from '../net/protocol';
 
 export interface MonsterSpawn {
   uid: number;
@@ -63,7 +64,8 @@ export interface ChangeRoomReq {
 export interface ServerEvents {
   inventory: InventorySnapshot;
   monsterSpawn: MonsterSpawn;
-  monsterRemove: { uid: number };
+  /** killed = 被打死（多人連線時是別的玩家打死的，播死亡動畫但沒有派彩）；否則直接消失 */
+  monsterRemove: { uid: number; killed?: boolean };
   balance: { balance: number };
   feature: { type: 'bomb'; uid: number; x: number; y: number; results: AttackResult['results'] };
   wave: { phase: 'warning' | 'start' | 'end'; endsAt?: number };
@@ -79,4 +81,13 @@ export interface GameServer {
   setBalance(balance: number): number;
   on<K extends keyof ServerEvents>(event: K, handler: (data: ServerEvents[K]) => void): () => void;
   dispose(): void;
+
+  // ---- 多人連線（SPEC §5.5）：怪物由一位玩家（主機）負責，錢包與擊殺判定各自算 ----
+  /** true = 跟隨主機（不自己生怪）；false = 自己當主機（補滿生怪區） */
+  setFollower(on: boolean): void;
+  readonly isFollower: boolean;
+  /** 跟隨者：怪物清單換成主機的（dead = 被打死的、ignore = 自己剛打死還沒確認的） */
+  syncFromHost(mobs: readonly NetMob[], dead: ReadonlySet<number>, ignore: ReadonlySet<number>): void;
+  /** 主機：別的玩家打死了這隻；還活著就移除並排重生，回傳 true */
+  confirmRemoteKill(uid: number): boolean;
 }

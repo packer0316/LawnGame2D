@@ -21,6 +21,9 @@ import {GRASP_SKILL} from './InfernalGraspTiming';
 import {PhoenixAwakening} from './PhoenixAwakening';
 import {loadPhoenixAwakeningArt} from './PhoenixAwakeningArt';
 import {PHOENIX_SKILL} from './PhoenixAwakeningTiming';
+import { ReaperSummon } from './ReaperSummon';
+import { loadReaperSummonArt } from './ReaperSummonArt';
+import { REAPER_SKILL } from './ReaperSummonTiming';
 import { loadWarriorBladeArt } from './WarriorBladeArt';
 import { WarriorBladeEffects } from './WarriorBladeEffects';
 import { sfx } from '../audio/Sfx';
@@ -91,8 +94,7 @@ export class SkillFx {
   private readonly lights = new Set<Phaser.GameObjects.Light>();
   private readonly kit: SkillVfxKit;
   private readonly audio: SkillAudio;
-  private activeReaper: Phaser.GameObjects.Sprite | null = null;
-  private reaperBeat=0;
+  private reaperSummon: ReaperSummon | null = null;
   private tiger:TigerSummon|null=null;
   private storm:AssassinStorm|null=null;
   private moon:MoonExecution|null=null;
@@ -107,6 +109,7 @@ export class SkillFx {
 
   static async preload(scene: Phaser.Scene): Promise<void> {
     await loadSkillAtlases(scene);
+    await loadReaperSummonArt(scene);
     await loadMoonExecutionArt(scene);
     await loadInfernalGraspArt(scene);
     await loadPhoenixAwakeningArt(scene);
@@ -129,11 +132,12 @@ export class SkillFx {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + (this.grasp?.count??0) + (this.phoenix?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
+  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.reaperSummon?.count ?? 0) + (this.moon?.count??0) + (this.grasp?.count??0) + (this.phoenix?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
     this.warriorBlades.begin(skill.id);
+    if(skill.id===REAPER_SKILL){this.reaperSummon?.destroy();this.reaperSummon=new ReaperSummon(this.scene,ctx);return;}
     if(skill.id===MOON_SKILL){this.moon?.destroy();this.moon=new MoonExecution(this.scene,ctx,this.audio);return;}
     if(skill.id===GRASP_SKILL){this.grasp?.destroy();this.grasp=new InfernalGrasp(this.scene,ctx);return;}
     if(skill.id===PHOENIX_SKILL){this.phoenix?.destroy();this.phoenix=new PhoenixAwakening(this.scene,ctx);return;}
@@ -166,7 +170,6 @@ export class SkillFx {
       const seal=this.track(createSkillWeapon(this.scene,kind,ctx.x,ctx.y-CHEST,85)).setAlpha(.25);
       this.fade(seal,chargeMs,{scaleX:seal.scaleX*.4,scaleY:seal.scaleY*.4});
     }
-    if(skill.id==='skill_0043'){this.reaperBeat=0;this.kit.cinematic(skill.strikes.at(-1)!.atMs+1400);}
     if(skill.ultimate)this.kit.veil(palette.shadow,Math.min(650,skill.strikes[0]!.atMs),.3);
   }
 
@@ -197,6 +200,7 @@ export class SkillFx {
 
   contact(skill: SkillDef,index: number,ctx: SkillFxContext): ReturnType<typeof impactFeel> {
     const feel=impactFeel(skill,index);
+    if(skill.id===REAPER_SKILL){this.reaperSummon?.contact(ctx.targets,index,feel.last);return feel;}
     if(skill.id===MOON_SKILL){this.moon?.contact(ctx.targets,feel.last);return feel;}
     if(skill.id===GRASP_SKILL){this.grasp?.contact(ctx.targets,index,feel.last);return feel;}
     if(skill.id===PHOENIX_SKILL){this.phoenix?.contact(ctx.targets,index,feel.last);return feel;}
@@ -285,14 +289,13 @@ export class SkillFx {
         return this.swordRain(ctx);
       case 'meteorShower':
         return this.meteorShower(ctx);
-      case 'summonCircle':
-        return this.summonCircle(ctx);
-      case 'reaper':
-        return this.reaper(ctx);
-      case 'reaperSweep':
-        return this.reaperSweep(ctx);
-      case 'darkBurst':
-        return this.darkBurst(ctx);
+      case 'reaperGaze':
+      case 'reaperCharge':
+      case 'reaperCut':
+      case 'reaperSouls':
+      case 'reaperSoulHit':
+      case 'reaperSoulFinal':
+        return; // 死神演出用固定時鐘取格；魂爆由 contact() 與實際命中同步。
       case 'arrowVolley':
         return this.arrowVolley(ctx);
       case 'screenArrowRain':
@@ -350,16 +353,8 @@ export class SkillFx {
     this.ring(x,y,10,90*power,0xffd789,2,300,.5);
   }
 
-  /** Mage-only vertical spirit tears and rising soul motes. */
-  private soulRift(x:number,y:number,power:number):void {
-    const size=(90+power*40)*rand(.9,1.1);
-    const soul=this.sequence('soul',x,y+24,size).setOrigin(.5,.85).setFlipX(this.reaperBeat%2===0).setAlpha(.92);
-    this.scene.tweens.add({targets:soul,y:soul.y-26,duration:440,ease:'Sine.Out'});
-    this.kit.glow(x,y,0xb56eff,100*power,250,.4);
-    this.kit.burst(x,y,0xb283ff,power,5,-Math.PI/2);
-  }
-
   clear(): void {
+    this.reaperSummon?.destroy();this.reaperSummon=null;
     this.warriorBlades.clear();
     this.moon?.destroy();this.moon=null;
     this.grasp?.destroy();this.grasp=null;
@@ -369,9 +364,7 @@ export class SkillFx {
     this.tiger?.destroy();this.tiger=null;
     this.storm?.destroy();this.storm=null;
     this.goldContacts=[];
-    this.activeReaper = null;
     this.activeDragon = null;
-    this.reaperBeat=0;
     this.kit.clear();
     this.audio.clear();
     const objects = [...this.objects];
@@ -467,6 +460,8 @@ export class SkillFx {
 
   /** Called before Player.step so presentation and strike positions share one fixed clock. */
   step(dt:number):void {
+    this.reaperSummon?.step(dt);
+    if(this.reaperSummon&&!this.reaperSummon.active)this.reaperSummon=null;
     this.warriorBlades.step(dt);
     this.moon?.step(dt);
     if(this.moon&&!this.moon.active)this.moon=null;
@@ -483,6 +478,8 @@ export class SkillFx {
 
   tigerHitRect(index:number):Rect|null {return this.tiger?.hitRect(index)??null;}
   phoenixTargetIds(index:number):string[]{return this.phoenix?.targetIds(index)??[];}
+  /** 聖劍斬：劍氣新碰到的怪（id）；只有碰到的才算命中。 */
+  takeHolyContacts():string[]{return this.warriorBlades.takeHolyContacts();}
   tigerFloorAt(x:number):number|null {return this.tiger?.floorAt(x)??null;}
   get tigerImpactX():number|undefined{return this.tiger?.sprite.x;}
 
@@ -778,72 +775,6 @@ export class SkillFx {
       const land = ctx.groundAt(x, area.y + rand(0, area.h * 0.6)) ?? ctx.y;
       this.fallingMeteor(x - 160, land - 420, x, land - 10, 180 + rand(0, 140), rand(0.9, 1.5), true);
     }
-  }
-
-  /** 死神召喚（cue）：前方地面出現法陣與光柱，持續到技能結束。 */
-  private summonCircle(ctx: SkillFxContext): void {
-    const x = ctx.x + ctx.facing * 200;
-    const ground = ctx.groundAt(x, ctx.y - 40) ?? ctx.y;
-    this.sequence('arcane',x,ground-12,245).setDisplaySize(245,85).setTint(0xc298ff);
-    const circle = this.gfx(x, ground - 4);
-    circle.lineStyle(3, 0xb07cff, 0.9).strokeCircle(0, 0, 110).strokeCircle(0, 0, 84);
-    const star = [0, 1, 2, 3, 4, 5].map((i) => ({ x: Math.cos((i / 6) * Math.PI * 2) * 84, y: Math.sin((i / 6) * Math.PI * 2) * 84 }));
-    circle.lineStyle(2, 0xe0c8ff, 0.9).strokeTriangle(star[0]!.x, star[0]!.y, star[2]!.x, star[2]!.y, star[4]!.x, star[4]!.y);
-    circle.strokeTriangle(star[1]!.x, star[1]!.y, star[3]!.x, star[3]!.y, star[5]!.x, star[5]!.y);
-    circle.setScale(0.2, 0.07);
-    this.scene.tweens.add({ targets: circle, scaleX: 1, scaleY: 0.35, duration: 260, ease: 'Back.Out' });
-    // Keep the seal horizontal on the ground; rotating a squashed object tilts the entire plane.
-    this.fade(circle, 300, {}, ctx.remainingMs);
-    this.kit.glow(x,ground-120,0x9b6bff,310,650,.45);
-    this.kit.burst(x,ground-8,0xc79dff,2,24,-Math.PI/2);
-    this.flash(x, ground - 60, 0xb07cff, 240, 2.2, ctx.remainingMs);
-  }
-
-  /** 死神（cue）：巨大的死神從法陣升起，舉著鐮刀，等下一刀時揮出。 */
-  private reaper(ctx: SkillFxContext): void {
-    const x = ctx.x + ctx.facing * 200;
-    const ground = ctx.groundAt(x, ctx.y - 40) ?? ctx.y;
-    this.kit.veil(0x160b2c,650,.32);
-    this.kit.smoke(x,ground,0x573079,3);
-    this.activeReaper?.destroy();
-    const reaper=this.track(this.scene.add.sprite(x,ground+8,atlasKey('reaper'),0))
-      .setOrigin(.5,1).setDepth(DEPTH.fx-1).setFlipX(ctx.facing===-1).setDisplaySize(360,360);
-    this.activeReaper=reaper;
-    reaper.once(Phaser.GameObjects.Events.DESTROY,()=>{if(this.activeReaper===reaper)this.activeReaper=null;});
-    reaper.play({key:`${atlasKey('reaper')}-summon`,duration:Math.max(120,ctx.leadMs)});
-    // The strike callbacks advance the poses. Hit stop cannot make the scythe swing early.
-    // Fallback cleanup also covers interrupted/cancelled skills.
-    this.fade(reaper,180,{},ctx.remainingMs+700);
-  }
-
-  /** 死神揮鐮：一道橫跨畫面的暗紫弧光，整張地圖的怪身上都出現斬痕。 */
-  private reaperSweep(ctx: SkillFxContext): void {
-    this.reaperBeat++;
-    this.activeReaper?.play({key:`${atlasKey('reaper')}-sweep`,duration:190});
-    const view = ctx.view;
-    const g = this.gfx(view.x + view.w / 2, ctx.y + 90);
-    drawBladeArc(g,view.w*.55,Math.PI*1.08,Math.PI*1.92,0xb17bff,28);
-    g.setScale(1,this.reaperBeat%2?.35:.48).setAlpha(.85);
-    this.fade(g, 260, { scaleY:.45 });
-    for (const t of ctx.targets)this.soulRift(t.x,t.y,1);
-    this.skyFlash(0x8f5bd6);
-  }
-
-  /** 死神爆發：畫面蒙上暗紫，整張地圖的怪身上都炸開。 */
-  private darkBurst(ctx: SkillFxContext): void {
-    this.kit.endCinematic();
-    const reaper=this.activeReaper;
-    if(reaper){reaper.play(`${atlasKey('reaper')}-dissolve`);this.fade(reaper,260);}
-    const view = ctx.view;
-    const veil = this.gfx(view.x, view.y, false);
-    veil.fillStyle(0x2a0f45, 0.45).fillRect(0, 0, view.w, view.h);
-    this.fade(veil, 420);
-    for (const p of ctx.targets) {
-      this.soulRift(p.x,p.y,1.8);
-      this.kit.burst(p.x,p.y,0xb685ff,.9,8);
-      this.ring(p.x, p.y, 6, 46, 0xe0c8ff, 3, 300);
-    }
-    this.skyFlash(0xb07cff);
   }
 
   /** 萬箭齊發（cue）：往天上射出一排箭。 */

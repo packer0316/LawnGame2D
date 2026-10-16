@@ -21,7 +21,7 @@ try {
    scene.skillFx.begin=(skill,ctx)=>{window.starts.push(skill.id);begin(skill,ctx);};
    scene.skillFx.play=(name,ctx)=>{window.fxEvents.push(name);play(name,ctx);};
    scene.events.on('postupdate',()=>{
-     const r=scene.skillFx.activeReaper;
+     const r=scene.skillFx.reaperSummon?.body;
      if(r&&!window.reaperFrames.includes(Number(r.frame.name)))window.reaperFrames.push(Number(r.frame.name));
      window.maxFx=Math.max(window.maxFx,scene.skillFx.count);
    });
@@ -29,13 +29,13 @@ try {
  const classes=JSON.parse(fs.readFileSync('../content/class/classes.json','utf8')).classes;
  // Reaper first, before other skills remove its targets.
  await page.keyboard.press('7');
- await page.waitForTimeout(1050);
+ await page.waitForTimeout(850);
  await page.screenshot({path:'art-review/reaper-ready-final.png'});
- await page.waitForTimeout(200);
+ await page.waitForTimeout(1400);
  await page.screenshot({path:'art-review/reaper-cut-final.png'});
  await page.waitForTimeout(2800);
  const frames=await page.evaluate(()=>window.reaperFrames);
- assert.deepEqual([...frames].sort((a,b)=>a-b),Array.from({length:12},(_,i)=>i),'all twelve reaper poses actually played');
+ assert.deepEqual([...frames].sort((a,b)=>a-b),Array.from({length:8},(_,i)=>i),'single-swing reaper poses actually played');
  for(const cls of classes){
    await page.evaluate(id=>window.reviewScene.command({type:'setClass',classId:id}),cls.id);
    for(let slot=0;slot<cls.skills.length;slot++){
@@ -64,10 +64,11 @@ try {
  await page.evaluate(()=>{
    const s=window.reviewScene,skill=s.bundle.skills.get('skill_0043');
    const ctx=s.fxContext(skill,skill.strikes[0].area,[],null,700);
-   s.skillFx.play('reaper',{...ctx,leadMs:400});
-   s.command({type:'changeRoom',roomId:2});
+   s.skillFx.begin(skill,ctx);
+   window.nextReviewRoom=s.bundle.rooms.find(r=>r.id!==s.stats().room).id;
+   s.command({type:'changeRoom',roomId:window.nextReviewRoom});
  });
- await page.waitForFunction(()=>window.__lawnStats().room===2);
+ await page.waitForFunction(()=>window.__lawnStats().room===window.nextReviewRoom);
  await page.waitForTimeout(2000);
  assert.equal(await page.evaluate(()=>window.__lawnStats().skillFx),0);
 }finally{await browser.close();}

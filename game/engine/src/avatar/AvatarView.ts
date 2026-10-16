@@ -85,6 +85,11 @@ export class AvatarView extends Phaser.GameObjects.Container {
     return this.motionOn;
   }
 
+  /** 正在播的技能整體動畫 Tag（多人連線送給別人看）；沒在播為 null。 */
+  get motionTag(): string | null {
+    return this.motionOn ? this.motionAnimator.tag : null;
+  }
+
   /** 目前畫面上的整體動畫幀（殘影用）；沒有在播時為 null。 */
   get motionFrame(): { key: string; frame: string } | null {
     if (this.motionOn && this.cosmetic) return { key: this.base.path, frame: frameName('body', this.animator.frame) };

@@ -23,9 +23,9 @@ try {
  await page.keyboard.press('7');
  await page.waitForTimeout(850);
  await page.screenshot({path:'art-review/reaper-summon.png'});
- await page.waitForTimeout(300);
+ await page.waitForTimeout(1400);
  await page.screenshot({path:'art-review/reaper-sweep.png'});
- await page.waitForTimeout(600);
+ await page.waitForTimeout(1100);
  await page.screenshot({path:'art-review/reaper-dissolve.png'});
  await page.waitForTimeout(2000);
  const report=await page.evaluate(async()=>{

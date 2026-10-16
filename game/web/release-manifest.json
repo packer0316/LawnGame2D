@@ -1,8 +1,8 @@
 {
  "url": "https://claude.ai/artifact/NTjSKzmHiqXQzyPyk1cU5j",
  "page": {
-  "script": "./assets/index-CTcsPCQ9.js",
-  "style": "./assets/index-CmjTRlSG.css"
+  "script": "./assets/index-C6E2GNKa.js",
+  "style": "./assets/index-DB_aPi0k.css"
  },
  "files": {
   "assets/angel-DOK9Vtdk.mp3": "f775910319a245aa509ca4054a9dee5efc438614",
@@ -76,8 +76,8 @@
   "assets/ice_break-_Avcnbln.mp3": "019767723d53b91c10e4e654c0aa0bb632c48314",
   "assets/ice_hit-CwotWQY_.mp3": "3e06c03d30ef33cf5de14367578ae4e2e535e690",
   "assets/ice_shatter-C86D3xI4.mp3": "5c35263eb0c2fbdce8069766a26728484ebf1857",
-  "assets/index-CmjTRlSG.css": "3113e7ffe80fcb97d6f672eba56a57757d55f4ad",
-  "assets/index-CTcsPCQ9.js": "7013c9dc187dfeb43801e9668305679f50c6d085",
+  "assets/index-C6E2GNKa.js": "f46f0ac49ed50e5d5d26bcbd9ae89649cb3b4c87",
+  "assets/index-DB_aPi0k.css": "8fda91fd1dab1944d97edd1fd91d841cd8cbe9a3",
   "assets/jump-CW1iNJNR.mp3": "b19fe822c86b922acb3f220b461c57281c10302a",
   "assets/land_heavy-CUerS61m.mp3": "6c8d18a6beaf8190dd23f672f5486e29b7af01d8",
   "assets/lightning-sequence-v4-CNtXhrmy.png": "b336ce6ca4e053c23bbea5174fe56e56c210d494",
@@ -127,6 +127,7 @@
   "assets/poof-2-9ZtLNu.mp3": "80fe08b6ae9d355b806bdfcb8e67f837d32a7694",
   "assets/portrait-v1-Bt9oAzhK.png": "9b84407671cde7eef2a75337d67b23f91b203763",
   "assets/portrait-v1-CvhgEP8X.png": "afe0921cfcdf61fd112763b1c6491f667f6abff1",
+  "assets/portrait-v1-Dj2npHEw.png": "3fdcd4d6e4f1d695a256b39948a6043c43d27675",
   "assets/portrait-v1-o1R_RpmA.png": "7d7ef96ae184708db91cee28fc360056ac6f1bcf",
   "assets/power_up-jbZ3mp4L.mp3": "2b30ac75be661b4ef67525e1e17752fe4bb703da",
   "assets/puff-DovTnFp2.mp3": "c94d4cff5878332afcbef689ce7beff9f45a88cc",
@@ -142,13 +143,13 @@
   "assets/punch_m_5-DtK3b1E8.mp3": "fecd1a1a1a4e10783d47a5a149334d8e0f44fbf0",
   "assets/rare-beasts-v2-Dg3Wozre.webp": "a0d1a4c16cd2e75863535200f21cd7b92d824174",
   "assets/razor-sequence-v7-txw0p32v.png": "db3fc1f3d0e2b524ec4500683492c86abd71a72c",
-  "assets/reaper-sequence-NpxKqEi-.png": "97750809fd416231a76505be6aca60bd7a9cb702",
   "assets/rend-sequence-v7-Cegvm-Xg.png": "f3b870c0dc4407e7ef27e09edce20f008ffbe2b9",
   "assets/riser-BoUTzYx0.mp3": "5adac9e688b150161e8a99fd1ac7c644da923edb",
   "assets/riser_2-CM8R5Z4_.mp3": "199c1996d92e44fa24af776f0d2bfab48cc34acc",
   "assets/rock-Btt38krs.mp3": "9898e0202d15858bf825c96d473bac9086ca01f5",
   "assets/rumble-vtcGm3Ft.mp3": "dc9b8a62739fa711b0316802c79ab8e8b4080e48",
   "assets/scabbards-v1-CYd-bF6F.png": "cddc33449beea515b064dd85d14590d85186f46a",
+  "assets/scythe-v1-Ds5WiKuv.png": "d753db6d1951620a3aff777308f330c8c410be95",
   "assets/shade_1-BcLtHZB4.mp3": "36061cab2c9a99ba8324717e4ed2e9b3206d1b8e",
   "assets/shade_2-B-eCH-4B.mp3": "4166b5bca7cba0d835afe07bf9ae2b7cb3edbd21",
   "assets/shade_3-B7UNOzUX.mp3": "52aee35561be7f7739a78cddb3ae57e8f3ca9bff",
@@ -247,7 +248,7 @@
   "content/bgm/bgm_ruins.mp3": "fefd6c89d3674c2183df8e014117a07ff29e3d7b",
   "content/class/bet-levels.json": "17814eb0ffa9f909cc8d2d6862a12a40c1fd6e2b",
   "content/class/classes.json": "21c194dcbe7e9b1281ace6edab23f53e0a623e2a",
-  "content/class/skills.json": "cf4fa299148466bb0c6e5a47994dee188cf3f111",
+  "content/class/skills.json": "87caa979429a40fc851bb05a89e53ca06ecee366",
   "content/fx/arrow.png": "5171330b52fad642d75fcf7765968ae4730fe903",
   "content/fx/arrow.sheet.json": "2491d3c4def0b8ed5b935e7a04049c9beb5e9303",
   "content/fx/coin.png": "51c45d460324dae02d9e962b087eabb4681777d6",

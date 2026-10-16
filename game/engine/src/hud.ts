@@ -1,6 +1,7 @@
 import type { ClassId } from '@lawn/shared';
 import type { InventoryAction, InventorySnapshot } from './inventory/model';
 import type { AutoConfig, AutoStatus } from './auto/AutoHunt';
+import type { AutoReportView } from './auto/AutoReport';
 import type { ComboState } from './feel/ComboTracker';
 
 export type { AutoConfig, AutoStatus };
@@ -35,7 +36,7 @@ export interface HudState {
   classId: ClassId;
   classes: { id: ClassId; name: string }[];
   mode: GameMode;
-  /** 技能列（鍵盤 1–8）：slot 0 起算，key 是按鍵 */
+  /** 技能列（鍵盤 2–9，1 是普攻）：slot 0 起算，key 是按鍵 */
   skills: (HudSkill & { slot: number; key: string; ultimate: boolean })[];
   /** 常駐小技能（X） */
   secondary?: HudSkill;
@@ -45,7 +46,13 @@ export interface HudState {
   autoConfig: AutoConfig;
   /** 本次掛機：開始到現在的輸贏與時間 */
   autoSession?: { net: number; elapsedMs: number };
+  /** 掛機紀錄：本次（或上一次）掛機的財產曲線與掉落；停止後保留到下次開始。從沒掛過機時沒有 */
+  autoReport?: AutoReportView;
   fps: number;
+  /** 多人連線：這一房目前的人數（含自己）；單人時沒有 */
+  online?: number;
+  /** 多人連線的權限被拒絕（畫面上給一個按鈕重新開啟） */
+  netDenied?: boolean;
   toast?: { id: number; text: string };
   /** 畫面左側的得獎紀錄：獎金、裝備、卷軸，最新的在最後；每筆 4 秒後消失（大獎不再另外全螢幕顯示） */
   feed?: HudFeedEntry[];
@@ -72,5 +79,7 @@ export type GameCommand =
   | { type: 'toggleAuto' }
   | { type: 'setAutoConfig'; config: AutoConfig }
   | { type: 'setMode'; mode: GameMode }
+  /** 多人連線被拒絕時：打開平台的權限面板，開啟後重新連線 */
+  | { type: 'netPermissions' }
   | { type: 'setBalance'; balance: number }
   | { type: 'toggleDebug' };

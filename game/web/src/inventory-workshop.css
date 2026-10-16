@@ -1,0 +1,136 @@
+/* 固定工坊高度，各欄獨立捲動；卷軸與施作按鈕不跟著武器說明離開畫面。 */
+.inventory-window { height: min(850px, 94dvh); max-height: 94dvh; }
+.inventory-header { flex-shrink: 0; padding: 18px 26px; }
+.inventory-header h2 { font-size: 23px; margin: 5px 0; }
+.inventory-bottom { flex-shrink: 0; padding: 10px 24px; }
+.inventory-body { flex: 1; grid-template-columns: minmax(290px, 1.15fr) minmax(300px, 1fr) minmax(230px, .8fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.inventory-browse { display: contents; }
+.inventory-collection { grid-column: 1; grid-row: 1; min-height: 0; min-width: 0; overflow: auto; padding: 18px; }
+.inventory-tabs, .inventory-outfit-slot, .inventory-filters, .inventory-collection-footer { flex-shrink: 0; }
+.inventory-grid { flex: 1; min-height: 100px; max-height: none; }
+.inventory-collection-footer { padding-top: 8px; }
+.inventory-collection-footer p { margin: 4px 0; }
+.inventory-detail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 18px; overflow: hidden; }
+.inventory-detail-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #6d8268 transparent; }
+.inventory-merchant { grid-column: 3; grid-row: 1; min-height: 0; min-width: 0; overflow: auto; padding: 20px; }
+.inventory-collection, .inventory-grid, .inventory-merchant, .inventory-browse { overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #6d8268 transparent; }
+
+/* 上半部：武器與文字並排，回收價與換裝放在同一列。 */
+.inventory-weapon-summary { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 158px; }
+.inventory-weapon-summary .inventory-showcase { height: 158px; }
+.inventory-weapon-summary .weapon-art.large { width: 88px; height: 147px; }
+.inventory-weapon-summary .inventory-rune { font-size: 130px; }
+.inventory-weapon-kind { color: #b3b899; font-size: 10px; letter-spacing: 1.5px; }
+.inventory-weapon-copy h3 { font-size: 21px; line-height: 1.35; margin: 8px 0; overflow-wrap: anywhere; }
+.inventory-weapon-copy .inventory-description { min-height: 0; margin: 0; line-height: 1.8; }
+.inventory-weapon-copy .inventory-cosmetic { border: 0; padding: 0; margin: 10px 0 0; }
+.inventory-equip-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0 4px; padding-top: 12px; border-top: 1px solid #a1aa8533; }
+.inventory-equip-row .inventory-value { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin: 0; }
+.inventory-equip-row .inventory-value strong { font-size: 19px; }
+.inventory-equip-row .inventory-primary { width: auto; min-width: 110px; padding: 9px 10px; letter-spacing: .5px; }
+
+/* 下半部保持可見，選卷軸後直接施作。 */
+.inventory-forge { flex-shrink: 0; margin-top: 16px; padding: 14px; border: 1px solid #b6a57059; border-radius: 10px; background: linear-gradient(150deg, #b7a3630d, #07191680); box-shadow: inset 0 1px #ffebb50a; }
+.inventory-forge .inventory-scroll-heading { margin: 0 0 10px; gap: 6px; }
+.inventory-forge h4 { margin: 0; color: #eddaad; }
+.inventory-forge .inventory-scrolls { gap: 6px; }
+.inventory-forge .inventory-scrolls button { min-width: 0; padding: 7px 3px; }
+.inventory-forge .inventory-scrolls button .scroll-art { width: 52px; height: 52px; }
+.inventory-forge .inventory-scrolls strong { margin: 3px 0; font-size: 15px; }
+.inventory-forge .inventory-scrolls small { font-size: 10px; }
+.inventory-forge .inventory-slots { margin-top: 12px; }
+.inventory-forge .inventory-slots > div { margin: 7px 0 0; gap: 5px; }
+.inventory-forge .inventory-risk { margin: 10px 0; line-height: 1.7; }
+.hud .inventory-forge .upgrade { min-height: 40px; padding: 9px; border-color: #c9af6e; background: linear-gradient(110deg, #74633b, #4e5131); color: #fff0c2 !important; font-weight: 600; box-shadow: inset 0 1px #ffeabb26, 0 3px 8px #00171255; }
+.hud .inventory-forge .upgrade:not(:disabled):hover { background: linear-gradient(110deg, #8c7747, #66673c); }
+
+@media (max-width: 1000px) {
+  .inventory-body { grid-template-columns: minmax(220px, 1fr) minmax(270px, 1.15fr) minmax(195px, .85fr); }
+  .inventory-collection, .inventory-detail, .inventory-merchant { padding: 12px; }
+  .inventory-weapon-summary { grid-template-columns: 80px minmax(0, 1fr); gap: 8px; min-height: 146px; }
+  .inventory-weapon-summary .inventory-showcase { height: 146px; }
+  .inventory-weapon-summary .weapon-art.large { width: 78px; height: 130px; }
+  .inventory-weapon-copy h3 { font-size: 18px; }
+  .inventory-forge { padding: 10px; }
+  .inventory-forge .inventory-scrolls button .scroll-art { width: 44px; height: 44px; }
+}
+@media (max-width: 740px) {
+  .inventory-header { padding: 12px; gap: 10px; }
+  .inventory-header h2 { font-size: 17px; letter-spacing: 1px; }
+  .inventory-bottom { padding: 8px 10px; }
+  .inventory-body { grid-template-columns: minmax(128px, .7fr) minmax(0, 1fr); }
+  .inventory-browse { display: block; grid-column: 1; grid-row: 1; min-height: 0; min-width: 0; overflow: auto; }
+  .inventory-collection { overflow: visible; padding: 10px; }
+  .inventory-grid { flex: none; min-height: 0; max-height: 320px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inventory-collection-footer { font-size: 9px; }
+  .inventory-tabs button { font-size: 11px; }
+  .inventory-outfit-slot { flex-direction: column; align-items: flex-start; padding: 7px; }
+  .inventory-outfit-slot strong { font-size: 10px; }
+  .inventory-outfit-slot small { width: auto; font-size: 8px; }
+  .inventory-item-name { white-space: normal; text-align: center; line-height: 1.4; }
+  .inventory-grid .outfit-art { width: 54px; height: 54px; }
+  .inventory-merchant { overflow: visible; border-top: 1px solid #a1aa8533; padding: 10px; }
+  .inventory-merchant > h3 { font-size: 16px; letter-spacing: 0; }
+  .inventory-merchant .merchant-stage { height: 130px; }
+  .inventory-merchant .merchant-sprite { width: 130px; height: 130px; }
+  .inventory-merchant .merchant-halo { width: 100px; height: 100px; }
+  .inventory-merchant .merchant-dialogue { min-height: 0; padding: 8px; font-size: 10px; }
+  .inventory-merchant .merchant-shop > div { flex-wrap: wrap; gap: 4px; }
+  .inventory-merchant .merchant-shop button { margin-left: auto; }
+  .inventory-detail { padding: 10px; border-right: 0; }
+  .inventory-weapon-summary { grid-template-columns: 1fr; gap: 4px; min-height: 0; }
+  .inventory-weapon-summary .inventory-showcase { height: 136px; }
+  .inventory-weapon-copy h3 { margin: 5px 0; font-size: 17px; }
+  .inventory-weapon-kind { font-size: 9px; }
+  .inventory-weapon-copy .inventory-description { font-size: 10px; line-height: 1.6; }
+  .inventory-weapon-copy .inventory-cosmetic { margin-top: 5px; font-size: 9px; }
+  .inventory-equip-row { flex-wrap: wrap; gap: 8px; margin-top: 8px; padding-top: 8px; }
+  .inventory-equip-row .inventory-value { flex: 1; flex-direction: row; align-items: center; gap: 5px; font-size: 10px; }
+  .inventory-equip-row .inventory-value strong { font-size: 16px; }
+  .inventory-equip-row .inventory-primary { width: 100%; min-width: 0; padding: 7px; }
+  .inventory-forge { padding: 8px; margin-top: 10px; }
+  .inventory-forge .inventory-scroll-heading small { display: none; }
+  .inventory-forge .inventory-scrolls { gap: 4px; }
+  .inventory-forge .inventory-scrolls button .scroll-art { width: 36px; height: 36px; }
+  .inventory-forge .inventory-scrolls strong { font-size: 13px; }
+  .inventory-forge .inventory-scrolls small { font-size: 9px; }
+  .inventory-forge .inventory-risk { font-size: 10px; }
+  .inventory-forge .inventory-risk small { font-size: 9px; }
+}
+@media (max-width: 740px) and (max-height: 760px) {
+  .inventory-weapon-summary .inventory-showcase { height: 100px; }
+  .inventory-weapon-summary .weapon-art.large { width: 60px; height: 100px; }
+}
+/* 矮視窗優先保留卷軸與施作鈕，武器說明仍可獨立閱讀。 */
+@media (max-height: 650px) {
+  .inventory-header { padding-block: 10px; }
+  .inventory-header > div:first-child > .inventory-kicker, .inventory-header p { display: none; }
+  .inventory-header h2 { margin: 0; font-size: 19px; }
+  .inventory-bottom { padding-block: 7px; }
+  .inventory-detail { padding-block: 8px; }
+  .inventory-weapon-summary { min-height: 0; grid-template-columns: 64px minmax(0, 1fr); }
+  .inventory-weapon-summary .inventory-showcase { height: 106px; }
+  .inventory-weapon-summary .weapon-art.large { width: 60px; height: 100px; }
+  .inventory-forge { padding: 8px; margin-top: 8px; }
+  .inventory-forge .inventory-scroll-heading { margin-bottom: 6px; }
+  .inventory-forge .inventory-scrolls button { padding: 4px 2px; }
+  .inventory-forge .inventory-scrolls button .scroll-art { width: 30px; height: 30px; }
+  .inventory-forge .inventory-scrolls strong { font-size: 12px; margin: 2px 0; }
+  .inventory-forge .inventory-scrolls small { font-size: 9px; }
+  .inventory-forge .inventory-slots { margin-top: 7px; }
+  .inventory-forge .inventory-slots > div { margin-top: 4px; }
+  .inventory-forge .inventory-risk { margin: 6px 0; line-height: 1.5; }
+  .hud .inventory-forge .upgrade { min-height: 34px; padding: 6px; }
+}
+@media (max-height: 480px) {
+  .inventory-header { padding-block: 6px; }
+  .inventory-header h2 { font-size: 17px; }
+  .inventory-wallet strong { font-size: 17px; margin-top: 2px; }
+  .inventory-wallet small { font-size: 10px; }
+  .inventory-bottom { padding-block: 5px; font-size: 9px; }
+  .inventory-weapon-summary { grid-template-columns: 28px minmax(0, 1fr); gap: 6px; }
+  .inventory-weapon-summary .inventory-showcase { height: 40px; }
+  .inventory-weapon-summary .weapon-art.large { width: 24px; height: 40px; }
+  .inventory-weapon-kind, .inventory-weapon-copy .inventory-description, .inventory-weapon-copy .inventory-cosmetic { display: none; }
+  .inventory-weapon-copy h3 { font-size: 16px; margin: 0; }
+}

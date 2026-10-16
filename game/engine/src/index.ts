@@ -5,6 +5,7 @@ export type { CreateGameOptions, GameHandle } from './createGame';
 export { createGame, INTERNAL_HEIGHT } from './createGame';
 export type { AutoConfig, AutoStatus, GameCommand, GameMode, HudFeedEntry, HudSkill, HudState } from './hud';
 export { AUTO_ROOM, DEFAULT_AUTO_CONFIG } from './auto/AutoHunt';
+export type { AutoReportItem, AutoReportView } from './auto/AutoReport';
 export type { Action, SkillAction } from './core/input';
 export { SKILL_ACTIONS } from './core/input';
 export { SKILL_ICONS } from './ui/skillIcons';

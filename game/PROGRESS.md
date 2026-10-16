@@ -4,6 +4,27 @@
 
 ## 已完成
 
+### 2026-10-16：聖劍斬只打劍氣碰到的怪
+
+- 原本五刀都是全圖判定（整張地圖的怪都會被打）。改成命中由劍氣決定：`WarriorBladeEffects` 把劍氣新碰到的怪 id 排進佇列（`SkillFx.takeHolyContacts()`），GameScene `stepHoly()` 每個固定步長取走，碰到起每 180 ms 一刀、每隻吃滿 5 刀（扣款與機率跟原本一樣），同一刀一起打所有還沒打完的怪；時間軸上的五刀不再自己找目標。換房時清掉。
+- 劍氣碰撞改成從上次檢查到的位置一路掃到現在（每步 ≤24 px），卡肉冷卻中也記錄碰到的怪；卡肉停頓只在這一幀走過的範圍內發生，不會把刀拉回去。
+- 驗證：型別檢查、196 個測試；`art-review/holy-check.mjs` 在晨光森林連拍：命中音緊跟每次劍氣接觸，傷害數字只出在劍氣那條高度（最上層平台沒被打），遠處的怪等劍氣飛到才打。未部署。
+
+### 2026-10-16：掛機收益（SPEC v1.4）
+
+- `engine/src/auto/AutoReport.ts`：`AutoReportRecorder` 記一次掛機的財產曲線（6 小時內每秒一點，超過 21,600 點才隔點丟、間隔加倍）、高低點、掉落（同樣的合併 ×N，記每次時間與 id：武器 definitionId／`scroll-10`）；停止後保留到下次開始，存 localStorage `lawn.autoReport`（掛機中每 15 秒、掉落、開始／停止時存；讀回時還在掛機就當成在最後一點停止）。`shift()` 跟著改金錢／清空重置平移。測試 5 個。
+- GameScene：`setAuto` 開始／停止、每 100ms 取樣、擊殺掉落記錄，HUD 多 `autoReport`（`AutoReportView`，沒變時沿用同一份曲線）。
+- HUD：`AutoReportButton`（已掛機 10:39 +輸贏／上次掛機）浮在操作列上緣、對齊「冒險中」（`.auto-group` 中心，位置每次 render 由程式設定），點開 `AutoReportPanel` 從按鈕往上展開：狀態、四格數字、SVG 折線圖（時間級距 1分／5分／15分／1時／全部、每像素保留頭尾高低的抽樣、滑過看時間與財產、放大鈕開大圖）、裝備與卷軸清單（武器用 `WEAPON_ART` 圖格、卷軸用 `ScrollArt`；舊紀錄沒 id 用名稱找）。有按鈕時自動冒險設定往上挪（`.hud.has-auto-report`）。
+- 驗證：型別檢查、196 個測試；實際掛機 25 秒、停止後保留；`art-review/auto-report-check.mjs`（1400／1000／390 寬：按鈕對齊冒險中、面板不出畫面、5／5 物品圖、級距軸標、放大圖、Esc 先關大圖）。未部署。
+
+### 2026-10-16：全螢幕＋精簡操作列、技能列 1 是普攻（SPEC v1.3）
+
+- 遊戲畫面佔滿整個視窗：`App.tsx` 不再用 `setViewInsets` 替底欄留空間（介面還在，預設 0），鏡頭縮放 = 視窗高 ÷ 540。
+- 底部操作列縮成一列、半透明蓋在畫面上（`web/src/hud-compact.css`，在 hud.css／skill-art.css 之後載入）：職業（只留圖示）｜技能列｜押注＋持有金幣｜自動冒險｜背包。格子 52／46／40px，≤860px 技能列自己一排；≤1500px 隱藏左下操作提示。
+- 右上角加全螢幕按鈕（Fullscreen API，`expand`／`collapse` 圖示）。
+- 技能列九格：第 1 格普攻（`Digit1`／`Numpad1` → `attack`，按住連擊），職業技能移到 `2`–`9`（`skill1`–`skill8` 動作不變，HUD key = slot + 2）；拿掉 `Z`／`X` 鍵與兩顆按鈕。`secondary` 動作仍保留給自動冒險用（跟技能列同一個技能、共用冷卻）。`Ctrl` 仍是普攻。
+- 驗證：型別檢查、191 個測試；`art-review/fullscreen-check.mjs` 1914／1280／1000／900／390 寬截圖；`art-review/keys-check.mjs` 確認 Z／X 無作用、1 普攻、2 放第一個技能、9 放第八個。未部署。
+
 ### 2026-10-16：弓箭手「紫焰覺醒・鳳羽天劫」
 
 - 新增第 8 格 skill_0050：眼睛覺醒 → 上半身 → 場上朝天拉弓 → 紫焰鳳凰垂直出畫 → 左／右上角振翅。4 張專屬透明序列圖，共 52 幀；完整素材與提示詞見 [美術／接入紀錄](assets/skills/phoenix-awakening/README.md)。
@@ -108,6 +129,10 @@
 - 2026-10-16：掉落物落地修正（lawngame2d-12 改、遊戲 agent 同意）：原本落地高度固定用怪物死亡當下的 y，飛行怪的掉落物浮在半空、金幣噴到斜坡或平台外插進地面、斜 45 度的武器固定抬 19px 有高有低。`Pickups` 新增 `world`，掉落時用圖案下緣每 4px 一欄沿路徑 `findLanding` 找實際地板（牆擋住、往上噴穿過的單向平台不算），下緣形狀依不透明像素（含縮放、旋轉）量一次快取，漂浮時下緣離地 5±2.5px，光暈跟著正下方的地板；GameScene 只加 `this.pickups.world = () => this.world ?? null`。
 - 2026-10-16：使用者要大獎不要特別顯示，改成畫面左側的得獎紀錄：獎金、裝備、卷軸一行一行出來，最新的在最下面、舊的往上推，每行 4 秒後淡出，大獎用特殊色。`HudState.bigWin` 改為 `feed`（`HudFeedEntry`：coin／big／mega／super／weapon／scroll／warn），GameScene `addFeed` 記錄、`visibleFeed` 只送 4 秒內最多 8 行；`web/src/WinFeed.tsx` 顯示（新行高度從 0 展開讓舊行平滑上移，3.6 秒開始淡出）。掉落的「拾取：…」提示框拿掉（改在得獎紀錄），只留背包已滿的提醒。全螢幕 Big Win 畫面與樣式刪除，慢動作、震動、大獎音效保留。
 - 2026-10-16：音效音量預設 50% → 20%（沒調過音量的人；調過的保留自己的設定）。
+- 2026-10-16：多人連線（SPEC §5.5，使用者要「一起打同一批怪」）：`net/protocol.ts`（presence 格式、主機選舉）、`net/transport.ts`（claude.ai room 能力；`?net=local` 用 BroadcastChannel 測試）、`net/session.ts`（角色 solo／pending／host／follower、擊殺宣告與確認、背景交出主機）、`net/RemotePlayers.ts`（其他玩家的紙娃娃與名字）；LocalServer 加跟隨模式（`setFollower`、`syncFromHost`、`confirmRemoteKill`），MonsterActor 加 `setRemote`（跟著主機位置內插），GameScene 每 100ms 送狀態；HUD「線上 N 人」。本機兩分頁實測：兩邊同一批怪（編號總和一致）、跟隨者放大招兩邊同步少怪、主機關掉後跟隨者接手並補滿生怪區。部署要宣告 `capabilities: {room: {}, user: {scopes: ["profile"]}}`。
+- 2026-10-16：其他玩家的技能特效半透明（使用者要求）：presence 加 `s`（最近 2 秒放的技能），`GameScene.replaySkill` 照時間表重播到 `net/RemoteFxScene`（疊在上面的場景，鏡頭同步主鏡頭、alpha 0.5，自己一份 SkillFx／FxLayer，投射物純畫面直線飛）；`areaRect`／`findTargets` 可傳其他玩家的位置。兩分頁實測：法師隕石術、死神召喚、弓箭手普攻箭與箭雨、劍士連斬與大招都在另一邊半透明出現，無錯誤。
+- 2026-10-16：使用者在 claude.ai 回報：他人特效有些變成方塊、他人普攻穿透怪物。本機（GPU、正式建置、150% 縮放）都重現不出方塊；把半透明從鏡頭 alpha（先畫到暫存畫布再貼上，疊加發光在某些環境會出問題）改成 Layer（`RemoteFxScene` 新增的物件一出現就收進 alpha 0.5 的圖層，畫每個物件時乘上透明度）。他人投射物改成跟放的人一樣找目標（瞄準錐內、或正前方第一隻），飛到目標停下並播命中效果。部署 Version 8。
+- 2026-10-16：使用者回報只有自己多開分頁看得到別人，別人的電腦看不到。推測：命名房間（`room.join`）不開放給只有檢視權限的人（文件：join 可能 not_permitted），擁有者自己多開都是同一身分所以可以；另外第一次使用會問權限。改成用平台大廳 + presence 的 `r` 分遊戲房，啟動時 `permissions.request([room, user])` 批次問一次，拒絕時 HUD 顯示「多人連線未開啟 · 點此開啟」（`permissions.manage()` 後重連）。`net/transport.test.ts` 用假平台驗證分房與權限流程。
 - 2026-10-16：依使用者提供的楓之谷卷軸參考，怪物掉落卷軸改為側面微展開的像素紙卷 v4：10% 金黃紫星、60% 朱紅白焰、90% 冰藍青葉，地面光暈跟隨紙色。新增 `loot-scrolls-v4.png` 與提示詞／設計紀錄，`scrollArt.ts` 已套用；維持 34px、落地漂浮與吸取節奏。typecheck、build、Chrome 三款載入／大小／漂浮／暫停／吸取清除驗證通過，記錄於 `game/assets/inventory/loot-scrolls-v4.md`。
 - 2026-10-16：背包卷軸選項與商人補給同步使用掉落卷軸 v4。以原 PNG 的 alpha 邊界設定 viewBox，等比例置中並保留像素取樣；桌面／手機／商人圖示分別為 64／42／36px。已確認三種成功率的圖示、選取狀態與按鈕對應，typecheck、build 和瀏覽器驗證通過。
 - 2026-10-16：依使用者要求，地圖掉落卷軸在載入時轉成 18×17 粗像素圖格，以最近鄰放大至原本 34px 尺寸，透明邊緣硬切；背包／商人沿用清晰原 PNG。三款掉落、漂浮、暫停、吸取，以及桌面／手機背包圖示驗證通過，typecheck 通過。
