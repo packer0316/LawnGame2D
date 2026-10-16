@@ -51,14 +51,15 @@ try {
   await page.evaluate(()=>s.command({type:'inventoryOpen',open:true}));
   await page.locator('.inventory-scrolls .scroll-art').first().waitFor();
   const bagArt=await page.locator('.scroll-art').evaluateAll(elements=>elements.map(el=>({
+    area:el.closest('.inventory-scrolls')?'bag':'shop',
     label:el.getAttribute('aria-label'),view:el.getAttribute('viewBox'),
     href:el.querySelector('image')?.getAttribute('href'),width:el.getBoundingClientRect().width,
   })));
   assert.equal(bagArt.length,6);
   assert.ok(bagArt.every(icon=>icon.href.includes('loot-scrolls-v4.png')));
   assert.equal(new Set(bagArt.map(icon=>icon.view)).size,3);
-  assert.deepEqual(bagArt.slice(0,3).map(icon=>icon.width),[64,64,64]);
-  assert.deepEqual(bagArt.slice(3).map(icon=>icon.width),[36,36,36]);
+  assert.deepEqual(bagArt.filter(icon=>icon.area==='bag').map(icon=>icon.width),[52,52,52]);
+  assert.deepEqual(bagArt.filter(icon=>icon.area==='shop').map(icon=>icon.width),[36,36,36]);
   await page.evaluate(async()=>{
     const icon=document.querySelector('.scroll-art image'),image=new Image();
     image.src=icon.getAttribute('href');await image.decode();
@@ -73,7 +74,7 @@ try {
   await page.setViewportSize({width:390,height:844});
   await page.locator('.inventory-scrolls').scrollIntoViewIfNeeded();
   const mobile=await page.locator('.inventory-scrolls .scroll-art').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().width));
-  assert.deepEqual(mobile,[42,42,42]);
+  assert.deepEqual(mobile,[36,36,36]);
   await page.locator('.inventory-scrolls').screenshot({path:'art-review/scroll-bag-v4-mobile.png'});
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ shown, ...result,bagArt,mobile, errors }));
