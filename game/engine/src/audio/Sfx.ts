@@ -193,8 +193,8 @@ function matchesWhen(layer: SfxLayer, index: number, count: number): boolean {
   }
 }
 
-/** 沒存過音量時的預設（使用者指定 50%） */
-const DEFAULT_VOLUME = 0.5;
+/** 沒存過音量時的預設（使用者指定 20%） */
+const DEFAULT_VOLUME = 0.2;
 
 function readVolume(): number {
   try {

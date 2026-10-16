@@ -1,8 +1,8 @@
 {
  "url": "https://claude.ai/artifact/NTjSKzmHiqXQzyPyk1cU5j",
  "page": {
-  "script": "./assets/index-BUxT1UKx.js",
-  "style": "./assets/index-CSnYXNz0.css"
+  "script": "./assets/index-CTcsPCQ9.js",
+  "style": "./assets/index-CmjTRlSG.css"
  },
  "files": {
   "assets/angel-DOK9Vtdk.mp3": "f775910319a245aa509ca4054a9dee5efc438614",
@@ -76,8 +76,8 @@
   "assets/ice_break-_Avcnbln.mp3": "019767723d53b91c10e4e654c0aa0bb632c48314",
   "assets/ice_hit-CwotWQY_.mp3": "3e06c03d30ef33cf5de14367578ae4e2e535e690",
   "assets/ice_shatter-C86D3xI4.mp3": "5c35263eb0c2fbdce8069766a26728484ebf1857",
-  "assets/index-BUxT1UKx.js": "c93ae084f5a69b8661cee558f47345f6c19848a3",
-  "assets/index-CSnYXNz0.css": "83a1ec31af7d6a459e35c2638945c9c5c353c3fa",
+  "assets/index-CmjTRlSG.css": "3113e7ffe80fcb97d6f672eba56a57757d55f4ad",
+  "assets/index-CTcsPCQ9.js": "7013c9dc187dfeb43801e9668305679f50c6d085",
   "assets/jump-CW1iNJNR.mp3": "b19fe822c86b922acb3f220b461c57281c10302a",
   "assets/land_heavy-CUerS61m.mp3": "6c8d18a6beaf8190dd23f672f5486e29b7af01d8",
   "assets/lightning-sequence-v4-CNtXhrmy.png": "b336ce6ca4e053c23bbea5174fe56e56c210d494",
@@ -140,6 +140,7 @@
   "assets/punch_m_3-DT8yhLuT.mp3": "54a6c4fbbbbb12edbc564aceb95bf46a9e71b347",
   "assets/punch_m_4-DtAzyQFQ.mp3": "aab24012de55a0e6fde2ccc47ceb67b1b70fea36",
   "assets/punch_m_5-DtK3b1E8.mp3": "fecd1a1a1a4e10783d47a5a149334d8e0f44fbf0",
+  "assets/rare-beasts-v2-Dg3Wozre.webp": "a0d1a4c16cd2e75863535200f21cd7b92d824174",
   "assets/razor-sequence-v7-txw0p32v.png": "db3fc1f3d0e2b524ec4500683492c86abd71a72c",
   "assets/reaper-sequence-NpxKqEi-.png": "97750809fd416231a76505be6aca60bd7a9cb702",
   "assets/rend-sequence-v7-Cegvm-Xg.png": "f3b870c0dc4407e7ef27e09edce20f008ffbe2b9",
