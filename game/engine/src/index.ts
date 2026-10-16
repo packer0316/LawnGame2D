@@ -2,7 +2,7 @@ export type { ContentSource } from './content';
 export { httpContentSource } from './content';
 export type { CreateGameOptions, GameHandle } from './createGame';
 export { createGame, INTERNAL_HEIGHT } from './createGame';
-export type { AutoConfig, AutoStatus, GameCommand, GameMode, HudSkill, HudState } from './hud';
+export type { AutoConfig, AutoStatus, GameCommand, GameMode, HudFeedEntry, HudSkill, HudState } from './hud';
 export { AUTO_ROOM, DEFAULT_AUTO_CONFIG } from './auto/AutoHunt';
 export type { Action, SkillAction } from './core/input';
 export { SKILL_ACTIONS } from './core/input';

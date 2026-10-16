@@ -9,8 +9,7 @@ import { ComboHud } from './ComboHud';
 import { HudAction } from './HudAction';
 import { BASIC_SKILL, CLASS_DESCRIPTION, SKILL_DESCRIPTION } from './skillArt';
 import { useUiSounds } from './uiSounds';
-
-const BIG_WIN_TITLE = { big: 'BIG WIN', mega: 'MEGA WIN', super: 'SUPER WIN' } as const;
+import { WinFeed } from './WinFeed';
 
 /** 依 SPEC §2.6 的 HUD 配置。HUD 只顯示狀態，所有操作透過 command() 送回遊戲。 */
 /** 技能列固定八格（鍵盤 1–8），職業技能不足八個時後面留空。 */
@@ -40,34 +39,26 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
     setSettingsOpen(false);
     setBetOpen(false);
   };
-  const [bigWinShown, setBigWinShown] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!state?.bigWin || state.bigWin.id === bigWinShown) return;
-    setBigWinShown(state.bigWin.id);
-  }, [state?.bigWin, bigWinShown]);
-
-  const [bigWinClosed, setBigWinClosed] = useState<number | null>(null);
-  useEffect(() => {
-    if (bigWinShown === null) return;
-    const timer = setTimeout(() => setBigWinClosed(bigWinShown), 2600);
-    return () => clearTimeout(timer);
-  }, [bigWinShown]);
 
   if (!state) return <div className="hud"><div className="loading"><Icon name="leaf" /><span>正在走進森林…</span></div></div>;
   if (state.error) return <div className="hud"><div className="loading error">載入失敗：{state.error}</div></div>;
   if (state.loading) return <div className="hud"><div className="loading">載入中…</div></div>;
 
   const roomIndex = state.rooms.findIndex((r) => r.id === state.roomId) + 1;
-  const showBigWin = state.bigWin && state.bigWin.id === bigWinShown && bigWinClosed !== bigWinShown;
 
   return (
     <div className="hud">
       {!state.inventoryOpen && <ComboHud combo={state.combo} />}
+      {!state.inventoryOpen && <WinFeed entries={state.feed ?? []} />}
       <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
-        <div className="world-title"><span className="eyebrow">LAWN / ADVENTURE</span><strong>{state.roomName}</strong></div>
-        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}><Icon name="compass" /><span>換房</span><span className="room-count">{String(roomIndex).padStart(2, '0')} / {String(state.rooms.length).padStart(2, '0')}</span></button>
+        <div className="world-title">
+          <span className="eyebrow">LAWN / ADVENTURE</span>
+          <strong>{state.roomName}</strong>
+          <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}>
+            <Icon name="compass" />尊榮{String(roomIndex).padStart(2, '0')} 換房
+          </button>
+        </div>
       </div>
 
       {roomsOpen && (
@@ -143,14 +134,6 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
         </div>
       )}
       {state.inventoryOpen && state.inventory && <InventoryPanel state={state} command={command} />}
-
-      {showBigWin && state.bigWin && (
-        <div className={`big-win ${state.bigWin.level}`} onClick={() => setBigWinClosed(state.bigWin!.id)}>
-          <div className="title">{BIG_WIN_TITLE[state.bigWin.level]}</div>
-          <div className="amount">+{state.bigWin.amount.toLocaleString()}</div>
-          <div className="sub">×{state.bigWin.multiple}</div>
-        </div>
-      )}
     </div>
   );
 }

@@ -36,7 +36,7 @@ import { ComboTracker } from '../feel/ComboTracker';
 import { SkillFx, type FxPoint, type SkillFxContext } from '../feel/SkillFx';
 import { createClassProjectile, orientSkillWeapon } from '../feel/SkillWeapons';
 import { impactFeel } from '../feel/SkillPresentation';
-import type { GameCommand, GameMode, HudState } from '../hud';
+import type { GameCommand, GameMode, HudFeedEntry, HudState } from '../hud';
 import { DEPTH, MapView } from '../map/MapView';
 import { landmarkBgm } from '../map/LandmarkScenery';
 import { MonsterActor } from '../monster/MonsterActor';
@@ -48,6 +48,9 @@ import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server
 export const INTERNAL_HEIGHT = 540;
 const STEP_MS = PHYSICS.dt * 1000;
 const BIG_WIN = { big: 50, mega: 100, super: 300 } as const;
+/** 得獎紀錄：每筆顯示多久、最多同時幾行 */
+const FEED_LIFE_MS = 4000;
+const FEED_MAX = 8;
 /** 手動介入後多久恢復掛機（SPEC §3.6） */
 const AUTO_RESUME_MS = 3000;
 const AUTO_CONFIG_KEY = 'lawn.autoConfig';
@@ -122,7 +125,8 @@ export class GameScene extends Phaser.Scene {
   private classId: ClassId = 'warrior';
   private hudElapsed = 0;
   private toast: HudState['toast'];
-  private bigWin: HudState['bigWin'];
+  /** 畫面左側的得獎紀錄（at = performance.now()） */
+  private feed: (HudFeedEntry & { at: number })[] = [];
   private uiId = 0;
   private prevPlayer = { x: 0, y: 0 };
   private cameraTarget!: Phaser.GameObjects.Zone;
@@ -210,7 +214,8 @@ export class GameScene extends Phaser.Scene {
       this.server.on('inventory', (snapshot) => {
         this.inventoryState = snapshot;
         this.applyLoadout();
-        if (snapshot.feedback?.kind === 'drop') this.showToast(snapshot.feedback.message);
+        // 掉落的裝備、卷軸已經在得獎紀錄裡；只有背包滿了撿不到才提醒
+        if (snapshot.feedback?.kind === 'drop' && snapshot.feedback.message.includes('背包已滿')) this.addFeed('warn', '背包已滿，未能拾取武器');
         this.emitHud({});
       }),
       this.server.on('monsterSpawn', (spawn) => {
@@ -1394,12 +1399,16 @@ export class GameScene extends Phaser.Scene {
         for (const item of outcome.loot ?? []) this.pickups.item(item, c.x, c.y, floor);
         this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' });
       });
-      this.onPayout(outcome.payout, outcome.multiplier, c);
+      this.onPayout(outcome.payout, outcome.multiplier, c, monster.def.name);
+      for (const item of outcome.loot ?? []) {
+        if (item.kind === 'weapon') this.addFeed('weapon', WEAPON_BY_ID.get(item.definitionId)?.name ?? '武器');
+        else this.addFeed('scroll', `${item.rate}% 武器卷軸`);
+      }
     }
     this.emitHud({});
   }
 
-  private onPayout(payout: number, multiplier: number, at: { x: number; y: number }): void {
+  private onPayout(payout: number, multiplier: number, at: { x: number; y: number }, name: string): void {
     const text = this.add
       .text(Math.round(at.x), Math.round(at.y - 18), `+${payout.toLocaleString()}`, {
         fontFamily: 'monospace',
@@ -1422,9 +1431,24 @@ export class GameScene extends Phaser.Scene {
       this.slowMoMs = 300;
       this.cameras.main.shake(200, 4 / this.cameras.main.worldView.width);
       const level = multiplier >= BIG_WIN.super ? 'super' : multiplier >= BIG_WIN.mega ? 'mega' : 'big';
-      this.bigWin = { id: ++this.uiId, level, amount: payout, multiple: multiplier };
       this.playSfx(`win:${level}`, { x: undefined });
+      this.addFeed(level, `${name} ×${multiplier}`, payout);
+    } else {
+      this.addFeed('coin', `${name} ×${multiplier}`, payout);
     }
+  }
+
+  /** 得獎紀錄加一行（畫面左側，4 秒後淡出）。 */
+  private addFeed(kind: HudFeedEntry['kind'], text: string, amount?: number): void {
+    this.feed.push({ id: ++this.uiId, kind, text, at: performance.now(), ...(amount !== undefined ? { amount } : {}) });
+    if (this.feed.length > 40) this.feed.splice(0, this.feed.length - 40);
+  }
+
+  /** 還在顯示期間的得獎紀錄，最多 FEED_MAX 行（太多時舊的先走）。 */
+  private visibleFeed(): HudFeedEntry[] {
+    const now = performance.now();
+    this.feed = this.feed.filter((entry) => now - entry.at < FEED_LIFE_MS);
+    return this.feed.slice(-FEED_MAX).map(({ at: _at, ...entry }) => entry);
   }
 
   // ---------------------------------------------------------------------------
@@ -1480,7 +1504,7 @@ export class GameScene extends Phaser.Scene {
       autoConfig: this.auto.config,
       fps: Math.round(this.game.loop.actualFps),
       ...(this.toast ? { toast: this.toast } : {}),
-      ...(this.bigWin ? { bigWin: this.bigWin } : {}),
+      feed: this.visibleFeed(),
       ...patch,
     });
   }

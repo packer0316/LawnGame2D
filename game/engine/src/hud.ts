@@ -47,8 +47,19 @@ export interface HudState {
   autoSession?: { net: number; elapsedMs: number };
   fps: number;
   toast?: { id: number; text: string };
-  bigWin?: { id: number; level: 'big' | 'mega' | 'super'; amount: number; multiple: number };
+  /** 畫面左側的得獎紀錄：獎金、裝備、卷軸，最新的在最後；每筆 4 秒後消失（大獎不再另外全螢幕顯示） */
+  feed?: HudFeedEntry[];
   wave?: { phase: 'warning' | 'start'; endsAt?: number };
+}
+
+/** 得獎紀錄一行。 */
+export interface HudFeedEntry {
+  id: number;
+  /** coin = 一般獎金；big／mega／super = 大獎（特殊色）；weapon／scroll = 掉落；warn = 背包已滿等提醒 */
+  kind: 'coin' | 'big' | 'mega' | 'super' | 'weapon' | 'scroll' | 'warn';
+  text: string;
+  /** 獎金（金色數字） */
+  amount?: number;
 }
 
 export type GameCommand =

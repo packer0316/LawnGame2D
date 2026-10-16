@@ -1,3 +1,6 @@
+.hud .room-list { top: 132px; }
+@media (max-width: 950px) { .hud .room-list { top: 118px; } }
+@media (max-width: 680px) { .hud-top-left { max-width: calc(100% - 104px); } .hud .room-list { top: 110px; } }
 .room-categories { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; }
 .room-categories button { border: 1px solid #607e714d; border-radius: 20px; padding: 6px 10px; font-size: 11px; background: #102b26; color: #abc2b5; }
 .room-categories button[aria-pressed="true"] { border-color: #d0bc79; background: #52624166; color: #f5e5b1; }

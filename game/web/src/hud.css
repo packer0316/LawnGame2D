@@ -20,16 +20,17 @@
 .panel { background: linear-gradient(135deg, #163833f5, #102725f5); border: 1px solid #bdc6a34a; box-shadow: 0 10px 40px #0316174d, inset 0 1px #f2e5b90c; border-radius: 8px; }
 .eyebrow { display: block; font-size: 9px; font-weight: 600; letter-spacing: 2px; color: #b4c5b2; }
 .hud-top-left, .hud-top-right { position: absolute; top: 26px; display: flex; align-items: center; gap: 15px; }
-.hud-top-left { left: 32px; }
+.hud-top-left { left: 32px; align-items: flex-start; max-width: calc(100% - 150px); }
 .hud-top-right { right: 32px; }
 .brand-mark { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #c6d0ac66; border-radius: 14px 3px; background: #173a34b3; color: #e2d4a3; }
 .brand-mark .icon { width: 29px; height: 29px; }
-.world-title { min-width: 134px; text-shadow: 0 2px 8px #0b292b; }
-.world-title strong { display: block; font-size: 23px; font-weight: 600; letter-spacing: 3px; margin-top: 3px; }
+.world-title { min-width: 0; text-shadow: 0 2px 8px #0b292b; }
+.world-title strong { display: block; font-size: 23px; font-weight: 600; letter-spacing: 3px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .world-title .eyebrow { color: #e6e6c9; font-size: 8px; letter-spacing: 2.2px; }
-.hud .room-switch { display: flex; gap: 9px; align-items: center; padding: 9px 13px; border-radius: 6px; background: #153930aa; }
-.room-switch .icon { width: 17px; height: 17px; color: var(--gold); }
-.room-count { color: #b0c5b5; font-size: 10px; letter-spacing: 1px; margin-left: 7px; }
+.hud .room-switch { display: flex; width: fit-content; min-height: 38px; margin-top: 9px; gap: 9px; align-items: center; padding: 9px 15px; border-radius: 6px; background: #dfbd75; border-color: #f3dba4; color: #203529; font-weight: 700; letter-spacing: .8px; white-space: nowrap; text-shadow: none; box-shadow: 0 3px 10px #071b2859; }
+.hud .room-switch:hover, .hud .room-switch[aria-expanded="true"] { background: #f0d599; border-color: #fff0c9; }
+.hud .room-switch:active { background: #cba45c; }
+.room-switch .icon { width: 17px; height: 17px; color: currentColor; }
 .hud .help-toggle { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: #dedcc1; background: #15362c99; }
 .help-toggle .icon { width: 19px; height: 19px; }
 .hud-bottom-stack { position: absolute; left: 0; right: 0; bottom: 35px; margin: 0 auto; width: fit-content; max-width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -141,12 +142,29 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #b5c6ae3b; backgro
 .loading .icon { width: 42px; height: 42px; color: #d9c38a; animation: breathe 2s ease-in-out infinite; }
 @keyframes breathe { 50% { opacity: .45; transform: translateY(-4px); } }
 .error { color: var(--danger); }
-.big-win { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; background: radial-gradient(circle, #c6ac643d, #061e24b3 70%); cursor: pointer; }
-.big-win .title { font-family: Georgia, serif; font-size: clamp(36px, 6vw, 82px); letter-spacing: 8px; color: #f7dc9b; text-shadow: 0 3px 20px #a3804a; }
-.big-win .amount { font-size: 40px; color: #fff1cd; margin: 22px 0 10px; }
-.big-win .sub { color: #c8d7b8; }
-.big-win.mega .title { color: #e6c1ec; }
-.big-win.super .title { color: #bce9e6; }
+/* 得獎紀錄：畫面左側，一行一行往上推，最新的在最下面；每行 4 秒（3.6 秒開始淡出） */
+.win-feed { position: absolute; left: 18px; top: 128px; bottom: 34%; width: min(360px, 62vw); display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; gap: 4px; pointer-events: none; overflow: hidden; }
+.win-feed-line { display: flex; align-items: baseline; gap: 8px; max-width: 100%; max-height: 34px; padding: 4px 11px; border-radius: 6px; border: 1px solid #d4c89e33; background: linear-gradient(90deg, #0b211dd9, #0b211d99); color: #e6e2cc; font-size: 13px; line-height: 1.35; white-space: nowrap; box-shadow: 0 4px 14px #00141633; animation: win-feed-in .24s ease-out, win-feed-out .4s ease-in 3.6s forwards; }
+.win-feed-line .text { overflow: hidden; text-overflow: ellipsis; }
+.win-feed-line .label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; }
+.win-feed-line .amount { color: #ffd76a; font-weight: 700; font-variant-numeric: tabular-nums; }
+.win-feed-line.weapon .label { color: #9fd3ff; }
+.win-feed-line.scroll .label { color: #a8e6a1; }
+.win-feed-line.warn { border-color: #e0806a66; }
+.win-feed-line.warn .label { color: #ff9f8a; }
+/* 大獎：特殊色（金／紫／青），字大一點、有光 */
+.win-feed-line.big, .win-feed-line.mega, .win-feed-line.super { font-size: 15px; font-weight: 700; max-height: 40px; padding-block: 6px; }
+.win-feed-line.big { border-color: #ffd76acc; background: linear-gradient(90deg, #6b4a12f0, #2c1e07cc); color: #fff3cc; text-shadow: 0 0 10px #ffbf3a88; }
+.win-feed-line.big .label, .win-feed-line.big .amount { color: #ffd76a; }
+.win-feed-line.mega { border-color: #e6a8ffcc; background: linear-gradient(90deg, #5a1f72f0, #26113acc); color: #fbeaff; text-shadow: 0 0 10px #d77bff88; }
+.win-feed-line.mega .label, .win-feed-line.mega .amount { color: #f0b8ff; }
+.win-feed-line.super { border-color: #8ff3eccc; background: linear-gradient(90deg, #0f5c62f0, #0b2a33cc); color: #e9fffd; text-shadow: 0 0 12px #5ff0e888; }
+.win-feed-line.super .label { background: linear-gradient(90deg, #ffd76a, #ff9ad8, #8ff3ec); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.win-feed-line.super .amount { color: #8ff3ec; }
+@keyframes win-feed-in { from { opacity: 0; transform: translateX(-14px); max-height: 0; padding-block: 0; } }
+@keyframes win-feed-out { to { opacity: 0; transform: translateX(-8px); } }
+@media (max-width: 680px) { .win-feed { left: 10px; top: 92px; width: 70vw; } .win-feed-line { font-size: 11px; padding: 3px 8px; } .win-feed-line.big, .win-feed-line.mega, .win-feed-line.super { font-size: 12px; } }
+@media (prefers-reduced-motion: reduce) { .win-feed-line { animation: win-feed-out .4s linear 3.6s forwards; } }
 @media (min-width: 1700px) { .hud-bottom-stack { bottom: 40px; } .hud-bottom { gap: 25px; padding: 16px 22px; } .hotbar-slot { width: 70px; height: 60px; } .class-select button { width: 55px; } .hud .skill { width: 85px; height: 72px; } .hud .auto-button { min-height: 72px; min-width: 110px; } }
 @media (max-width: 950px) { .hud-bottom-stack { bottom: 25px; gap: 6px; } .hud-bottom { gap: 10px; padding: 10px; } .hotbar-slot { width: 54px; height: 48px; } .class-select button { width: 40px; } .hud .skill { width: 59px; } .hud .bet { min-width: 132px; } .hud .bet .value { min-width: 62px; font-size: 20px; } .hud .auto-button { min-width: 85px; padding: 7px; } .hud-top-left { left: 18px; top: 17px; gap: 10px; } .hud-top-right { right: 18px; top: 17px; gap: 9px; } .brand-mark { display: none; } .world-title strong { font-size: 19px; } .world-title { min-width: 110px; } .room-count { display: none; } .hud-footer { bottom: 7px; left: 18px; right: 18px; font-size: 8px; } }
 @media (max-width: 680px) { .settings { right: 12px; left: 12px; width: auto; top: 83px; } .hotbar { gap: 4px; padding: 4px; } .hotbar-slot { width: 46px; height: 44px; } .hotbar-slot span { display: none; } .hud-bottom { max-width: calc(100vw - 20px); width: 550px; gap: 8px; flex-wrap: wrap; justify-content: center; border-radius: 9px; padding: 8px; } .class-section { order: 4; } .class-section > .eyebrow, .dock-divider { display: none; } .class-select button { height: 31px; width: 59px; flex-direction: row; gap: 4px; } .class-select .icon { width: 16px; height: 16px; } .class-select span { font-size: 9px; } .hud .skill { width: 57px; height: 57px; } .hud .auto-button { min-height: 57px; } .hud .bet { min-width: 124px; } .hud .bet .value { min-width: 58px; font-size: 18px; } .bet-balance .label { display: none; } .world-title strong { font-size: 16px; letter-spacing: 2px; } .world-title .eyebrow { font-size: 6px; letter-spacing: 1.4px; } .world-title { min-width: 94px; } .hud-top-left { left: 12px; gap: 7px; } .hud-top-right { right: 12px; gap: 6px; } .hud .room-switch { padding: 8px; } .room-switch span { display: none; } .hud .help-toggle { width: 30px; height: 30px; } .hud-footer > span:first-child { visibility: hidden; } .room-list { width: calc(100% - 24px); left: 12px; top: 83px; } .help { right: 12px; left: 12px; top: 83px; padding: 16px 20px; } }
