@@ -5,6 +5,7 @@ import archer from '../../assets/ui/archer-icons-v1.png?url';
 import assassin from '../../assets/ui/assassin-icons-v1.png?url';
 import moonExecution from '../../assets/skills/moon-execution/moonblades-v4.png?url';
 import infernalGrasp from '../../assets/skills/infernal-grasp/hands-v1.png?url';
+import phoenix from '../../assets/skills/phoenix-awakening/phoenix-v1.png?url';
 
 export const ICON_ATLASES = {
   warrior: { url: warrior, width: 1254, height: 1254, cols: 4, rows: 3, bands: [[32,386],[420,772],[790,1200]], ids: ['warrior','skill_0001','skill_0002','skill_0003','skill_0004','skill_0005','skill_0006','skill_0007','skill_0008','skill_0009','skill_0040','skill_0041'] },
@@ -25,6 +26,7 @@ export const PIXEL_ICONS = Object.fromEntries(Object.values(ICON_ATLASES).flatMa
 })));
 PIXEL_ICONS.skill_0048={url:moonExecution,col:1,row:0,aspect:1,sizeX:400,sizeY:400,positionX:100/3,positionY:0};
 PIXEL_ICONS.skill_0049={url:infernalGrasp,col:3,row:0,aspect:1,sizeX:400,sizeY:400,positionX:100,positionY:0};
+PIXEL_ICONS.skill_0050={url:phoenix,col:1,row:1,aspect:1,sizeX:400,sizeY:400,positionX:100/3,positionY:100/3};
 
 export const BASIC_SKILL: Record<ClassId, string> = { warrior: 'skill_0001', mage: 'skill_0011', archer: 'skill_0021', assassin: 'skill_0031' };
 export const CLASS_DESCRIPTION: Record<ClassId, string> = {
@@ -34,6 +36,7 @@ export const CLASS_DESCRIPTION: Record<ClassId, string> = {
   assassin: '以四刃飛鏢、疾風連斬和影分身發動靈巧的連續攻勢。',
 };
 export const SKILL_DESCRIPTION: Record<string, string> = {
+  skill_0050: '紫瞳覺醒，朝天放箭喚出紫焰鳳凰。鳳凰於上角持續射出紫焰羽彈，沿弧線轉向、加速追擊全圖各層怪物，連續轟炸後化為餘焰。',
   skill_0049: '冥獄巨手從地底接連伸起，掙扎蓄力後猛然握碎。八段全圖重擊逐拍爆發，最後引爆金紫色冥焰。',
   skill_0048: '赤瞳結印，一斬分月；影分身在各層怪群間現身，留下銀藍月印。收刀後引爆全圖八段月刃，化成月光碎瓣消散。',
   skill_0001: '揮劍近身斬擊；按住 Z 可銜接三段普攻。',

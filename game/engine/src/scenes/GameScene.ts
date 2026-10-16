@@ -1011,7 +1011,11 @@ export class GameScene extends Phaser.Scene {
     this.playSfx(`swing:${skill.id}`, beat);
     let targets: MonsterActor[];
     let from: FxPoint | null = null;
-    if (skill.chain) ({ targets, from } = this.chainTargets(skill, index, strike));
+    if(skill.id==='skill_0050'){
+      const ids=new Set(this.skillFx.phoenixTargetIds(index));
+      targets=[...this.monsters.values()].filter(m=>m.alive&&ids.has(String(m.spawn.uid)));
+    }
+    else if (skill.chain) ({ targets, from } = this.chainTargets(skill, index, strike));
     else if (skill.scatter) targets = this.scatterTargets(skill, index, strike);
     else if(skill.id==='skill_0009'){
       const box=this.skillFx.tigerHitRect(index);

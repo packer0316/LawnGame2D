@@ -18,6 +18,9 @@ import { MOON_SKILL } from './MoonExecutionTiming';
 import {InfernalGrasp} from './InfernalGrasp';
 import {loadInfernalGraspArt} from './InfernalGraspArt';
 import {GRASP_SKILL} from './InfernalGraspTiming';
+import {PhoenixAwakening} from './PhoenixAwakening';
+import {loadPhoenixAwakeningArt} from './PhoenixAwakeningArt';
+import {PHOENIX_SKILL} from './PhoenixAwakeningTiming';
 import { loadWarriorBladeArt } from './WarriorBladeArt';
 import { WarriorBladeEffects } from './WarriorBladeEffects';
 import { sfx } from '../audio/Sfx';
@@ -94,6 +97,7 @@ export class SkillFx {
   private storm:AssassinStorm|null=null;
   private moon:MoonExecution|null=null;
   private grasp:InfernalGrasp|null=null;
+  private phoenix:PhoenixAwakening|null=null;
   private readonly warriorBlades:WarriorBladeEffects;
   private readonly rains = new Set<FallingRain>();
   private readonly rainWaves = new Map<string, FallingRain[]>();
@@ -105,6 +109,7 @@ export class SkillFx {
     await loadSkillAtlases(scene);
     await loadMoonExecutionArt(scene);
     await loadInfernalGraspArt(scene);
+    await loadPhoenixAwakeningArt(scene);
     await loadWarriorBladeArt(scene);
   }
 
@@ -124,13 +129,14 @@ export class SkillFx {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});
   }
 
-  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + (this.grasp?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
+  get count(): number { return this.objects.size + this.kit.count + this.warriorBlades.count + (this.moon?.count??0) + (this.grasp?.count??0) + (this.phoenix?.count??0) + [...this.rains].reduce((sum, rain) => sum + rain.count, 0); }
 
   begin(skill: SkillDef, ctx: SkillFxContext): void {
     if(skill.kind==='basic')return;
     this.warriorBlades.begin(skill.id);
     if(skill.id===MOON_SKILL){this.moon?.destroy();this.moon=new MoonExecution(this.scene,ctx,this.audio);return;}
     if(skill.id===GRASP_SKILL){this.grasp?.destroy();this.grasp=new InfernalGrasp(this.scene,ctx);return;}
+    if(skill.id===PHOENIX_SKILL){this.phoenix?.destroy();this.phoenix=new PhoenixAwakening(this.scene,ctx);return;}
     this.prepareRain(skill, ctx);
     if(skill.id==='skill_0008'){this.activeDragon?.destroy();this.activeDragon=null;}
     if(skill.id==='skill_0009'){this.tiger?.destroy();this.tiger=new TigerSummon(this.scene,this.kit,ctx,skill);}
@@ -193,6 +199,7 @@ export class SkillFx {
     const feel=impactFeel(skill,index);
     if(skill.id===MOON_SKILL){this.moon?.contact(ctx.targets,feel.last);return feel;}
     if(skill.id===GRASP_SKILL){this.grasp?.contact(ctx.targets,index,feel.last);return feel;}
+    if(skill.id===PHOENIX_SKILL){this.phoenix?.contact(ctx.targets,index,feel.last);return feel;}
     this.audio.play(skill.classId,feel.strength);
     // 每個可見的實際命中都有核心效果；只縮減附加粒子，不截掉後面的怪物。
     const visible=ctx.targets.filter(t=>t.x>=ctx.view.x-100&&t.x<=ctx.view.x+ctx.view.w+100&&t.y>=ctx.view.y-100&&t.y<=ctx.view.y+ctx.view.h+100);
@@ -356,6 +363,7 @@ export class SkillFx {
     this.warriorBlades.clear();
     this.moon?.destroy();this.moon=null;
     this.grasp?.destroy();this.grasp=null;
+    this.phoenix?.destroy();this.phoenix=null;
     for (const rain of this.rains) rain.destroy();
     this.rainWaves.clear();
     this.tiger?.destroy();this.tiger=null;
@@ -464,6 +472,8 @@ export class SkillFx {
     if(this.moon&&!this.moon.active)this.moon=null;
     this.grasp?.step(dt);
     if(this.grasp&&!this.grasp.active)this.grasp=null;
+    this.phoenix?.step(dt);
+    if(this.phoenix&&!this.phoenix.active)this.phoenix=null;
     for (const rain of this.rains) rain.step(dt);
     this.tiger?.step(dt);
     if(this.tiger&&!this.tiger.sprite.active)this.tiger=null;
@@ -472,6 +482,7 @@ export class SkillFx {
   }
 
   tigerHitRect(index:number):Rect|null {return this.tiger?.hitRect(index)??null;}
+  phoenixTargetIds(index:number):string[]{return this.phoenix?.targetIds(index)??[];}
   tigerFloorAt(x:number):number|null {return this.tiger?.floorAt(x)??null;}
   get tigerImpactX():number|undefined{return this.tiger?.sprite.x;}
 
