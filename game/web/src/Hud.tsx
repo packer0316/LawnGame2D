@@ -49,6 +49,8 @@ export function Hud({ state, loading, command, action }: { state: HudState | nul
     <div className="hud">
       {!state.inventoryOpen && <ComboHud combo={state.combo} />}
       {!state.inventoryOpen && <WinFeed entries={state.feed ?? []} />}
+      {state.online !== undefined && <div className="net-badge" title="同一房的玩家（含你）"><i />線上 {state.online} 人</div>}
+      {state.netDenied && <button className="net-badge net-denied" onClick={() => command({ type: 'netPermissions' })} title="多人連線需要你允許這個頁面的「房間」權限">多人連線未開啟 · 點此開啟</button>}
       <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
         <div className="world-title">

@@ -11,6 +11,7 @@ import {
 } from '@lawn/shared';
 import type { ContentBundle } from '../content/bundle';
 import { inventoryAction, newProfile, parseProfile, rollLootDrops, type InventoryAction, type InventoryFeedback, type InventoryProfile, type InventorySnapshot, type LootItem } from '../inventory/model';
+import type { NetMob } from '../net/protocol';
 import type { AttackReq, AttackResult, ChangeRoomReq, GameServer, JoinReq, MonsterSpawn, ServerEvents, Snapshot } from './types';
 
 /**
@@ -57,6 +58,8 @@ export class LocalServer implements GameServer {
   private lastSeq = -1;
   private strikeTimes: number[] = [];
   private lastRoomChange = 0;
+  /** 多人連線：跟隨主機（不自己生怪，怪物清單由主機同步）；錢包與擊殺判定仍在自己這裡 */
+  private follower = false;
   private timer: ReturnType<typeof setInterval>;
   private readonly rtp: number;
   private readonly latency: [number, number];
@@ -193,10 +196,7 @@ export class LocalServer implements GameServer {
     this.monsters.clear();
     this.respawnQueue.length = 0;
     this.lastRoomChange = performance.now();
-    for (const zone of this.map.spawnZones) {
-      const count = Math.round(zone.maxCount * this.spawnScale);
-      for (let i = 0; i < count; i += 1) this.spawnIn(zone, false);
-    }
+    if (!this.follower) this.fillZones(false);
     return {
       roomId: room.id,
       mapId: room.mapId,
@@ -244,14 +244,82 @@ export class LocalServer implements GameServer {
     if (notify) this.emit('monsterSpawn', spawn);
   }
 
-  private removeMonster(monster: LiveMonster, notify: boolean): void {
+  private removeMonster(monster: LiveMonster, notify: boolean, killed = false): void {
     this.monsters.delete(monster.spawn.uid);
-    this.respawnQueue.push({ zoneId: monster.zone.id, at: performance.now() + monster.zone.respawnSec * 1000 });
-    if (notify) this.emit('monsterRemove', { uid: monster.spawn.uid });
+    if (!this.follower) this.respawnQueue.push({ zoneId: monster.zone.id, at: performance.now() + monster.zone.respawnSec * 1000 });
+    if (notify) this.emit('monsterRemove', { uid: monster.spawn.uid, ...(killed ? { killed } : {}) });
+  }
+
+  /** 每個生怪區補到上限：房間是空的就立刻生，否則排進重生（別人剛離開、自己接手當主機時不會一次冒一堆）。 */
+  private fillZones(notify: boolean): void {
+    if (!this.map) return;
+    const empty = this.monsters.size === 0;
+    const now = performance.now();
+    for (const zone of this.map.spawnZones) {
+      const alive = [...this.monsters.values()].filter((m) => m.zone.id === zone.id).length;
+      const queued = this.respawnQueue.filter((r) => r.zoneId === zone.id).length;
+      const missing = Math.round(zone.maxCount * this.spawnScale) - alive - queued;
+      for (let i = 0; i < missing; i += 1) {
+        if (empty) this.spawnIn(zone, notify);
+        else this.respawnQueue.push({ zoneId: zone.id, at: now + Math.random() * zone.respawnSec * 1000 });
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- 多人連線（SPEC §5.5）
+
+  /** 切換成跟隨主機（true）或自己當主機（false，接手時補滿生怪區）。 */
+  setFollower(on: boolean): void {
+    if (this.follower === on) return;
+    this.follower = on;
+    if (on) this.respawnQueue.length = 0;
+    else this.fillZones(true);
+  }
+
+  get isFollower(): boolean {
+    return this.follower;
+  }
+
+  /** 主機用：目前這一房的怪（位置由畫面那邊的怪物 AI 決定）。 */
+  liveMonsters(): MonsterSpawn[] {
+    return [...this.monsters.values()].map((m) => m.spawn);
+  }
+
+  /**
+   * 跟隨者：把怪物清單換成主機送來的。新的送 monsterSpawn、不見的送 monsterRemove（dead 裡的是被打死）；
+   * ignore = 自己剛打死、主機還沒確認的（不要復活）。
+   */
+  syncFromHost(mobs: readonly NetMob[], dead: ReadonlySet<number>, ignore: ReadonlySet<number>): void {
+    if (!this.follower || !this.map) return;
+    const seen = new Set<number>();
+    for (const mob of mobs) {
+      this.nextUid = Math.max(this.nextUid, mob.uid + 1);
+      if (ignore.has(mob.uid)) continue;
+      seen.add(mob.uid);
+      const existing = this.monsters.get(mob.uid);
+      if (existing && existing.spawn.typeId === mob.type) continue;
+      if (existing) this.removeMonster(existing, true);
+      const zone = this.map.spawnZones.find((z) => z.id === mob.zone) ?? this.map.spawnZones[0];
+      if (!zone || !this.bundle.monsters.has(mob.type)) continue;
+      const spawn: MonsterSpawn = { uid: mob.uid, typeId: mob.type, zoneId: zone.id, seed: mob.uid, spawnTime: performance.now(), multiplier: mob.multiplier, x: mob.x, y: mob.y };
+      this.monsters.set(spawn.uid, { spawn, zone });
+      this.emit('monsterSpawn', spawn);
+    }
+    for (const monster of [...this.monsters.values()]) {
+      if (!seen.has(monster.spawn.uid)) this.removeMonster(monster, true, dead.has(monster.spawn.uid));
+    }
+  }
+
+  /** 主機：別的玩家打死了這隻（他自己已經派彩）。還活著就移除並排重生，回傳 true。 */
+  confirmRemoteKill(uid: number): boolean {
+    const monster = this.monsters.get(uid);
+    if (!monster || this.follower) return false;
+    this.removeMonster(monster, true, true);
+    return true;
   }
 
   private tick(): void {
-    if (!this.map) return;
+    if (!this.map || this.follower) return;
     const now = performance.now();
     for (let i = this.respawnQueue.length - 1; i >= 0; i -= 1) {
       const entry = this.respawnQueue[i]!;

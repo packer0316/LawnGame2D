@@ -17,6 +17,7 @@ export function skillEnergyColor(skill:SkillDef):number {
 /** 表現層節奏：不改判定、傷害或扣注時間；連段保留流動感，末段才有重停頓。 */
 export function impactFeel(skill: SkillDef, index: number) {
   const last = index === skill.strikes.length - 1;
+  if(skill.id==='skill_0043')return {stopMs:last?100:8,pixels:last?5.5:1.6,durationMs:last?170:45,strength:last?1.7:.9,last};
   if(skill.id==='skill_0050')return {stopMs:last?85:0,pixels:last?5:index%4===0?.65:0,durationMs:last?180:45,strength:last?1.6:.8,last};
   if(skill.id==='skill_0049')return {stopMs:last?115:32,pixels:last?7:3.2,durationMs:last?210:85,strength:last?1.85:1.05,last};
   if(skill.id==='skill_0048')return {stopMs:last?105:8,pixels:last?7:2.3,durationMs:last?190:55,strength:last?1.8:.95,last};

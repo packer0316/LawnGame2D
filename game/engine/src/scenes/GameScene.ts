@@ -20,6 +20,11 @@ import {
 import { Player, type PlayerInput } from '../actor/Player';
 import { BgmPlayer } from '../audio/BgmPlayer';
 import { sfx, type SfxPlayOptions } from '../audio/Sfx';
+import type { NetCast, NetMob, NetWorld, PlayerState } from '../net/protocol';
+import { RemotePlayers } from '../net/RemotePlayers';
+import { RemoteFxScene } from '../net/RemoteFxScene';
+import { MultiplayerSession, type NetRole } from '../net/session';
+import { connectNet, type NetConnection } from '../net/transport';
 import { SFX_CUES } from '../audio/sfxCues';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
 import { AvatarView } from '../avatar/AvatarView';
@@ -48,7 +53,18 @@ import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server
 
 export const INTERNAL_HEIGHT = 540;
 const STEP_MS = PHYSICS.dt * 1000;
+/** 放技能的人（自己或其他玩家）：判定範圍與特效的中心 */
+interface Caster {
+  x: number;
+  y: number;
+  facing: 1 | -1;
+  origin?: FxPoint | null;
+}
 const BIG_WIN = { big: 50, mega: 100, super: 300 } as const;
+/** 多人連線：每隔多久送一次自己的狀態（主機加上怪物世界） */
+const NET_TICK_MS = 100;
+/** 自己打死、主機還沒確認的怪，多久內不讓它復活 */
+const LOCAL_KILL_MS = 5000;
 /** 得獎紀錄：每筆顯示多久、最多同時幾行 */
 const FEED_LIFE_MS = 4000;
 const FEED_MAX = 8;
@@ -127,6 +143,22 @@ export class GameScene extends Phaser.Scene {
   private classId: ClassId = 'warrior';
   private hudElapsed = 0;
   private toast: HudState['toast'];
+  /** 多人連線（SPEC §5.5）；null = 單人（本機開發、或平台不提供） */
+  private net: MultiplayerSession | null = null;
+  private remotePlayers!: RemotePlayers;
+  private netElapsed = 0;
+  /** 自己剛打死、主機還沒確認的怪：uid → 時間 */
+  private readonly localKills = new Map<number, number>();
+  /** 技能動畫序號：同一招連放也讓別人重播 */
+  private motionSeq = 0;
+  private lastMotionTag: string | null = null;
+  private readonly onVisibility = () => this.net?.setAway(document.hidden);
+  /** 連線狀態（權限被拒絕時 HUD 顯示開啟按鈕） */
+  private netConnection: NetConnection | null = null;
+  /** 其他玩家的技能特效（半透明，另一個場景） */
+  private remoteFx: RemoteFxScene | null = null;
+  /** 每位玩家已經重播到第幾次放技能 */
+  private readonly castSeen = new Map<string, number>();
   /** 畫面左側的得獎紀錄（at = performance.now()） */
   private feed: (HudFeedEntry & { at: number })[] = [];
   private uiId = 0;
@@ -189,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     sfx.listener = this.sfxListener;
     this.cameraTarget = this.add.zone(0, 0, 1, 1);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
+    document.addEventListener('visibilitychange', this.onVisibility);
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
     this.boot().catch((error: unknown) => {
       if (this.dead) return;
@@ -229,7 +262,18 @@ export class GameScene extends Phaser.Scene {
         if (!this.ready || this.switching) this.queuedMonsterSpawns.push(spawn);
         else this.spawnMonster(spawn);
       }),
-      this.server.on('monsterRemove', ({ uid }) => this.monsters.get(uid)?.destroy()),
+      this.server.on('monsterRemove', ({ uid, killed }) => {
+        const monster = this.monsters.get(uid);
+        if (!monster) return;
+        // 別的玩家打死的：播死亡（沒有派彩）；同步時消失的：直接移除（同一個編號可能馬上又被主機的怪用到）
+        if (!killed) {
+          monster.destroy();
+          this.monsters.delete(uid);
+        } else if (monster.alive) {
+          const c = monster.center();
+          monster.kill(() => this.fx.spawn(monster.def.fx.die ?? 'dust', c.x, c.y, { additive: monster.def.fx.die === 'explosion' }));
+        }
+      }),
     );
 
     this.avatar = new AvatarView(this, bundle);
@@ -255,6 +299,8 @@ export class GameScene extends Phaser.Scene {
       },
     );
     this.applyLoadout();
+    this.remotePlayers = new RemotePlayers(this, bundle, (by, peer) => this.net?.lobby.nameOf(by, peer) ?? Promise.resolve(''), () => this.opts.lighting !== false);
+    if (!this.opts.mapOverride) void this.startNet();
 
     const snapshot = await this.server.join({ roomId: this.opts.roomId ?? 1, classId: this.classId });
     if (this.dead) return;
@@ -374,6 +420,206 @@ export class GameScene extends Phaser.Scene {
     if (!this.opts.mapOverride) this.prefetchTimer = this.time.delayedCall(PREFETCH_DELAY_MS, () => {
       for (const id of this.neighborIds(this.roomId)) void this.prefetchRoom(id);
     });
+    // 多人連線：換到這一房的通道（先等一下看有沒有主機）
+    this.remotePlayers.clear();
+    this.localKills.clear();
+    this.castSeen.clear();
+    if (this.remoteFx?.sys.isActive()) this.remoteFx.skillFx.clear();
+    if (this.net) void this.net.enter(netRoomName(this.roomId));
+  }
+
+  // ---------------------------------------------------------------------------
+  // 多人連線（SPEC §5.5）
+  // ---------------------------------------------------------------------------
+
+  /** 有平台的多人連線就加入目前這一房；本機開發（沒有平台）維持單人。 */
+  private async startNet(): Promise<void> {
+    const connection = await connectNet();
+    if (this.dead) return;
+    this.netConnection = connection;
+    this.emitHud({});
+    const lobby = connection.lobby;
+    if (!lobby) return;
+    this.net = new MultiplayerSession(lobby, {
+      onRole: (role) => this.onNetRole(role),
+      onWorld: (world) => this.onNetWorld(world),
+      onRemoteKill: (uid, peer) => {
+        if (this.server.confirmRemoteKill(uid)) this.net?.recordDeath(uid, peer);
+      },
+    });
+    // 已經進房了就直接加入；還在載入的話 enterRoom 結束時會加入
+    if (this.mapView) void this.net.enter(netRoomName(this.roomId));
+    // 先把半透明特效場景建好，別人第一次放技能就看得到
+    this.ensureRemoteFx();
+  }
+
+  /** 玩家按「開啟多人連線」：打開平台的權限面板，開啟了就重新連線。 */
+  private async reopenNet(): Promise<void> {
+    const manage = this.netConnection?.managePermissions;
+    if (!manage || this.net) return;
+    if ((await manage()) === 'on' && !this.dead) await this.startNet();
+  }
+
+  private onNetRole(role: NetRole): void {
+    if (role === 'pending') return;
+    if (role === 'follower') {
+      this.server.setFollower(true);
+      return;
+    }
+    // 主機（或連線斷了變單人）：自己生怪、怪物 AI 收回來
+    this.server.setFollower(false);
+    for (const monster of this.monsters.values()) monster.setRemote(null);
+  }
+
+  /** 跟隨者：照主機的世界增減怪物、更新位置。 */
+  private onNetWorld(world: NetWorld): void {
+    const now = performance.now();
+    for (const [uid, at] of this.localKills) if (now - at > LOCAL_KILL_MS) this.localKills.delete(uid);
+    this.server.syncFromHost(world.mobs, new Set(world.dead.map(([uid]) => uid)), new Set(this.localKills.keys()));
+    for (const mob of world.mobs) {
+      const monster = this.monsters.get(mob.uid);
+      if (monster?.alive) monster.setRemote({ x: mob.x, y: mob.y, facing: mob.facing, state: mob.state });
+    }
+  }
+
+  /** 每個畫面：其他玩家內插；每 NET_TICK_MS 送一次自己的狀態（主機加上怪物世界）。 */
+  private netTick(delta: number): void {
+    if (!this.net) return;
+    this.remotePlayers.update(Math.min(delta, 100));
+    this.netElapsed += delta;
+    if (this.netElapsed < NET_TICK_MS) return;
+    this.netElapsed = 0;
+    this.net.tick(this.switching ? null : this.netPlayer(), () => this.netWorld());
+    const players = this.switching ? [] : this.net.remotePlayers();
+    this.remotePlayers.sync(players);
+    for (const player of players) this.replayCasts(player.peer, player.casts);
+  }
+
+  /** 其他玩家新放的技能：在半透明特效場景重播（第一次看到這位玩家時只記下序號，不重播舊的）。 */
+  private replayCasts(peer: string, casts: readonly NetCast[]): void {
+    const seen = this.castSeen.get(peer);
+    const latest = casts.reduce((max, c) => Math.max(max, c.seq), seen ?? 0);
+    this.castSeen.set(peer, latest);
+    if (seen === undefined) return;
+    for (const cast of casts) {
+      if (cast.seq <= seen) continue;
+      const skill = this.bundle.skills.get(cast.skillId);
+      if (skill) this.replaySkill(peer, skill, cast);
+    }
+  }
+
+  /** 照技能的時間表重播：起手、演出時點、每一刀的特效與命中（目標用自己畫面上的怪）。純畫面，不扣款、不判定。 */
+  private replaySkill(peer: string, skill: SkillDef, cast: NetCast): void {
+    const fx = this.ensureRemoteFx();
+    if (!fx) return;
+    const origin = { x: cast.x, y: cast.y };
+    const caster = (): Caster => ({ ...(this.remotePlayers.position(peer) ?? { x: cast.x, y: cast.y, facing: cast.facing }), origin });
+    const context = (area: Area, targets: MonsterActor[], atMs: number): SkillFxContext => this.remoteFxContext(peer, skill, area, caster(), targets, atMs);
+    fx.skillFx.begin(skill, context(skill.strikes[0]!.area, [], 0));
+    for (const cue of skill.cues ?? []) {
+      const next = skill.strikes.find((strike) => strike.atMs >= cue.atMs) ?? skill.strikes[0]!;
+      this.time.delayedCall(cue.atMs, () => {
+        if (fx.scene.isActive()) fx.skillFx.play(cue.fx, { ...context(next.area, [], cue.atMs), leadMs: next.atMs - cue.atMs });
+      });
+    }
+    skill.strikes.forEach((strike, index) => {
+      this.time.delayedCall(strike.atMs, () => {
+        if (!fx.scene.isActive()) return;
+        const at = caster();
+        const fxId = skill.slashFx ?? skill.fx;
+        if (skill.classId === 'warrior' && skill.kind === 'basic') fx.skillFx.basicMelee(skill, context(strike.area, [], strike.atMs));
+        else if (fxId) fx.fx.spawn(fxId, at.x + at.facing * (skill.slashFx ? 22 : 30), at.y - 26, { flipX: at.facing === 1, additive: true });
+        if (skill.projectile) {
+          // 跟放的人一樣找目標（瞄準錐內最近的，沒有瞄準就是正前方第一隻），飛到牠身上停下並播命中
+          const spec = skill.projectile;
+          const sx = at.x + at.facing * 14;
+          const sy = at.y - 26;
+          const range = (spec.aim?.range ?? strike.area.w ?? 300) + 60;
+          const target = spec.aim ? this.aimTarget(sx, sy, at.facing, spec.aim.coneDeg, spec.aim.range) : this.lineTarget(sx, sy, at.facing, range);
+          const c = target?.center();
+          const angle = c ? Math.atan2(c.y - sy, c.x - sx) : at.facing === 1 ? 0 : Math.PI;
+          fx.skillFx.release(skill, context(strike.area, [], strike.atMs));
+          fx.projectile(skill, sx, sy, angle, c ? Math.hypot(c.x - sx, c.y - sy) : range, target ? () => {
+            if (target.alive && fx.sys.isActive()) fx.skillFx.contact(skill, index, { ...context(strike.area, [target], strike.atMs), impactAngle: angle });
+          } : undefined);
+          return;
+        }
+        const targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce, at);
+        const landed = fx.skillFx.landRain(skill, index);
+        if (strike.fx && !landed) fx.skillFx.play(strike.fx, context(strike.area, targets, strike.atMs));
+        if (targets.length > 0) fx.skillFx.contact(skill, index, context(strike.area, targets, strike.atMs));
+      });
+    });
+  }
+
+  private remoteFxContext(peer: string, skill: SkillDef, area: Area, caster: Caster, targets: MonsterActor[], atMs: number): SkillFxContext {
+    const view = this.cameras.main.worldView;
+    return {
+      view: { x: view.x, y: view.y, w: view.width, h: view.height },
+      bodyArt: this.avatar.bodyArt,
+      setPlayerVisible: (visible) => this.remotePlayers.setVisible(peer, visible),
+      restoreCamera: () => undefined,
+      classId: skill.classId,
+      bounds: { x: 0, y: 0, w: this.world.width, h: this.world.height },
+      points: [],
+      groundAt: (x, fromY) => this.world.groundBelow(x, fromY)?.y ?? null,
+      rainTerrain: this.world.segments,
+      playerAt: () => ({ x: caster.x, y: caster.y - 26 }),
+      targetsAt: (x, y, radius) => [...this.monsters.values()].filter((m) => m.alive && circleRect(x, y, radius, m.hitbox())).map((m) => ({ ...m.center(), id: String(m.spawn.uid) })),
+      frame: this.remotePlayers.motionFrame(peer),
+      remainingMs: Math.max(0, skill.strikes.at(-1)!.atMs - atMs) + 250,
+      reach: this.skillReach(skill),
+      x: caster.x,
+      y: caster.y,
+      facing: caster.facing,
+      area: this.areaRect(area, caster),
+      targets: targets.map((m) => m.center()),
+      origin: caster.origin ?? null,
+      from: null,
+      tint: 0xffffff,
+      leadMs: 0,
+    };
+  }
+
+  /** 半透明特效場景：第一次有人放技能時才建立（疊在遊戲場景上面）。 */
+  private ensureRemoteFx(): RemoteFxScene | null {
+    if (this.remoteFx?.sys.isActive()) return this.remoteFx;
+    if (this.remoteFx) return null; // 還在啟動
+    this.remoteFx = this.scene.add('remote-fx', RemoteFxScene, true, { bundle: this.bundle, main: this.cameras.main }) as RemoteFxScene | null;
+    return null;
+  }
+
+  private netPlayer(): PlayerState {
+    const body = this.player.body;
+    const motion = this.avatar.motionTag;
+    if (motion !== this.lastMotionTag) {
+      if (motion) this.motionSeq += 1;
+      this.lastMotionTag = motion;
+    }
+    const inventory = this.inventoryState?.inventory;
+    const item = inventory?.items.find((w) => w.uid === inventory.equipped[this.classId]);
+    return {
+      x: Math.round(body.x),
+      y: Math.round(body.y),
+      f: body.facing,
+      a: this.avatar.animator.tag,
+      m: motion,
+      ms: this.motionSeq,
+      c: this.classId,
+      cw: item?.definitionId ?? null,
+      o: inventory?.equippedOutfit ?? null,
+    };
+  }
+
+  /** 主機：目前這一房活著的怪（位置是怪物 AI 的即時位置）。 */
+  private netWorld(): NetWorld {
+    const mobs: NetMob[] = [];
+    for (const monster of this.monsters.values()) {
+      if (!monster.alive) continue;
+      const spawn = monster.spawn;
+      mobs.push({ uid: spawn.uid, type: spawn.typeId, zone: spawn.zoneId, x: monster.x, y: monster.y, facing: monster.facing, state: monster.state === 'move' ? 1 : monster.state === 'hit' ? 2 : 0, multiplier: spawn.multiplier });
+    }
+    return { mobs, dead: [] };
   }
 
   /** 這一房會用到的怪物圖：地圖的生怪區、房間的怪物組成、怪潮、Boss，加上目前場上的怪。 */
@@ -427,6 +673,8 @@ export class GameScene extends Phaser.Scene {
       const camera = this.cameras.main;
       camera.fadeOut(200, 0, 0, 0);
       this.playSfx('portal');
+      // 多人連線：新房先不生怪，等確定自己是主機（沒人在）才生，否則照主機的怪
+      if (this.net) this.server.setFollower(true);
       const [snapshot] = await Promise.all([this.server.changeRoom({ toRoomId: roomId, via }), new Promise((r) => setTimeout(r, 220))]);
       await this.enterRoom(snapshot, arriveAt);
     } catch (error) {
@@ -459,9 +707,15 @@ export class GameScene extends Phaser.Scene {
   private spawnMonster(spawn: MonsterSpawn): void {
     const entry = this.bundle.monsters.get(spawn.typeId);
     const map = this.mapView?.map;
-    if (!entry || !map || this.monsters.has(spawn.uid)) return;
+    if (!entry || !map) return;
+    // 同一個編號還活著就不重複建；死亡動畫中的舊怪讓位給新的
+    const old = this.monsters.get(spawn.uid);
+    if (old?.alive) return;
+    old?.destroy();
     const zone = map.spawnZones.find((z) => z.id === spawn.zoneId)?.rect ?? { x: 0, y: 0, w: map.size.w, h: map.size.h };
     const actor = new MonsterActor(this, this.world, entry.def, entry.math, entry.sheet, spawn, zone, this.opts.lighting ?? true);
+    // 跟隨主機時，位置由主機決定
+    if (this.server.isFollower) actor.setRemote({ x: spawn.x, y: spawn.y, facing: actor.facing, state: 0 });
     this.monsters.set(spawn.uid, actor);
   }
 
@@ -470,6 +724,7 @@ export class GameScene extends Phaser.Scene {
   // ---------------------------------------------------------------------------
 
   override update(_time: number, delta: number): void {
+    if (this.ready) this.netTick(delta);
     if (!this.ready || this.switching) return;
     if (this.inventoryOpen) {
       this.keys.clear();
@@ -700,6 +955,9 @@ export class GameScene extends Phaser.Scene {
       case 'toggleAuto':
         if (this.ready) this.setAuto(!this.autoOn);
         break;
+      case 'netPermissions':
+        void this.reopenNet();
+        break;
       case 'setMode':
         this.setMode(cmd.mode);
         break;
@@ -813,6 +1071,8 @@ export class GameScene extends Phaser.Scene {
       this.skillFx.begin(skill,this.fxContext(skill,skill.strikes[0]!.area,[],null,0));
       // 起手音：普攻只放自己定義的，技能沒定義就用職業共通的
       this.playSfx(skill.kind === 'basic' ? [`cast:${skill.id}`] : [`cast:${skill.id}`, `cast:${skill.classId}`]);
+      // 多人連線：別人會在他的畫面重播這招的半透明特效
+      this.net?.castSkill(skill.id, this.player.body.x, this.player.body.y, this.player.body.facing);
       return true;
     };
     if (skill.chain?.blink) {
@@ -1212,6 +1472,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** 面向 ±coneDeg、range 內的怪：角度偏差小的優先，再看距離。 */
+  /** 沒有瞄準的投射物：正前方（高度在判定框內）距離最近的一隻。 */
+  private lineTarget(x: number, y: number, dir: 1 | -1, range: number): MonsterActor | null {
+    let best: { m: MonsterActor; d: number } | null = null;
+    for (const m of this.monsters.values()) {
+      if (!m.alive) continue;
+      const box = m.hitbox();
+      if (y < box.y - 6 || y > box.y + box.h + 6) continue;
+      // 整隻在後面的不算；d = 到牠近側邊緣的距離（已經貼在身上就是 0）
+      if (dir === 1 ? box.x + box.w < x : box.x > x) continue;
+      const d = Math.max(0, dir === 1 ? box.x - x : x - (box.x + box.w));
+      if (d > range) continue;
+      if (!best || d < best.d) best = { m, d };
+    }
+    return best?.m ?? null;
+  }
+
   private aimTarget(x: number, y: number, dir: 1 | -1, coneDeg: number, range: number): MonsterActor | null {
     const cone = (coneDeg * Math.PI) / 180;
     let best: { m: MonsterActor; score: number } | null = null;
@@ -1292,8 +1568,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** 判定範圍的外框（世界座標）；特效也用這個。 */
-  private areaRect(area: Area): Rect {
-    const body = this.player.body;
+  /** 判定範圍（世界座標）；caster 不給就是自己（給的話用其他玩家的位置，重播他的技能特效）。 */
+  private areaRect(area: Area, caster?: Caster): Rect {
+    const body = caster ?? this.player.body;
     const dir = body.facing;
     const cy = body.y - 24;
     switch (area.shape) {
@@ -1305,7 +1582,7 @@ export class GameScene extends Phaser.Scene {
         return { x: Math.min(near, far), y: cy - h / 2, w: Math.abs(far - near), h };
       }
       case 'path': {
-        const origin = this.player.skillOrigin ?? { x: body.x, y: body.y };
+        const origin = (caster ? caster.origin : this.player.skillOrigin) ?? { x: body.x, y: body.y };
         const end = body.x + dir * (area.w ?? 0);
         const h = area.h ?? 60;
         const top = Math.min(origin.y, body.y) - 24 - h / 2;
@@ -1327,8 +1604,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** 範圍內的怪物，依距離排序取前 maxTargets 隻。 */
-  private findTargets(area: Area, maxTargets: number, pierce: boolean): MonsterActor[] {
-    const body = this.player.body;
+  private findTargets(area: Area, maxTargets: number, pierce: boolean, caster?: Caster): MonsterActor[] {
+    const body = caster ?? this.player.body;
     const dir = body.facing;
     const cy = body.y - 24;
     const candidates: { m: MonsterActor; d: number }[] = [];
@@ -1341,7 +1618,7 @@ export class GameScene extends Phaser.Scene {
         case 'line':
         case 'path':
         case 'map':
-          inside = intersects(box, this.areaRect(area));
+          inside = intersects(box, this.areaRect(area, caster));
           break;
         case 'circle':
           inside = circleRect(body.x, cy, area.r ?? 0, box);
@@ -1429,6 +1706,11 @@ export class GameScene extends Phaser.Scene {
       if (!monster) continue;
       monster.pending = Math.max(0, monster.pending - 1);
       if (!outcome.killed) continue;
+      // 多人連線：跟隨者的擊殺等主機確認；主機自己打死的告訴大家
+      if (this.net?.role === 'follower') {
+        this.net.claimKill(outcome.uid);
+        this.localKills.set(outcome.uid, performance.now());
+      } else if (this.net?.role === 'host') this.net.recordDeath(outcome.uid, null);
       const c = monster.center();
       const floor = monster.y;
       const coins = Math.min(30, monster.def.fx.coinCount + Math.floor(outcome.multiplier / 10));
@@ -1544,6 +1826,8 @@ export class GameScene extends Phaser.Scene {
         : {}),
       autoConfig: this.auto.config,
       fps: Math.round(this.game.loop.actualFps),
+      ...(this.net && this.net.role !== 'solo' ? { online: this.net.online } : {}),
+      ...(this.netConnection?.status === 'denied' && !this.net ? { netDenied: true } : {}),
       ...(this.toast ? { toast: this.toast } : {}),
       feed: this.visibleFeed(),
       ...patch,
@@ -1555,6 +1839,11 @@ export class GameScene extends Phaser.Scene {
     return {
       fps: Math.round(this.game.loop.actualFps),
       monsters: this.monsters.size,
+      // 多人連線：角色（0 單人、1 等待、2 主機、3 跟隨）、人數、看到的其他玩家、活著的怪的編號總和（比對兩邊是不是同一批）
+      netRole: ['solo', 'pending', 'host', 'follower'].indexOf(this.net?.role ?? 'solo'),
+      netOnline: this.net?.online ?? 1,
+      netRemotes: this.remotePlayers?.count ?? 0,
+      monsterUidSum: [...this.monsters.values()].filter((m) => m.alive).reduce((sum, m) => sum + m.spawn.uid, 0),
       fx: this.fx.count,
       pickups: this.pickups.count,
       skillFx: this.skillFx.count,
@@ -1595,6 +1884,12 @@ export class GameScene extends Phaser.Scene {
     this.server?.dispose();
     this.keys?.dispose();
     this.bgm?.destroy();
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    this.net?.dispose();
+    this.net = null;
+    this.remotePlayers?.clear();
+    if (this.remoteFx) this.scene.remove('remote-fx');
+    this.remoteFx = null;
     if (sfx.listener === this.sfxListener) sfx.listener = null;
   }
 }
@@ -1676,4 +1971,9 @@ function saveMode(mode: GameMode): void {
   } catch {
     // 無痕模式等情況無法存，忽略
   }
+}
+
+/** 多人連線的通道名稱：一間遊戲房一個（平台規定小寫英數）。 */
+function netRoomName(roomId: number): string {
+  return `room-${roomId}`;
 }

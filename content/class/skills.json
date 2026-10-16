@@ -384,21 +384,21 @@
       "motion": {"tag": "mage_cast"},
       "icon": "reaper",
       "strikes": [
-        {"atMs": 1100, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 1340, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 1580, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 1820, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 2060, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "reaperSweep"},
-        {"atMs": 2400, "area": {"shape": "map"}, "maxTargets": 30, "pierce": true, "weightRule": "even", "fx": "darkBurst"}
+        {"atMs": 2580, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulHit"},
+        {"atMs": 2740, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulHit"},
+        {"atMs": 2880, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulHit"},
+        {"atMs": 3000, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulHit"},
+        {"atMs": 3100, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulHit"},
+        {"atMs": 3330, "area": {"shape": "map"}, "maxTargets": 1000, "pierce": true, "weightRule": "even", "fx": "reaperSoulFinal"}
       ],
       "cooldownSec": 30,
       "price": 20,
       "fullTargets": 30,
-      "cancelFromMs": 2490,
+      "cancelFromMs": 3880,
       "hitStopMs": 90,
       "shake": 6,
       "ultimate": true,
-      "cues": [{"atMs": 410, "fx": "summonCircle"}, {"atMs": 700, "fx": "reaper"}]
+      "cues": [{"atMs": 620, "fx": "reaperGaze"}, {"atMs": 1740, "fx": "reaperCharge"}, {"atMs": 2200, "fx": "reaperCut"}, {"atMs": 2440, "fx": "reaperSouls"}]
     },
     {
       "id": "skill_0021",

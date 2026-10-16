@@ -10,6 +10,17 @@ type MonsterState = 'idle' | 'move' | 'hit' | 'die' | 'gone';
 
 const DEFAULT_DIE_FADE_SEC = 0.4;
 const HIT_LOCK_MS = 160;
+/** 跟隨主機位置：每個物理步拉近的比例；離太遠直接瞬移 */
+const REMOTE_FOLLOW = 0.2;
+const REMOTE_SNAP_PX = 160;
+
+/** 主機送來的位置與動作（0 = 站著、1 = 移動、2 = 受擊）。 */
+export interface RemoteTarget {
+  x: number;
+  y: number;
+  facing: 1 | -1;
+  state: 0 | 1 | 2;
+}
 
 /**
  * 一隻怪物：確定性 AI（亂數種子 + 生成時間）、四個必備動作、受擊閃白與擊退、死亡淡出（SPEC §3.8）。
@@ -25,6 +36,8 @@ export class MonsterActor {
   private readonly random: () => number;
   private body: BodyState | null = null;
   private fly: { baseY: number; phase: number } | null = null;
+  /** 多人連線：這隻怪由主機決定位置（只做內插與動作）；null = 自己跑 AI */
+  private remote: RemoteTarget | null = null;
   state: MonsterState = 'idle';
   facing: 1 | -1;
   x: number;
@@ -119,10 +132,42 @@ export class MonsterActor {
     this.animator.play(mode === 'idle' ? this.def.tags.idle : this.def.tags.move, { restart: true });
   }
 
+  /** 多人連線用：交給主機（傳位置）或收回自己跑 AI（傳 null，例如自己變成主機）。 */
+  setRemote(target: RemoteTarget | null): void {
+    if (target) {
+      if (!this.remote) this.body = null;
+      this.remote = target;
+      return;
+    }
+    if (!this.remote) return;
+    this.remote = null;
+    if (this.def.behavior.move !== 'fly') this.body = createBody(this.world, this.x, this.y - 2, this.facing);
+    else this.fly = { baseY: this.y, phase: 0 };
+    if (this.alive) this.enterMode('idle');
+  }
+
+  /** 由主機決定位置中。 */
+  get remoteControlled(): boolean {
+    return this.remote !== null;
+  }
+
   /** 固定步長：移動與狀態計時。 */
   step(): void {
     const dt = PHYSICS.dt * 1000;
     if (this.state === 'gone') return;
+    if (this.remote && this.state !== 'die') {
+      const t = this.remote;
+      const far = Math.abs(t.x - this.x) > REMOTE_SNAP_PX || Math.abs(t.y - this.y) > REMOTE_SNAP_PX;
+      this.x = far ? t.x : this.x + (t.x - this.x) * REMOTE_FOLLOW;
+      this.y = far ? t.y : this.y + (t.y - this.y) * REMOTE_FOLLOW;
+      this.facing = t.facing;
+      const next: MonsterState = t.state === 1 ? 'move' : t.state === 2 ? 'hit' : 'idle';
+      if (next !== this.state) {
+        this.state = next;
+        this.animator.play(next === 'move' ? this.def.tags.move : next === 'hit' ? this.def.tags.hit : this.def.tags.idle, { restart: true, loop: next !== 'hit' });
+      }
+      return;
+    }
     if (this.state === 'die') {
       if (this.body) stepBody(this.world, this.body, NO_INPUT, { rooted: true, canClimb: false });
       this.syncBody();
@@ -220,7 +265,8 @@ export class MonsterActor {
     this.knockDir = this.x >= fromX ? 1 : -1;
     this.facing = this.knockDir === 1 ? -1 : 1;
     this.hpShown = Math.max(0.1, this.hpShown - 0.08);
-    if (this.def.behavior.knockback > 0 || this.def.behavior.move !== 'static') {
+    // 主機決定位置的怪只做閃白與回彈，不在本機推動
+    if (!this.remote && (this.def.behavior.knockback > 0 || this.def.behavior.move !== 'static')) {
       this.state = 'hit';
       this.hitMs = HIT_LOCK_MS;
       this.animator.play(this.def.tags.hit, { restart: true, loop: false });

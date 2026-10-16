@@ -206,3 +206,9 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #b5c6ae3b; backgro
 .auto-note { font-size: 10px; color: #c7b385; line-height: 1.5; }
 @media (max-width: 680px) { .auto-settings { left: 12px; right: 12px; width: auto; top: 83px; bottom: auto; max-height: calc(100% - 230px); } }
 .auto-label small { display: block; margin-top: 2px; font-size: 10px; color: #93a89a; }
+/* 多人連線：這一房目前的人數 */
+.net-badge { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; padding: 5px 12px; border-radius: 999px; border: 1px solid #8fd3b04d; background: #0b211dcc; color: #d9efe2; font-size: 12px; letter-spacing: 1px; pointer-events: none; }
+.net-badge i { width: 7px; height: 7px; border-radius: 50%; background: #6fe0a0; box-shadow: 0 0 6px #6fe0a0; }
+.hud .net-denied { pointer-events: auto; cursor: pointer; border-color: #e0b56a88; color: #ffe3b0; font: inherit; font-size: 12px; }
+.hud .net-denied:hover { background: #1d3a2fe6; }
+@media (max-width: 680px) { .net-badge { top: 60px; font-size: 10px; padding: 3px 9px; } }

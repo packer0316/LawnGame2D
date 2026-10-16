@@ -46,6 +46,10 @@ export interface HudState {
   /** 本次掛機：開始到現在的輸贏與時間 */
   autoSession?: { net: number; elapsedMs: number };
   fps: number;
+  /** 多人連線：這一房目前的人數（含自己）；單人時沒有 */
+  online?: number;
+  /** 多人連線的權限被拒絕（畫面上給一個按鈕重新開啟） */
+  netDenied?: boolean;
   toast?: { id: number; text: string };
   /** 畫面左側的得獎紀錄：獎金、裝備、卷軸，最新的在最後；每筆 4 秒後消失（大獎不再另外全螢幕顯示） */
   feed?: HudFeedEntry[];
@@ -72,5 +76,7 @@ export type GameCommand =
   | { type: 'toggleAuto' }
   | { type: 'setAutoConfig'; config: AutoConfig }
   | { type: 'setMode'; mode: GameMode }
+  /** 多人連線被拒絕時：打開平台的權限面板，開啟後重新連線 */
+  | { type: 'netPermissions' }
   | { type: 'setBalance'; balance: number }
   | { type: 'toggleDebug' };

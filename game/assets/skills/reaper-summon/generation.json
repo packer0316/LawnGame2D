@@ -1,0 +1,26 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "game/assets/skills/reaper-sequence.png"
+  ],
+  "assets": [
+    {
+      "path": "portrait-v1.png",
+      "grid": [
+        4,
+        2
+      ],
+      "prompt": "Use case: identity-preserve animation artwork. Edit the referenced game reaper character into a production transparent ANIMATION ATLAS for a cinematic face close-up. EXACT regular 4 columns by 2 rows, 8 square cells, output 2048x1024. No gutters, no grid lines, no labels. One hooded skull head and upper chest in each cell at constant scale; head width about 260px within 512px square cell, shoulders visible bottom, centerline x256, hood top y50, collar y430. Match the reference's ornate antique silver clasps, tattered indigo black robe, cold violet skeletal face, restrained lavender-magenta eyes and detailed painterly pixel-art RPG aesthetic. FACE STRAIGHT TOWARD THE VIEWER, symmetrical two eyes. This is the same reaper, NOT the player. Frame order left to right then next row. Frame0 head deeply bowed, hood hides eye sockets, closed dark gaze. Frame1 chin lifting a little, eyes still hidden. Frame2 head half raised, skull nose and brow becoming visible. Frame3 head raised almost level, two dark eye sockets looking forward. Frame4 head fully raised, piercing forward stare, tiny violet eye lights ignite. Frame5 eyes illuminate slightly brighter, hold this confident threatening gaze. Frame6 eyes brightest focused pinpoints and thin luminous brow accents, shoulders settle. Frame7 same final forward gaze with cloak edges relaxed, controlled power. CRITICAL true head rotation and changing hood folds across first five poses, not identical faces shifted upward. Preserve facial identity, dark cloth core, collar scale and position. No weapon in this close-up; it will transition to the existing scythe atlas. Keep all hood and shoulders fully inside each cell with 30px clear margin. Real transparent alpha background, no colored backdrop, no floor, no text, no borders, no scenery, no giant glow cloud. Single final atlas."
+    },
+    {
+      "path": "scythe-v1.png",
+      "grid": [
+        4,
+        2
+      ],
+      "prompt": "Use case: identity-preserve animation artwork. Production transparent animation sprite atlas for the SAME reaper as both reference sheets. EXACT 4 columns x 2 rows, 8 equal square cells, 2048x1024, no grid, labels or gutters. Each cell ONE complete hooded reaper upper body from hood through waist, PLUS his entire huge curved scythe, all fully inside each cell. Constant scale and anchor, waist centered at x256 y465, head centered x230 y155, 30px safe margins. Reference1 establishes original indigo-black tattered cloak, antique silver ornament, violet-edged giant scythe; reference2 establishes more visible pale violet SKULL and forward violet eyes; match that skull identity. Detailed hand-painted pixel-textured fantasy RPG aesthetic, opaque dark cloth. The reaper faces three-quarter toward RIGHT but his skull initially looks forward at viewer. EXACT 8 sequential DISTINCT hand-drawn poses of ONE single deliberate scythe swing: frame0 upright calm chest open, scythe held low; frame1 turns torso and draws scythe backward LEFT; frame2 both hands raise scythe high behind LEFT shoulder, cloth curls left; frame3 extreme held anticipation, body twisted back, bright concentrated violet blade edge, eyes fixed forward; frame4 explosive single forward swing begins from upper LEFT to lower RIGHT, elbows and torso rotate; frame5 scythe stretched HORIZONTALLY RIGHT in decisive contact pose with narrow brilliant violet crescent; frame6 follow-through blade low RIGHT and cloak whips right; frame7 still final follow-through hold, weapon stays low right, never raises again. No duplicate repeated swings. No full legs or feet, upper body and waist wisps only, no environment. Transparent alpha, no background, no floor, no UI, no letters. Keep giant scythe inside each cell and separate neighboring cells. This atlas is the zoomed-out upper-body reveal after face closeup.",
+      "repairPrompt": "Repair this production animation atlas. Preserve the SAME eight reaper poses and colors in reading order, but SHRINK every complete figure, scythe, cloak and glow to fit comfortably INSIDE its own cell. Exact 4 columns x 2 rows square grid. Crucial: each cell needs EMPTY TRANSPARENT MARGINS of at least 18 percent on ALL FOUR SIDES. Occupied bounding box no larger than 64 percent of cell width AND height. Nothing may approach or cross a cell boundary. In the input the first scythe leaks down into the second row and swing frame leaks right: fix all such contamination. Complete weapons inside each cell; no cut-off parts. Constant overall size across frames, torso center aligned x50 percent, waist at y78 percent, no ground. Do not enlarge to fill sheet. Eight isolated smaller sprites floating in their spacious invisible square cells. Keep genuine alpha transparency, no grid lines, no text. Crisp detailed original game art. 2048x1024."
+    }
+  ],
+  "notes": "透明 PNG；臉部 8 格抬頭凝視，身體 8 格蓄力與唯一一次揮鐮。保留格子錨點，執行時依固定遊戲時鐘取格。"
+}

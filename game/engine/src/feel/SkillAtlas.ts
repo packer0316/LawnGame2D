@@ -1,5 +1,4 @@
 import * as Phaser from 'phaser';
-import reaper from '../../../assets/skills/reaper-sequence.png?url';
 import blade from '../../../assets/skills/blade-sequence.png?url';
 import fire from '../../../assets/skills/fire-sequence.png?url';
 import arcane from '../../../assets/skills/arcane-sequence.png?url';
@@ -23,8 +22,8 @@ import swordGround from '../../../assets/skills/sword-ground-sequence-v10.png?ur
 import arrowFall from '../../../assets/skills/arrow-fall-sequence-v10.png?url';
 import arrowGround from '../../../assets/skills/arrow-ground-sequence-v10.png?url';
 
-export type SkillAtlasName = 'reaper' | 'blade' | 'fire' | 'arcane' | 'shadow' | 'earth' | 'dragon' | 'lightning' | 'soul' | 'thrust' | 'tiger' | 'razor' | 'rend' | 'goldHit' | 'archerHit' | 'archerFireHit' | 'swordFall' | 'swordGround' | 'arrowFall' | 'arrowGround';
-const SHEETS = { reaper, blade, fire, arcane, shadow, earth, dragon, lightning, soul, thrust, tiger, razor, rend, goldHit, archerHit, archerFireHit, swordFall, swordGround, arrowFall, arrowGround };
+export type SkillAtlasName = 'blade' | 'fire' | 'arcane' | 'shadow' | 'earth' | 'dragon' | 'lightning' | 'soul' | 'thrust' | 'tiger' | 'razor' | 'rend' | 'goldHit' | 'archerHit' | 'archerFireHit' | 'swordFall' | 'swordGround' | 'arrowFall' | 'arrowGround';
+const SHEETS = { blade, fire, arcane, shadow, earth, dragon, lightning, soul, thrust, tiger, razor, rend, goldHit, archerHit, archerFireHit, swordFall, swordGround, arrowFall, arrowGround };
 export const BURST_DURATION:Record<Exclude<SkillAtlasName,'reaper'|'tiger'>,number>={blade:320,fire:440,arcane:320,shadow:320,earth:960,dragon:720,lightning:360,soul:460,thrust:880,razor:440,rend:360,goldHit:200,archerHit:240,archerFireHit:280,swordFall:440,swordGround:590,arrowFall:330,arrowGround:400};
 export const atlasKey = (name: SkillAtlasName): string => `skill-sequence-${name}`;
 
@@ -72,7 +71,7 @@ export async function loadSkillAtlases(scene: Phaser.Scene): Promise<void> {
   for (const name of Object.keys(SHEETS) as SkillAtlasName[]) {
     const key = atlasKey(name), texture = scene.textures.get(key);
     const source = texture.getSourceImage() as HTMLImageElement;
-    const rows = name === 'reaper' || name === 'tiger' ? 3 : 2;
+    const rows = name === 'tiger' ? 3 : 2;
     for (let i = 0; i < rows * 4; i++) {
       const x = Math.floor((i % 4) * source.width / 4), y = Math.floor(Math.floor(i / 4) * source.height / rows);
       const right = Math.floor((i % 4 + 1) * source.width / 4), bottom = Math.floor((Math.floor(i / 4) + 1) * source.height / rows);
@@ -84,12 +83,6 @@ export async function loadSkillAtlases(scene: Phaser.Scene): Promise<void> {
         key: `${key}-${suffix}`, frames: scene.anims.generateFrameNumbers(key, { start, end }), duration,
       });
     };
-    if (name === 'reaper') {
-      define('summon', 0, 5, 360);
-      define('sweep', 6, 9, 230);
-      define('dissolve', 10, 11, 240);
-    } else {
-      define('burst', 0, 7, BURST_DURATION[name]);
-    }
+    define('burst', 0, 7, BURST_DURATION[name]);
   }
 }
