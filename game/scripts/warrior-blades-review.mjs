@@ -16,7 +16,7 @@ try{
     window.spawned={whirl:0,holy:0};window.beats=[];
     const sprite=s.add.sprite.bind(s.add);s.add.sprite=(x,y,key,...args)=>{
       if(key==='warrior-blade-whirl-v11')spawned.whirl++;
-      if(key==='warrior-blade-holy-v12')spawned.holy++;
+      if(key==='warrior-blade-holy-v13')spawned.holy++;
       return sprite(x,y,key,...args);
     };
     const apply=s.applyHits.bind(s);s.applyHits=(skill,index,...args)=>{beats.push({id:skill.id,index});return apply(skill,index,...args)};
@@ -48,9 +48,9 @@ try{
   assert.equal(pair.length,2);assert.ok(pair[0].right<pair[1].left);assert.equal(pair[0].flip,true);assert.equal(pair[1].flip,false);
   await page.screenshot({path:'art-review/warrior-blades/holy-start.png'});
   await page.evaluate(()=>{
-    const fx=s.skillFx.warriorBlades;s.command({type:'inventoryOpen',open:true});const before=fx.waves[0].age;
+    const fx=s.skillFx.warriorBlades;s.command({type:'inventoryOpen',open:true});const before=fx.waves[0].age,artBefore=fx.waves[0].artAge;
     for(let i=0;i<60;i++)s.update(0,1000/60);
-    if(fx.waves[0].age!==before)throw Error('Holy wave advanced while paused');
+    if(fx.waves[0].age!==before||fx.waves[0].artAge!==artBefore)throw Error('Holy wave advanced while paused');
     s.command({type:'inventoryOpen',open:false});
   });
   for(const at of [650,850,1250,1400]){
@@ -69,21 +69,28 @@ try{
     const target={id:'review-monster',x:right.sprite.x+40,y:right.sprite.y};
     for(const w of fx.waves){w.hit.clear();w.holdMs=0;w.recoverMs=0;w.contactCooldown=0;}
     right.ctx.targetsAt=(x,y,r)=>Math.hypot(target.x-x,target.y-y)<r?[target]:[];
-    let impacts=0;const impact=fx.onMoonImpact;fx.onMoonImpact=()=>{impacts++;impact()};
+    let impacts=0,audio=0;window.__lawnSfx.onPlay=name=>{if(name==='moonblade:contact')audio++};
+    const impact=fx.onMoonImpact;fx.onMoonImpact=()=>{impacts++;impact(target)};
     for(let i=0;i<10&&right.holdMs===0;i++)fx.step(16);
-    if(right.holdMs!==55)throw Error('No contact hold');
-    const x=right.sprite.x,rotation=right.sprite.rotation,leftX=left.sprite.x;
+    if(right.holdMs!==60)throw Error('No contact hold');
+    const x=right.sprite.x,rotation=right.sprite.rotation,leftX=left.sprite.x,flame=right.sprite.frame.name;
     fx.step(40);
     if(right.sprite.x!==x||right.sprite.rotation!==rotation)throw Error('Moon moved during contact hold');
     if(left.sprite.x===leftX)throw Error('Unrelated moon stopped');
+    if(right.sprite.frame.name===flame)throw Error('Attached flames froze during bite');
     fx.step(32);
     if(right.sprite.x<=x||right.sprite.rotation===rotation)throw Error('Moon did not resume');
     for(let i=0;i<20;i++){target.x+=1;fx.step(16);}
-    if(impacts!==1)throw Error('Repeated impact on same monster');
+    if(impacts!==1||audio!==1)throw Error('Repeated impact or missing contact sound');
+    if(!Array.from({length:16},(_,i)=>s.textures.get('warrior-blade-holy-v13').has(String(i))).every(Boolean))throw Error('Missing flame phase');
+    right.ctx.targetsAt=()=>[];
+    const simulate=(dt,count)=>{right.age=0;right.holdMs=60;right.recoverMs=90;for(let i=0;i<count;i++)fx.step(dt);return right.age};
+    const fine=simulate(16,12),coarse=simulate(48,4);
+    if(Math.abs(fine-coarse)>1e-6)throw Error('Recovery depends on frame rate');
     fx.onMoonImpact=impact;
     fx.clear();
     if(fx.count!==0)throw Error('Moon sparks leaked');
-    return {holdMs:55,impacts,resumed:true,independent:true};
+    return {holdMs:60,impacts,audio,flamesDuringHold:true,resumed:true,independent:true,recoveryFrameIndependent:true};
   });
   // Left-facing spin preserves the same non-overlapping near/far halves and cancels cleanly.
   await page.evaluate(()=>{for(let i=0;i<120;i++)s.update(0,1000/60);start(0,-1);advance(300)});

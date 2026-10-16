@@ -17,6 +17,7 @@ import { motionDuration } from './motions';
 import type { WeaponDefinition } from '../inventory/catalog';
 import { weaponRig } from '../inventory/weaponRig';
 import { OUTFIT_VISUALS } from './outfits';
+import { IdleBody } from './IdleBody';
 
 /** 角色需要的內容：原始人物 sheet 與武器部件；套服另由遊戲美術包提供。 */
 export interface AvatarContent {
@@ -52,6 +53,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
   /** body 合圖沒有獨立前手時，重畫握柄處的手掌，保留手指遮擋。 */
   private readonly gripOccluder: Phaser.GameObjects.Sprite;
   private readonly scabbardSprite: Phaser.GameObjects.Sprite;
+  private readonly idleBody: IdleBody;
 
   constructor(
     scene: Phaser.Scene,
@@ -65,6 +67,8 @@ export class AvatarView extends Phaser.GameObjects.Container {
       this.sprites.set(layer, sprite);
       this.add(sprite);
     }
+    this.idleBody = new IdleBody(scene);
+    this.addAt(this.idleBody, this.getIndex(this.sprites.get('body')!) + 1);
     this.motionSprite = scene.add.sprite(-AVATAR_CANVAS.footX, -AVATAR_CANVAS.footY, '__MISSING').setOrigin(0, 0).setVisible(false);
     this.add(this.motionSprite);
     this.cosmeticSprite = scene.add.sprite(0, 0, '__MISSING').setVisible(false);
@@ -178,11 +182,13 @@ export class AvatarView extends Phaser.GameObjects.Container {
     }
     this.animator.update(dtMs);
     this.refresh();
+    this.idleBody.advance(dtMs);
   }
 
   /** 依目前幀擺好每個圖層。 */
   refresh(): void {
     if (this.motionOn && !this.cosmetic) {
+      this.idleBody.restPose();
       this.gripOccluder.setVisible(false);
       for (const sprite of this.sprites.values()) sprite.setVisible(false);
       this.motionSprite.setTexture(this.motionKey, frameName(null, this.motionAnimator.frame)).setVisible(true);
@@ -190,7 +196,14 @@ export class AvatarView extends Phaser.GameObjects.Container {
       return;
     }
     this.motionSprite.setVisible(false);
-    const f = this.animator.frame;
+    const stand = this.base.sheet.tags.get('stand');
+    const standBody = stand && this.base.sheet.frame('body', stand.from);
+    const idle = !this.motionOn && this.animator.tag === 'stand' && this.base.sheet.layers.length === 1
+      && standBody?.sourceSize.w === 128 && standBody.sourceSize.h === 128;
+    // The old stand frames translate the whole body 1px. Use the grounded pose for idle,
+    // including its weapon anchors, then animate only the loose hair and cloth.
+    const f = idle ? stand!.from : this.animator.frame;
+    if (!idle) this.idleBody.restPose();
     if (!this.dirty && f === this.lastFrame) return;
     this.lastFrame = f;
     this.dirty = false;
@@ -208,6 +221,7 @@ export class AvatarView extends Phaser.GameObjects.Container {
       sprite.setPosition(-AVATAR_CANVAS.footX + op.dx, -AVATAR_CANVAS.footY + op.dy);
       sprite.setVisible(true);
     }
+    if (idle && this.idleBody.use(this.base, f, this.outfit)) this.sprites.get('body')!.setVisible(false);
     if (this.cosmetic) {
       const def = this.cosmetic;
       const hand = this.content.base.sheet.slicePivotAt('hand', f) ?? { x: 48, y: 97 };
@@ -248,13 +262,13 @@ export class AvatarView extends Phaser.GameObjects.Container {
 
   /** 受擊閃白等效果：套到所有圖層。 */
   setFill(color: number | null): void {
-    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite]) {
+    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite, this.idleBody]) {
       if (color === null) sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.MULTIPLY);
       else sprite.setTint(color).setTintMode(Phaser.TintModes.FILL);
     }
   }
 
   setLit(enabled: boolean): void {
-    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite]) sprite.setLighting(enabled);
+    for (const sprite of [...this.sprites.values(), this.motionSprite, this.cosmeticSprite, this.gripOccluder, this.scabbardSprite, this.idleBody]) sprite.setLighting(enabled);
   }
 }

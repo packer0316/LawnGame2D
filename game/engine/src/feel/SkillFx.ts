@@ -20,6 +20,7 @@ import {loadInfernalGraspArt} from './InfernalGraspArt';
 import {GRASP_SKILL} from './InfernalGraspTiming';
 import { loadWarriorBladeArt } from './WarriorBladeArt';
 import { WarriorBladeEffects } from './WarriorBladeEffects';
+import { sfx } from '../audio/Sfx';
 import type { SheetAsset } from '../content/bundle';
 import { bladeFlipX, bladeSpinMs, createSkillWeapon, orientSkillWeapon } from './SkillWeapons';
 
@@ -116,8 +117,8 @@ export class SkillFx {
   ) {
     this.kit = new SkillVfxKit(scene);
     this.audio = new SkillAudio(scene);
-    this.warriorBlades=new WarriorBladeEffects(scene,()=>{
-      this.audio.play('warrior',.8);
+    this.warriorBlades=new WarriorBladeEffects(scene,(point)=>{
+      sfx.play('moonblade:contact',{x:point.x});
       this.scene.cameras.main.shake(55,1.5/Math.max(1,this.scene.cameras.main.height),false);
     });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN,()=>{this.clear();this.audio.destroy();});

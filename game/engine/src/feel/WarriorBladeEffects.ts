@@ -1,9 +1,10 @@
 import * as Phaser from 'phaser';
 import type {FxPoint,SkillFxContext} from './SkillFx';
-import {warriorBladeKey} from './WarriorBladeArt';
+import {warriorBladeKey,HOLY_BLADE_FRAMES} from './WarriorBladeArt';
 import {DEPTH} from '../map/MapView';
 
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
+const MOON_HOLD_MS=60,MOON_RECOVER_MS=90;
 // A broad cutting plane, an inclined upper orbit, and a quicker inner curl.
 // Independent phases give depth without multiplying layers on each damage beat.
 const SPIN_RINGS=[
@@ -13,7 +14,7 @@ const SPIN_RINGS=[
 ] as const;
 interface MoonBlade{
   sprite:Phaser.GameObjects.Sprite;ctx:SkillFxContext;dir:1|-1;
-  age:number;start:number;end:number;duration:number;
+  age:number;artAge:number;start:number;end:number;duration:number;
   holdMs:number;recoverMs:number;contactCooldown:number;hit:Set<string>;
 }
 
@@ -23,7 +24,7 @@ export class WarriorBladeEffects{
   private waves:MoonBlade[]=[];
   private sparks:{graphic:Phaser.GameObjects.Graphics;age:number}[]=[];
   private holyIssued=false;
-  constructor(private scene:Phaser.Scene,private onMoonImpact:()=>void=()=>{}){}
+  constructor(private scene:Phaser.Scene,private onMoonImpact:(point:FxPoint)=>void=()=>{}){}
   get count():number{return (this.spin?.halves.length??0)+this.waves.length+this.sparks.length;}
   begin(skillId:string):void{
     if(skillId==='skill_0004'){this.spin?.halves.forEach(s=>s.destroy());this.spin=null;}
@@ -49,7 +50,7 @@ export class WarriorBladeEffects{
       const end=dir===1?ctx.bounds.x+ctx.bounds.w+size:ctx.bounds.x-size;
       const sprite=this.scene.add.sprite(start,ctx.y-110,warriorBladeKey('holy'),0)
         .setDepth(DEPTH.fx).setDisplaySize(size,size).setFlipX(dir===-1).setAlpha(0);
-      this.waves.push({sprite,ctx,dir,age:0,start,end,
+      this.waves.push({sprite,ctx,dir,age:0,artAge:0,start,end,
         duration:Math.max(300,Math.abs(end-start)/Math.max(1,ctx.bounds.w)*1450),
         holdMs:0,recoverMs:0,contactCooldown:0,hit:new Set()});
     }
@@ -66,12 +67,16 @@ export class WarriorBladeEffects{
       s.graphic.setAlpha(1-s.age/150).setScale(1+s.age/300);return true;
     });
     this.waves=this.waves.filter(w=>{
+      // The blade bites and holds, while the attached flame continues to flicker.
+      w.artAge+=dt;
       w.contactCooldown=Math.max(0,w.contactCooldown-dt);
       const held=Math.min(dt,w.holdMs);w.holdMs-=held;
       const moving=dt-held;
-      const speed=w.recoverMs>0?1-.6*w.recoverMs/100:1;
+      const beforeRecovery=w.recoverMs;
       w.recoverMs=Math.max(0,w.recoverMs-moving);
-      const previous=w.age;w.age+=moving*speed;
+      // Integrate the eased recovery exactly so different frame rates resume identically.
+      const travel=moving-.55*(beforeRecovery**3-w.recoverMs**3)/(3*MOON_RECOVER_MS**2);
+      const previous=w.age;w.age+=travel;
       const xAt=(age:number)=>w.start+(w.end-w.start)*clamp(age/w.duration);
       // Sweep at most 24 px per sample, so low FPS cannot skip a small monster.
       if(moving>0&&w.contactCooldown===0&&w.age>65){
@@ -82,26 +87,27 @@ export class WarriorBladeEffects{
             .filter(t=>!w.hit.has(this.targetKey(t)));
           if(!contacts.length)continue;
           for(const t of contacts)w.hit.add(this.targetKey(t));
-          w.age=age;w.holdMs=55;w.recoverMs=100;w.contactCooldown=180;
+          w.age=age;w.holdMs=MOON_HOLD_MS;w.recoverMs=MOON_RECOVER_MS;w.contactCooldown=180;
           for(const t of contacts.slice(0,4))this.moonSpark(t,w.dir);
-          this.onMoonImpact();break;
+          this.onMoonImpact(contacts[0]!);break;
         }
       }
       if(w.age>=w.duration){w.sprite.destroy();return false;}
-      // Eight shimmer frames preserve the broad circular crescent silhouette throughout flight.
-      w.sprite.setFrame(Math.floor(w.age/55)%8).setX(xAt(w.age))
-        .setRotation(w.dir*(w.age/520*Math.PI*2-.18))
-        .setAlpha(clamp(w.age/70)*clamp((w.duration-w.age)/150)*.94);
+      // One thin circular blade, sixteen flame phases; no stacked moon afterimages.
+      w.sprite.setFrame(Math.floor(w.artAge/30)%HOLY_BLADE_FRAMES).setX(xAt(w.age))
+        .setRotation(w.dir*(w.age/580*Math.PI*2-.18))
+        .setAlpha(clamp(w.age/70)*clamp((w.duration-w.age)/150));
       return true;
     });
   }
   private targetKey(t:FxPoint):string{return t.id??`${Math.round(t.x/32)}:${Math.round(t.y/32)}`;}
   private moonSpark(t:FxPoint,dir:1|-1):void{
     const g=this.scene.add.graphics().setPosition(t.x,t.y).setDepth(DEPTH.fx+1).setRotation(dir*-.35);
-    // A compact cutting flash and three chips; no extra crescent or lingering trail.
-    g.fillStyle(0xffcf72,.8).fillTriangle(-32,0,26,-7,12,7);
-    g.fillStyle(0xfffbed,1).fillTriangle(-24,0,24,-2,10,3);
-    for(const [x,y]of [[-13,-18],[21,15],[7,-24]]){
+    // A crisp white incision and a few gold fragments, concentrated at contact.
+    g.fillStyle(0xffcf72,.8).fillTriangle(-38,0,32,-7,16,7);
+    g.fillStyle(0xfffbed,1).fillTriangle(-32,0,30,-2,10,3);
+    g.fillStyle(0xfff5d8,.95).fillTriangle(-3,-16,3,13,6,0);
+    for(const [x,y]of [[-13,-18],[21,15],[7,-24],[-21,12],[30,-13]]){
       g.fillStyle(0xffdf9c,.9).fillTriangle(x!,y!,x!+5,y!-5,x!+2,y!+3);
     }
     this.sparks.push({graphic:g,age:0});

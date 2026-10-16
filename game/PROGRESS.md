@@ -29,7 +29,7 @@
 
 - `npm run typecheck`、`npm test`（在 `game/`）
 - `npm run dev` 後執行 `node scripts/shot.mjs <url> <輸出.png> <等待毫秒> <寬x高> <按鍵腳本>` 用本機 Edge 截圖並印出 console 錯誤與效能數據
-- 網址參數：`?room=2&class=mage&mobs=2&lights=0&debug=1&content=dev|real`；預覽元件測試頁 `?preview=monster|map|avatar`
+- 網址參數：`?room=2&class=mage&mobs=2&lights=0&debug=1`；預覽元件測試頁 `?preview=monster|map|avatar`
 - `npm run sim -w @lawn/rtp-sim -- --strikes 100000000` 驗證 RTP
 - `npx tsx scripts/hero-poses.ts <輸出.png>` 檢查主角原畫的武器握點
 - 實際模式測掉落：`?mode=real&drop=1`（每殺必掉）；`?mode=dev` 直接用開發模式
@@ -38,6 +38,8 @@
 
 ## 決策紀錄
 
+- 2026-10-16：聖劍斬 v13「薄月聖焰」：薄圓月弧搭配 16 幀金白外緣焰光，兩片獨立旋轉飛行；接觸停 60ms、90ms 平滑回速，卡肉期間火焰持續流動，新增實際接觸切割音與集中白金碎光。保留五段判定／扣注，原畫與兩輪 prompt 見 assets/skills/v13-prompts.json；實機驗證間距、局部停頓、去重、音畫、暫停與清理。
+- 2026-10-16：待機改為髮梢與披風／飄帶的獨立微風擺動，固定腳底、臉、手與腰帶，移除整張角色上下平移。原裝、忍裝、兜帽套服共用原畫網格變形，保留四職業武器握點、翻面、光照、頓幀與技能切換；紀錄見 assets/verdant/idle-v2.md。
 - 2026-10-16：衝卷改為背包武器展示區原位演出，透明光場可超出展示框；重做同心符文法陣、收束星光、金白成功／冷銀失敗／損毀消散，時間縮至 1.05 + 0.85 秒並自動恢復操作。加入四組強化音效，共用音量／靜音；保留單次扣卷及揭曉前中性演出。紀錄見 assets/inventory/forge-v3.md；26 個音效／背包測試與桌面／手機三結果、連點、連續強化、靜音、暫停及定位檢查通過。
 - 2026-10-16：新增法師第八格全圖大絕「冥獄之握」skill_0049：8 幀法師施法特寫、16 幀骨手及 8 幀金紫握碎序列。4–8 隻巨手依實際最底層斜坡地面分欄出土，掙扎後依序重捏，八段全圖判定；中段 32 ms、末段 115 ms 卡肉，固定時鐘同步音畫與暫停。依使用者截圖回饋移除兩次特寫的黃色描邊。原畫／prompt／時間軸見 infernal-grasp/README.md，165 測試與實機八段／暫停／中斷／鏡頭清理通過。
 - 2026-10-16：刺客月下影殺 v5 強化特寫、突進分身、大斬光與月蝕終結，新增 16 幀 execution-v5 原畫；迴旋刃每圈接觸噴發亮白綠／淡金碎光；飛刃風暴切線離陣後主動追蹤活怪並加速，目標死亡重選、命中後穿出淡去。原判定與經濟保留。月下影殺與 assassin-v5 實機檢查通過，新增追蹤純函式測試與提示詞紀錄。
@@ -91,3 +93,4 @@
 - 2026-10-16：右上角「行囊」按鈕改名「背包」，移到底部控制台最右邊（自動冒險旁，同一種按鈕樣式、背包圖示、「按 I 開啟」）；class 仍是 `inventory-open-button`，截圖腳本不用改。
 - 2026-10-16：使用者要技能、按鈕等全部音效，而且技能要多層疊加。找 CC0 素材：Kenney 8 包（打擊、介面、RPG、科幻、電子、賭場、慶祝短曲）、OpenGameArt 3 包（RPG Sound Pack、Swishes、Battle Sound Effects）、freesound 約 70 段（都確認過頁面上是 CC0，用公開的高品質預覽檔）。`scripts/build-sfx.py` 下載到 `game/.sfx-cache`（不進 git）→ 裁切、去前置靜音、淡出、峰值 -1 dBFS → 96k mono mp3，共 150 段 1.8 MB，產生 `assets/sfx/CREDITS.md`。`audio/Sfx.ts` 引擎（Web Audio、第一次互動解鎖並載入全部、左右聲道、同素材 25ms 防重疊、48 聲上限、壓縮器、音量存 `lawn.sfxVolume`）；`audio/sfxCues.ts` 組合表（`cast/swing/launch/fx/cue/hit/move` 依技能→職業找第一個有定義的，`when: last` 給大招最後一刀收尾重擊）。GameScene 接起手、揮刀、特效、演出、射出、命中（重擊、群體各疊一層）、位移、跳躍落地翻滾、擊殺、金幣、大獎、換房、押注、職業、自動冒險；HUD 按鈕點擊／滑過在 `web/src/uiSounds.ts`（押注、職業、自動冒險由遊戲端出聲，不重複）；設定面板加音效音量。舊的程式合成技能音（SkillAudio）不再出聲，月斷的節拍改用 `moon:<段落>`。使用者回饋：撿金幣不要音階（改固定音高一聲、拿掉 8-bit 雙音）、道具掉落的「叮」與撿到道具都不要音效。瀏覽器實測四職業：152→150 段全部解碼、AudioContext running、無錯誤。
 - 2026-10-16：怪物掉落的武器放大（最長邊 26 → 40px）並斜 45 度（劍尖朝右上），光暈加寬、落地中心抬高不插進地板（`feel/Pickups.ts`）。
+- 2026-10-16：使用者要刪除測試資料：刪掉 `game/dev-content/`（14 MB），`npm run dev`／`build`（predev／prebuild）與啟動批次檔不再自動產生；遊戲與預覽頁一律讀相對路徑 `content/`（也為部署到子路徑做準備），拿掉 `?content=dev|real` 與開發伺服器的 /dev-content 掛載、建置不再複製。產生工具 `npm run art` 保留，要重做主角測試美術時手動跑（輸出仍在 game/dev-content/，不進 git）。

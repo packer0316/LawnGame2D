@@ -59,6 +59,7 @@ const ULT_RISE: SfxCue = [
 const FINALE: SfxLayer = { s: 'cinematic_hit', gain: -4, when: 'last' };
 
 export const SFX_CUES: Record<string, SfxCue> = {
+  'moonblade:contact': [{ s: 'cut_2', gain: -8, jitter: .025 }, { s: 'hit_flesh', gain: -14 }, { s: 'sword_ring', gain: -17, rate: 1.2, jitter: .02 }],
   // 工坊刻印：1.05 秒聚能，結果揭曉才觸發成功／失敗音色。
   'forge:charge': [{ s: 'charge_short', gain: -12, rate: 1.25, jitter: 0 }, { s: 'magic_whoosh', gain: -20, rate: 1.4, jitter: 0 }],
   'forge:success': [{ s: 'bell_1', gain: -12, rate: 1.3, jitter: 0 }, { s: 'chime', gain: -12, rate: 1.4, jitter: 0 }, { s: 'sparkle', gain: -19, at: 80, rate: 1.5, jitter: 0 }],

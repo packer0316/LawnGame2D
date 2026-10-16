@@ -25,6 +25,6 @@ npm run build
 node visual-check.mjs http://localhost:5173
 ```
 
-`dev` 與 `build` 會先重建 `game/dev-content/`；正式 build 會將素材複製到 `game/web/dist/dev-content/`。根目錄的啟動批次檔也會重建。網址加 `?content=dev` 可明確預覽此套件。
+測試內容 `game/dev-content/` 已不再自動產生（2026-10-16 使用者要求刪除）；需要時在 `game/` 執行 `npm run art` 手動產生，遊戲本身只讀 `content/`。
 
 瀏覽器檢查使用本機 Chrome／Edge（也可設定 `CHROME_PATH`），驗證職業、技能按鈕、押注、移動、跳躍、戰鬥、說明、除錯切換、房間往返及桌機／窄螢幕排版，截圖輸出至 `game/art-review/`。自動掛機沿用原本尚未實作的狀態，介面明示「即將開放」。

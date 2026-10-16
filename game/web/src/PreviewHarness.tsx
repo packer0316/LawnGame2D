@@ -12,7 +12,7 @@ export function PreviewHarness({ kind }: { kind: 'monster' | 'map' | 'avatar' })
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const content = httpContentSource(params.get('content') === 'real' ? '/content/' : '/dev-content/');
+    const content = httpContentSource('content/');
     let destroy: (() => void) | undefined;
     let disposed = false;
 

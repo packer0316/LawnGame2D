@@ -1,11 +1,12 @@
 import type * as Phaser from 'phaser';
 import {loadImages} from '../render/sheets';
 import whirl from '../../../assets/skills/warrior-whirl-v11.png?url';
-import holy from '../../../assets/skills/warrior-moonblade-v12.png?url';
+import holy from '../../../assets/skills/warrior-moonblade-v13.png?url';
 
-export const warriorBladeKey=(kind:'whirl'|'holy')=>`warrior-blade-${kind}-${kind==='holy'?'v12':'v11'}`;
+export const HOLY_BLADE_FRAMES=16;
+export const warriorBladeKey=(kind:'whirl'|'holy')=>`warrior-blade-${kind}-${kind==='holy'?'v13':'v11'}`;
 export async function loadWarriorBladeArt(scene:Phaser.Scene):Promise<void>{
-  const sheets=[{kind:'whirl' as const,url:whirl,rows:4},{kind:'holy' as const,url:holy,rows:2}];
+  const sheets=[{kind:'whirl' as const,url:whirl,rows:4},{kind:'holy' as const,url:holy,rows:4}];
   await loadImages(scene,{imageUrl:async path=>path,json:async()=>{throw Error('Bundled warrior blades');}},
     sheets.map(s=>({key:warriorBladeKey(s.kind),path:s.url})));
   for(const sheet of sheets){

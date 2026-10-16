@@ -67,12 +67,8 @@ function bundleContent(): Plugin {
     apply: 'build',
     configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
     writeBundle() {
-      for (const [name, dir] of [
-        ['dev-content', path.join(repoRoot, 'game/dev-content')],
-        ['content', path.join(repoRoot, 'content')],
-      ]) {
-        if (fs.existsSync(path.join(dir!, 'manifest.json'))) fs.cpSync(dir!, path.join(outDir, name!), { recursive: true });
-      }
+      const dir = path.join(repoRoot, 'content');
+      if (fs.existsSync(path.join(dir, 'manifest.json'))) fs.cpSync(dir, path.join(outDir, 'content'), { recursive: true });
     },
   };
 }
@@ -82,7 +78,6 @@ export default defineConfig({
     react(),
     bundleContent(),
     serveDir('/content', path.join(repoRoot, 'content')),
-    serveDir('/dev-content', path.join(repoRoot, 'game', 'dev-content')),
   ],
   server: { port: 5173 },
 });

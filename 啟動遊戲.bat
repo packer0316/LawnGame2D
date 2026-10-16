@@ -16,7 +16,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [1/3] 檢查套件...
+echo [1/2] 檢查套件...
 call npm install --prefer-offline --no-audit --no-fund --loglevel=error
 if errorlevel 1 (
   echo [錯誤] 套件安裝失敗，請確認網路連線後再試一次。
@@ -24,15 +24,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo [2/3] 產生測試美術...
-call npm run gen --silent -w @lawn/placeholder-art
-if errorlevel 1 (
-  echo [錯誤] 產生測試內容失敗。
-  pause
-  exit /b 1
-)
-
-echo [3/3] 啟動遊戲伺服器，瀏覽器會自動開啟。
+echo [2/2] 啟動遊戲伺服器，瀏覽器會自動開啟。
 echo       關閉這個視窗即可停止遊戲。
 echo.
 echo   操作：←→ 移動  ↑↓ 爬梯／進傳送點  Space 跳  ↓+Space 下跳

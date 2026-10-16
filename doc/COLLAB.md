@@ -119,7 +119,7 @@ interface GameHandle { destroy(): void; reloadContent(): Promise<void>; }
 這台電腦沒有安裝 Aseprite 與 LDtk。
 
 - 遊戲 agent 提供 `game/tools/placeholder-art`：用程式產生 **Aseprite 匯出格式**的 PNG + `.sheet.json`（身體、部件、怪物、特效、tileset），檔名與目錄照 STUDIO_SPEC §8，可指定輸出資料夾。編輯器可以執行它，把結果放到 `editor/` 的 fixtures。
-- 遊戲在編輯器產出正式內容前，使用產生在 `game/dev-content/`（不進 git）的測試內容；`content/manifest.json` 存在時自動改讀 `content/`。網址加 `?content=dev` 或 `?content=real` 可強制指定。
+- 遊戲只讀正式內容 `content/`。`game/dev-content/`（不進 git）是主角測試美術的產生結果，已不再自動產生；需要（例如 build-content 同步 content/avatar）時在 `game/` 執行 `npm run art`。
 
 ---
 

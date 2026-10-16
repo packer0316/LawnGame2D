@@ -10,9 +10,7 @@
   ],
   "scripts": {
     "art": "npm run gen -w @lawn/placeholder-art",
-    "predev": "npm run art",
     "dev": "npm run dev -w @lawn/web",
-    "prebuild": "npm run art",
     "build": "npm run build -w @lawn/web",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
