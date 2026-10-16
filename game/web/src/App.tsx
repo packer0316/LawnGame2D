@@ -37,22 +37,6 @@ export function App() {
     };
   }, []);
 
-  // 遊戲畫面畫在 HUD 底欄上方：量底欄的頂端位置，告訴遊戲保留多少高度
-  useEffect(() => {
-    // 技能列與底欄都算在 HUD 裡（像楓之谷的狀態列），量最上面那個的頂端
-    const update = () => {
-      const bar = document.querySelector('.hud-bottom-stack');
-      const top = bar ? bar.getBoundingClientRect().top : window.innerHeight;
-      handleRef.current?.setViewInsets({ bottom: Math.max(0, window.innerHeight - top + 6) });
-    };
-    const observer = new ResizeObserver(update);
-    observer.observe(document.body);
-    const bar = document.querySelector('.hud-bottom-stack');
-    if (bar) observer.observe(bar);
-    update();
-    return () => observer.disconnect();
-  }, [hud?.loading]);
-
   const command = (cmd: GameCommand) => handleRef.current?.command(cmd);
 
   return (

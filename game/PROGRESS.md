@@ -4,6 +4,21 @@
 
 ## 已完成
 
+### 2026-10-16：掛機收益（SPEC v1.4）
+
+- `engine/src/auto/AutoReport.ts`：`AutoReportRecorder` 記一次掛機的財產曲線（6 小時內每秒一點，超過 21,600 點才隔點丟、間隔加倍）、高低點、掉落（同樣的合併 ×N，記每次時間與 id：武器 definitionId／`scroll-10`）；停止後保留到下次開始，存 localStorage `lawn.autoReport`（掛機中每 15 秒、掉落、開始／停止時存；讀回時還在掛機就當成在最後一點停止）。`shift()` 跟著改金錢／清空重置平移。測試 5 個。
+- GameScene：`setAuto` 開始／停止、每 100ms 取樣、擊殺掉落記錄，HUD 多 `autoReport`（`AutoReportView`，沒變時沿用同一份曲線）。
+- HUD：`AutoReportButton`（已掛機 10:39 +輸贏／上次掛機）浮在操作列上緣、對齊「冒險中」（`.auto-group` 中心，位置每次 render 由程式設定），點開 `AutoReportPanel` 從按鈕往上展開：狀態、四格數字、SVG 折線圖（時間級距 1分／5分／15分／1時／全部、每像素保留頭尾高低的抽樣、滑過看時間與財產、放大鈕開大圖）、裝備與卷軸清單（武器用 `WEAPON_ART` 圖格、卷軸用 `ScrollArt`；舊紀錄沒 id 用名稱找）。有按鈕時自動冒險設定往上挪（`.hud.has-auto-report`）。
+- 驗證：型別檢查、196 個測試；實際掛機 25 秒、停止後保留；`art-review/auto-report-check.mjs`（1400／1000／390 寬：按鈕對齊冒險中、面板不出畫面、5／5 物品圖、級距軸標、放大圖、Esc 先關大圖）。未部署。
+
+### 2026-10-16：全螢幕＋精簡操作列、技能列 1 是普攻（SPEC v1.3）
+
+- 遊戲畫面佔滿整個視窗：`App.tsx` 不再用 `setViewInsets` 替底欄留空間（介面還在，預設 0），鏡頭縮放 = 視窗高 ÷ 540。
+- 底部操作列縮成一列、半透明蓋在畫面上（`web/src/hud-compact.css`，在 hud.css／skill-art.css 之後載入）：職業（只留圖示）｜技能列｜押注＋持有金幣｜自動冒險｜背包。格子 52／46／40px，≤860px 技能列自己一排；≤1500px 隱藏左下操作提示。
+- 右上角加全螢幕按鈕（Fullscreen API，`expand`／`collapse` 圖示）。
+- 技能列九格：第 1 格普攻（`Digit1`／`Numpad1` → `attack`，按住連擊），職業技能移到 `2`–`9`（`skill1`–`skill8` 動作不變，HUD key = slot + 2）；拿掉 `Z`／`X` 鍵與兩顆按鈕。`secondary` 動作仍保留給自動冒險用（跟技能列同一個技能、共用冷卻）。`Ctrl` 仍是普攻。
+- 驗證：型別檢查、191 個測試；`art-review/fullscreen-check.mjs` 1914／1280／1000／900／390 寬截圖；`art-review/keys-check.mjs` 確認 Z／X 無作用、1 普攻、2 放第一個技能、9 放第八個。未部署。
+
 ### 2026-10-16：弓箭手「紫焰覺醒・鳳羽天劫」
 
 - 新增第 8 格 skill_0050：眼睛覺醒 → 上半身 → 場上朝天拉弓 → 紫焰鳳凰垂直出畫 → 左／右上角振翅。4 張專屬透明序列圖，共 52 幀；完整素材與提示詞見 [美術／接入紀錄](assets/skills/phoenix-awakening/README.md)。

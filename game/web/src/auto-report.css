@@ -1,0 +1,77 @@
+/* 掛機收益：「冒險中」正上方的「已掛機 10:39」按鈕（位置由程式對齊）與收益面板 */
+.hud .auto-report-button { position: absolute; z-index: 2; transform: translateX(-50%); display: flex; align-items: center; gap: 7px; min-height: 28px; padding: 4px 11px; border-radius: 999px; border-color: #8fd3b04d; background: #0b211de6; box-shadow: 0 4px 14px #00141666; color: #d9efe2; font-size: 12px; letter-spacing: .6px; white-space: nowrap; text-shadow: none; }
+.hud .auto-report-button:active { transform: translateX(-50%) translateY(1px); }
+.hud .auto-report-button:hover, .hud .auto-report-button[aria-expanded="true"] { border-color: #b9e6cc; background: #173a30e6; }
+.auto-report-button i, .auto-report-status i { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: #8a9a92; }
+.auto-report-button i.live, .auto-report-status.live i { background: #6fe0a0; box-shadow: 0 0 6px #6fe0a0; animation: auto-report-pulse 1.6s ease-in-out infinite; }
+.auto-report-button b { font-weight: 600; font-variant-numeric: tabular-nums; color: #c9d4cb; }
+.auto-report .win, .auto-report-button .win { color: #8fe6a8; }
+.auto-report .loss, .auto-report-button .loss { color: var(--danger); }
+@keyframes auto-report-pulse { 50% { opacity: .45; } }
+
+/* 按鈕佔了操作列上方的位置：自動冒險設定往上挪 */
+.hud.has-auto-report .auto-settings { bottom: 120px; }
+
+/* 面板從按鈕往上展開（left／bottom／寬高由程式設定） */
+.auto-report { position: absolute; width: 440px; overflow-y: auto; padding: 16px 18px; z-index: 3; display: flex; flex-direction: column; gap: 10px; scrollbar-width: thin; scrollbar-color: #d4c89e55 transparent; }
+.auto-report > * { flex-shrink: 0; }
+.auto-report-heading { display: flex; align-items: flex-start; justify-content: space-between; }
+.auto-report-heading h3 { margin: 6px 0 0; font-weight: 500; letter-spacing: 3px; }
+.auto-report-heading button { border: 0; padding: 2px; background: transparent; height: 24px; }
+.auto-report-heading .icon { width: 17px; height: 17px; }
+.auto-report-status { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 11px; color: #b5c5b7; }
+.auto-report-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.auto-report-stats > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 8px 9px; border-radius: 6px; background: #0a221f99; }
+.auto-report-stats small { font-size: 10px; color: #93a89a; letter-spacing: 1px; }
+.auto-report-stats strong { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: #f0dfb3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auto-report-stats span { font-size: 10px; color: #93a89a; font-variant-numeric: tabular-nums; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auto-report-chart-heading { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.auto-report-chart-heading h4 { flex: 1; margin: 0; }
+.auto-report-ranges { display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: #071a17cc; }
+.hud .auto-report-ranges button { min-width: 34px; height: 22px; padding: 0 6px; border: 0; border-radius: 4px; background: transparent; color: #9fb3a6; font-size: 11px; }
+.hud .auto-report-ranges button:hover { background: #1d3a32; color: #e6e2cc; }
+.hud .auto-report-ranges button[aria-pressed="true"] { background: #4a6039; color: #f4dfa1; box-shadow: inset 0 0 0 1px #d0bc7988; }
+.hud .auto-report-zoom-button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border-radius: 6px; background: #071a17cc; color: #d9d7bc; }
+.auto-report-zoom-button .icon { width: 15px; height: 15px; }
+.auto-report-chart.clickable { cursor: zoom-in; }
+.auto-report h4 { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: #d9d7bc; }
+.auto-report h4 small { font-size: 10px; font-weight: 400; color: #93a89a; letter-spacing: 0; }
+.auto-report-chart { display: block; width: 100%; height: auto; border-radius: 6px; background: #071a1799; pointer-events: auto; touch-action: none; }
+.auto-report-chart .grid { stroke: #bdc6a31f; }
+.auto-report-chart .base { stroke: #e5c78c88; stroke-dasharray: 4 4; }
+.auto-report-chart .axis { fill: #93a89a; font-variant-numeric: tabular-nums; }
+.auto-report-chart .base-label { fill: #e5c78caa; }
+.auto-report-chart .hover line { stroke: #e7ecd966; }
+.auto-report-chart .hover rect { fill: #0b211df0; stroke: #d4c89e66; }
+.auto-report-chart .hover text { fill: #f1efdc; font-variant-numeric: tabular-nums; }
+.auto-report-empty { margin: 0; padding: 12px; border-radius: 6px; background: #0a221f66; font-size: 12px; color: #93a89a; text-align: center; }
+.auto-report-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.auto-report-items li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px; padding: 4px 10px 4px 4px; border-radius: 6px; background: #0a221f99; font-size: 12px; }
+.auto-report-thumb { display: grid; place-items: center; width: 38px; height: 38px; overflow: hidden; border-radius: 6px; background: radial-gradient(ellipse at 50% 55%, #43625455, #08181666); }
+.auto-report-thumb .scroll-art { width: 34px; height: 34px; margin: 0; vertical-align: top; }
+.auto-report-weapon { display: block; width: 21px; height: 35px; background-size: 500% 200%; background-repeat: no-repeat; filter: drop-shadow(0 2px 2px #0008); }
+.auto-report-items .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e6e2cc; }
+.auto-report-items b { color: #ffd76a; font-variant-numeric: tabular-nums; }
+.auto-report-items time { font-size: 11px; color: #93a89a; font-variant-numeric: tabular-nums; }
+
+/* 放大圖 */
+.auto-report-zoom-backdrop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: #020c0bb3; pointer-events: auto; }
+.auto-report-zoom { width: min(1100px, 100%); max-height: 100%; overflow-y: auto; padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 12px; }
+.auto-report-zoom-tools { display: flex; align-items: center; gap: 10px; }
+.auto-report-zoom-tools > button { border: 0; padding: 2px; background: transparent; height: 26px; }
+.auto-report-zoom-tools .icon { width: 19px; height: 19px; }
+.hud .auto-report-zoom .auto-report-ranges button { min-width: 44px; height: 28px; font-size: 13px; }
+.auto-report-zoom .auto-report-stats strong { font-size: 17px; }
+
+@media (min-width: 1700px) { .hud.has-auto-report .auto-settings { bottom: 128px; } }
+@media (max-width: 1100px) { .hud.has-auto-report .auto-settings { bottom: 110px; } }
+@media (max-width: 900px) { .hud.has-auto-report .auto-settings { bottom: 178px; } }
+@media (max-width: 680px) {
+  .hud.has-auto-report .auto-settings { bottom: auto; }
+  .hud .auto-report-button { min-height: 26px; padding: 3px 9px; font-size: 11px; }
+  .auto-report { padding: 12px 14px; }
+  .auto-report-stats { grid-template-columns: repeat(2, 1fr); }
+  .auto-report-chart-heading { flex-wrap: wrap; }
+  .auto-report-zoom { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .auto-report-button i.live, .auto-report-status.live i { animation: none; } }

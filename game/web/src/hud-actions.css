@@ -1,0 +1,121 @@
+/* 冒險與背包：沿用森林綠與黃銅邊框，設定鈕收進側邊，避免與鄰近按鈕重疊。 */
+.adventure-actions {
+  --action-height: 48px;
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  gap: 8px;
+}
+.adventure-actions .auto-group {
+  display: flex;
+  border: 1px solid #a9986580;
+  border-radius: 8px;
+  background: #18382f;
+  box-shadow: 0 3px 0 #071d1ba6, 0 4px 10px #03171240;
+  transition: border-color .18s, box-shadow .18s;
+}
+.adventure-actions .auto-group[data-active="true"] {
+  border-color: #c7bd80;
+  box-shadow: 0 3px 0 #071d1ba6, 0 0 12px #b5cf7720;
+}
+.hud .adventure-actions .dock-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: var(--action-height);
+  padding: 6px 8px;
+  order: 0;
+  border-radius: 8px;
+  text-align: left;
+  color: #efe7c8;
+  box-shadow: inset 0 1px #fff0ba19, inset 0 -2px #031b1940;
+}
+.hud .adventure-actions .auto-button {
+  width: 96px;
+  border: 0;
+  border-radius: 7px 0 0 7px;
+  background: linear-gradient(145deg, #345548, #1a382f);
+}
+.hud .adventure-actions .auto-button.is-on { background: linear-gradient(145deg, #537344, #2d513c); color: #fff3cd; }
+.hud .adventure-actions .auto-button:hover { background: linear-gradient(145deg, #49694e, #294b3a); }
+.hud .adventure-actions .auto-button.is-on:hover { background: linear-gradient(145deg, #63834e, #3a6245); }
+.adventure-actions .dock-action-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 30px;
+  border: 1px solid #ccb77952;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #d2bc7126, #061e202e);
+  color: #e6cd92;
+  box-shadow: inset 0 1px #fff0ba19;
+}
+.adventure-actions .dock-action-icon .icon { width: 19px; height: 19px; stroke-width: 1.7; }
+.adventure-actions .is-on .dock-action-icon { border-color: #d7d69e80; color: #f4edba; background: #cddd8b19; }
+.adventure-actions .dock-action-title { display: block; font-size: 12px; font-weight: 600; line-height: 1; letter-spacing: .5px; white-space: nowrap; }
+.hud .adventure-actions .auto-gear {
+  position: static;
+  flex: 0 0 28px;
+  width: 28px;
+  height: auto;
+  min-height: var(--action-height);
+  padding: 0;
+  border: 0;
+  border-left: 1px solid #c4b67c35;
+  border-radius: 0 7px 7px 0;
+  background: linear-gradient(#304c3b, #19382f);
+  color: #c6c9a4;
+  box-shadow: inset 0 1px #fff0ba19;
+}
+.adventure-actions .auto-gear .icon { width: 15px; height: 15px; transition: transform .2s; }
+.hud .adventure-actions .auto-gear:hover, .hud .adventure-actions .auto-gear[aria-expanded="true"] { background: #49624a; color: #fff0bb; }
+.adventure-actions .auto-gear:hover .icon { transform: rotate(30deg); }
+.hud .adventure-actions .inventory-open-button {
+  width: 78px;
+  border: 1px solid #a2b8a263;
+  background: linear-gradient(145deg, #294a43, #142f2d);
+  box-shadow: inset 0 1px #e6efcf19, inset 0 -2px #031b1940, 0 3px 0 #071d1ba6;
+}
+.adventure-actions .inventory-open-button .dock-action-icon { background: linear-gradient(145deg, #b7a47129, #071e2133); }
+.hud .adventure-actions .inventory-open-button:hover, .hud .adventure-actions .inventory-open-button[aria-expanded="true"] { border-color: #d0c18a; background: linear-gradient(145deg, #3c6051, #23463d); }
+.hud .adventure-actions button:focus-visible { position: relative; z-index: 1; outline-offset: 3px; }
+.hud .adventure-actions button:active { transform: translateY(1px); box-shadow: inset 0 2px 5px #031b1966; }
+
+@media (min-width: 1700px) { .adventure-actions { --action-height: 50px; } }
+@media (max-width: 1100px) {
+  .adventure-actions { --action-height: 42px; gap: 6px; }
+  .hud .adventure-actions .dock-action { gap: 6px; padding: 5px 7px; }
+  .hud .adventure-actions .auto-button { width: 88px; }
+  .hud .adventure-actions .auto-gear { flex-basis: 24px; width: 24px; }
+  .hud .adventure-actions .inventory-open-button { width: 70px; }
+  .adventure-actions .dock-action-icon { flex-basis: 22px; width: 22px; height: 28px; }
+  .adventure-actions .dock-action-title { font-size: 11px; }
+}
+/* 新按鈕的完整點擊範圍需要提早換成兩排。 */
+@media (min-width: 861px) and (max-width: 900px) {
+  .hud-bottom { flex-wrap: wrap; justify-content: center; row-gap: 14px; width: min(520px, calc(100vw - 16px)); max-width: calc(100vw - 16px); }
+  .hud-bottom .hotbar { order: -1; flex-basis: 100%; justify-content: center; }
+  .hotbar-mode { top: -14px; left: 50%; transform: translateX(-50%); }
+  .dock-divider { display: none; }
+  .auto-settings { bottom: 132px; }
+}
+@media (max-width: 680px) {
+  .adventure-actions { --action-height: 38px; gap: 5px; }
+  .hud .adventure-actions .auto-button { width: 84px; gap: 5px; padding: 5px 6px; }
+  .adventure-actions .dock-action-icon { flex-basis: 18px; width: 18px; height: 26px; border: 0; background: none; box-shadow: none; }
+  .adventure-actions .dock-action-icon .icon { width: 17px; height: 17px; }
+  .hud .adventure-actions .inventory-open-button { width: 62px; padding: 5px; }
+}
+@media (max-width: 460px) {
+  .hud-bottom .class-select { gap: 2px; }
+  .hud-bottom .class-select button { width: 24px; }
+  .hud-bottom .class-select .pixel-icon { width: 24px; height: 26px; }
+  .adventure-actions { gap: 4px; }
+  .hud .adventure-actions .auto-button { width: 54px; padding: 5px; }
+  .hud .adventure-actions .inventory-open-button { width: 38px; }
+  .adventure-actions .dock-action-icon { display: none; }
+  .adventure-actions .dock-action-title { font-size: 10px; letter-spacing: 0; }
+}

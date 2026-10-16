@@ -27,6 +27,7 @@ import { MultiplayerSession, type NetRole } from '../net/session';
 import { connectNet, type NetConnection } from '../net/transport';
 import { SFX_CUES } from '../audio/sfxCues';
 import { AutoHunt, DEFAULT_AUTO_CONFIG, type AutoConfig, type AutoSkill } from '../auto/AutoHunt';
+import { AutoReportRecorder } from '../auto/AutoReport';
 import { AvatarView } from '../avatar/AvatarView';
 import { loadHeroMotions, motionDuration } from '../avatar/motions';
 import { loadOutfitArt } from '../avatar/outfits';
@@ -184,6 +185,8 @@ export class GameScene extends Phaser.Scene {
   /** 手動介入：這個時間（performance.now）之前不掛機 */
   private autoPausedUntil = 0;
   private autoSession = { startBalance: 0, startedAt: 0 };
+  /** 掛機紀錄：財產曲線與掉落，停止後保留（左上角「已掛機」按鈕） */
+  private readonly autoReport = new AutoReportRecorder(browserStorage());
   private skillFx!: SkillFx;
   private mode: GameMode = 'real';
   /** 散射技能（分身飛鏢、影分身）：這次施放挑好的點 */
@@ -786,6 +789,7 @@ export class GameScene extends Phaser.Scene {
     this.hudElapsed += frameMs;
     if (this.hudElapsed >= 100) {
       this.hudElapsed = 0;
+      this.autoReport.sample(this.displayBalance);
       this.checkAutoStop();
       this.emitHud({});
     }
@@ -881,8 +885,10 @@ export class GameScene extends Phaser.Scene {
     this.auto.reset();
     if (on) {
       this.autoSession = { startBalance: this.displayBalance, startedAt: performance.now() };
+      this.autoReport.start(this.displayBalance);
       this.showToast('自動冒險開始');
     } else {
+      this.autoReport.stop(this.displayBalance, reason ?? '手動停止');
       this.showToast(reason ? `自動冒險停止：${reason}` : '自動冒險停止');
     }
     this.playSfx(on ? 'ui:autoOn' : 'ui:autoOff', { x: undefined });
@@ -925,7 +931,10 @@ export class GameScene extends Phaser.Scene {
         // 'balance' 事件是同步送出的，manageInventory 回來時 serverBalance 已經是新值
         this.server.manageInventory(cmd.action, this.mode === 'dev');
         // 清空重置會把金幣改回初始值：掛機的累計輸／贏基準跟著平移（同 setBalance）
-        if (cmd.action.type === 'reset') this.autoSession.startBalance += this.serverBalance - before;
+        if (cmd.action.type === 'reset') {
+          this.autoSession.startBalance += this.serverBalance - before;
+          this.autoReport.shift(this.serverBalance - before);
+        }
         break;
       }
       case 'stepBet': {
@@ -966,6 +975,7 @@ export class GameScene extends Phaser.Scene {
         const before = this.serverBalance;
         this.serverBalance = this.server.setBalance(cmd.balance);
         this.autoSession.startBalance += this.serverBalance - before;
+        this.autoReport.shift(this.serverBalance - before);
         break;
       }
       case 'setAutoConfig':
@@ -1724,8 +1734,10 @@ export class GameScene extends Phaser.Scene {
       });
       this.onPayout(outcome.payout, outcome.multiplier, c, monster.def.name);
       for (const item of outcome.loot ?? []) {
-        if (item.kind === 'weapon') this.addFeed('weapon', WEAPON_BY_ID.get(item.definitionId)?.name ?? '武器');
-        else this.addFeed('scroll', `${item.rate}% 武器卷軸`);
+        const kind = item.kind === 'weapon' ? 'weapon' : 'scroll';
+        const name = item.kind === 'weapon' ? (WEAPON_BY_ID.get(item.definitionId)?.name ?? '武器') : `${item.rate}% 武器卷軸`;
+        this.addFeed(kind, name);
+        this.autoReport.item(kind, name, item.kind === 'weapon' ? item.definitionId : `scroll-${item.rate}`);
       }
     }
     this.emitHud({});
@@ -1798,7 +1810,7 @@ export class GameScene extends Phaser.Scene {
       };
     };
     const hotbar: HudState['skills'] = (classDef?.skills ?? []).map((id, slot) => {
-      return { ...info(id), slot, key: String(slot + 1), ultimate: this.bundle.skills.get(id)?.ultimate ?? false };
+      return { ...info(id), slot, key: String(slot + 2), ultimate: this.bundle.skills.get(id)?.ultimate ?? false };
     });
     this.opts.onHud({
       combo: this.comboTracker.snapshot(),
@@ -1825,6 +1837,7 @@ export class GameScene extends Phaser.Scene {
           }
         : {}),
       autoConfig: this.auto.config,
+      autoReport: this.autoReport.view(),
       fps: Math.round(this.game.loop.actualFps),
       ...(this.net && this.net.role !== 'solo' ? { online: this.net.online } : {}),
       ...(this.netConnection?.status === 'denied' && !this.net ? { netDenied: true } : {}),
@@ -1934,6 +1947,15 @@ function segmentHitsRect(rect: Rect, x1: number, y1: number, x2: number, y2: num
 /** 投射物素材面向左：往右半邊飛時水平翻轉，避免上下顛倒。 */
 function orientProjectile(sprite: Phaser.GameObjects.Sprite, angle: number): void {
   orientSkillWeapon(sprite,angle);
+}
+
+/** 瀏覽器的 localStorage；拿不到（無痕、被封鎖）就只存在記憶體。 */
+function browserStorage(): Storage | null {
+  try {
+    return typeof localStorage === 'undefined' ? null : localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function loadAutoConfig(): AutoConfig {

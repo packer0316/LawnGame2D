@@ -101,6 +101,9 @@ kbd { font-family: inherit; font-size: 9px; border: 1px solid #b5c6ae3b; backgro
 .bet .tier { font-size: 9px; color: #c9bf8f; }
 .bet-controls { display: flex; align-items: center; justify-content: space-between; }
 .bet button { width: 27px; height: 28px; border-radius: 5px; font-size: 17px; background: #09261e77; }
+/* 加減符號以圖示置中，不受字型基線與瀏覽器預設 padding 影響。 */
+.bet-controls > button:not(.value) { display: grid; place-items: center; flex-shrink: 0; padding: 0; line-height: 1; }
+.bet-controls > button:not(.value) .icon { width: 14px; height: 14px; stroke-width: 2; }
 .hud .bet .value { width: auto; min-width: 74px; height: 30px; padding: 0 6px; border-color: transparent; background: transparent; font-size: 23px; line-height: 1; font-weight: 500; font-variant-numeric: tabular-nums; color: #efe7c9; text-align: center; }
 .hud .bet .value:hover, .hud .bet .value[aria-expanded='true'] { border-color: #d6c79566; background: #09261e77; }
 .bet-balance { display: flex; align-items: center; gap: 5px; margin-top: 7px; padding-top: 6px; border-top: 1px solid #bdc6a326; }

@@ -1,0 +1,105 @@
+/* 全螢幕版底部操作列：遊戲畫面佔滿整個視窗，職業｜技能列（1 普攻、2–9 技能）｜押注｜自動冒險｜背包 縮成一列、半透明蓋在畫面上。
+   這個檔在 hud.css、skill-art.css 之後載入，同權重的規則以這裡為準。 */
+.hud-bottom-stack { bottom: 8px; gap: 0; }
+.hud-bottom { gap: 8px; padding: 5px 9px; border-radius: 10px; border-color: #d4c89e4d; border-top-color: #ecdbab66; background: linear-gradient(130deg, #153832b3, #102925b3 60%, #1c382cb3); box-shadow: 0 6px 24px #001c2440; backdrop-filter: blur(3px); }
+.dock-divider { height: 36px; }
+
+/* 職業：只留圖示（名稱在滑鼠提示裡） */
+.class-section > .eyebrow { display: none; }
+.class-select { gap: 3px; }
+.hud .class-select button { width: 38px; height: 44px; padding: 2px; gap: 0; }
+.class-select .pixel-icon { width: 34px; height: 34px; }
+.class-select button > span:not(.pixel-icon) { display: none; }
+
+/* 技能列併進控制列，不再自己一塊面板 */
+.hud-bottom .hotbar { gap: 4px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.hud .hotbar-slot { width: 46px; height: 46px; padding: 2px; border-radius: 6px; }
+.hotbar-slot .pixel-icon { width: 40px; height: 40px; }
+.hotbar-mode { top: -16px; left: 0; padding: 0 5px; font-size: 7px; letter-spacing: 1px; }
+.hud .hotbar-slot.basic { margin-right: 4px; box-shadow: inset 0 0 0 1px #d4c89e66; }
+.hotbar-slot kbd { top: 2px; left: 2px; padding: 0 2px; font-size: 7px; }
+.price-badge { top: 2px; right: 2px; padding: 0 2px; font-size: 7px; }
+.cooldown-number { font-size: 15px; }
+
+/* 押注：− 數字 +，下面一行持有金幣；等級標籤掛在上緣 */
+.hud .bet { min-width: 112px; }
+.bet-heading { position: absolute; top: -16px; left: 0; margin: 0; }
+.bet-heading .eyebrow { display: none; }
+.bet .tier { padding: 0 5px; border-radius: 4px; font-size: 7px; letter-spacing: 1px; color: #e9dcae; background: #1d3e33; border: 1px solid #d4c89e55; }
+.bet button { width: 22px; height: 24px; font-size: 15px; }
+.hud .bet .value { min-width: 60px; height: 24px; padding: 0 4px; font-size: 18px; }
+.bet-balance { gap: 4px; margin-top: 3px; padding-top: 3px; }
+.bet-balance .icon { width: 12px; height: 12px; }
+.bet-balance .label { display: none; }
+.bet-balance strong { font-size: 12px; }
+
+/* 自動冒險、背包 */
+.hud .auto-button { min-width: 80px; min-height: 46px; padding: 5px 8px; grid-template-columns: 16px auto; column-gap: 4px; row-gap: 2px; border-radius: 6px; }
+.auto-button .icon { width: 15px; height: 15px; }
+.auto-button span { font-size: 10px; }
+.auto-button small { font-size: 7px; letter-spacing: 1px; }
+.hud .auto-gear { top: -7px; right: -7px; width: 20px; height: 20px; }
+.auto-gear .icon { width: 12px; height: 12px; }
+.hud .inventory-open-button { min-width: 58px; min-height: 46px; padding: 5px 8px; grid-template-columns: 16px auto; column-gap: 4px; border-radius: 6px; }
+.inventory-open-button .icon { width: 15px; height: 15px; }
+.inventory-open-button span { font-size: 10px; }
+.inventory-open-button small { display: none; }
+
+/* 底部提示：操作列兩側放得下才顯示，FPS 縮到右下角 */
+.hud-footer { bottom: 4px; left: 12px; right: 12px; font-size: 8px; }
+.auto-settings { bottom: 82px; }
+
+@media (min-width: 1700px) {
+  .hud-bottom-stack { bottom: 10px; }
+  .hud-bottom { gap: 10px; padding: 6px 11px; }
+  .hud .class-select button { width: 42px; height: 50px; }
+  .class-select .pixel-icon { width: 38px; height: 38px; }
+  .hud .hotbar-slot { width: 52px; height: 52px; }
+  .hotbar-slot .pixel-icon { width: 46px; height: 46px; }
+  .hud .auto-button, .hud .inventory-open-button { min-height: 52px; }
+  .auto-settings { bottom: 90px; }
+}
+@media (max-width: 1500px) { .hud-footer > span:first-child { visibility: hidden; } }
+
+/* 窄一點先縮格子，盡量維持一排（兩排會蓋到角色） */
+@media (max-width: 1100px) {
+  .hud-bottom { gap: 6px; padding: 4px 7px; width: auto; }
+  .hud .class-select button { width: 34px; height: 40px; }
+  .class-select .pixel-icon { width: 30px; height: 30px; }
+  .hud .hotbar-slot { width: 40px; height: 40px; }
+  .hotbar-slot .pixel-icon { width: 35px; height: 35px; }
+  .hud .bet { min-width: 104px; }
+  .hud .auto-button { min-width: 70px; min-height: 40px; }
+  .hud .inventory-open-button { min-width: 54px; min-height: 40px; }
+  .auto-settings { bottom: 72px; }
+}
+/* 再窄：技能列自己一排在上，其他控制在下一排 */
+@media (max-width: 860px) {
+  .hud-bottom { flex-wrap: wrap; justify-content: center; row-gap: 14px; width: min(520px, calc(100vw - 16px)); max-width: calc(100vw - 16px); }
+  .hud-bottom .hotbar { order: -1; flex-basis: 100%; justify-content: center; }
+  .hotbar-mode { top: -14px; left: 50%; transform: translateX(-50%); }
+  .dock-divider { display: none; }
+  .auto-settings { bottom: 132px; }
+}
+@media (max-width: 680px) {
+  .hud-bottom-stack { bottom: 6px; }
+  .hud-bottom { gap: 5px; row-gap: 14px; padding: 5px 6px; border-radius: 8px; }
+  .class-section { order: 0; }
+  .dock-divider { display: none; }
+  .hud .class-select button { width: 30px; height: 36px; flex-direction: column; }
+  .class-select .pixel-icon { width: 26px; height: 26px; }
+  .hud .hotbar-slot { width: 36px; height: 36px; }
+  .hotbar-slot .pixel-icon { width: 31px; height: 31px; }
+  .hud .hotbar-slot.basic { margin-right: 0; }
+  .hud-bottom .hotbar { gap: 3px; }
+  .hud .bet { min-width: 96px; }
+  .hud .bet .value { min-width: 50px; font-size: 16px; }
+  .hud .auto-button, .hud .inventory-open-button { min-height: 38px; min-width: 0; padding: 4px 7px; }
+  .auto-button small, .inventory-open-button span { display: none; }
+  .auto-settings { top: 83px; bottom: auto; }
+}
+@media (max-width: 370px) {
+  .hud-bottom .hotbar { gap: 2px; }
+  .hud .hotbar-slot { width: 33px; height: 33px; }
+  .hotbar-slot .pixel-icon { width: 29px; height: 29px; }
+}
