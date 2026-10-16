@@ -12,11 +12,12 @@ export function ScrollArt({ rate }: { rate: ScrollRate }) {
 type Phase = 'loading' | 'charge' | 'waiting' | 'result' | 'done' | 'loadError';
 interface Props {
   weaponName: string; weaponArt: ReactNode; rate: ScrollRate;
+  mobile?: boolean;
   anchor: RefObject<HTMLDivElement | null>;
   result?: InventoryFeedback; onCommit: () => void; onDismiss: () => void;
 }
 
-export function ForgeRitual({ weaponName, weaponArt, rate, anchor, result, onCommit, onDismiss }: Props) {
+export function ForgeRitual({ weaponName, weaponArt, rate, anchor, result, onCommit, onDismiss, mobile = false }: Props) {
   const [phase, setPhase] = useState<Phase>('loading');
   const sequence = useRef<ForgeSequencePlayer>(null);
   const [outcome, setOutcome] = useState<InventoryFeedback>();
@@ -31,6 +32,12 @@ export function ForgeRitual({ weaponName, weaponArt, rate, anchor, result, onCom
       if (!box || !panel.current) return;
       panel.current.style.left = `${box.left + box.width / 2}px`;
       panel.current.style.top = `${box.top + box.height / 2}px`;
+      if (mobile) {
+        const x = box.left + box.width / 2, y = box.top + box.height / 2;
+        // 特效仍對準武器；提示文字留在螢幕內，靠邊的武器也看得到結果。
+        panel.current.style.setProperty('--caption-x', `${Math.max(122, Math.min(window.innerWidth - 122, x)) - x}px`);
+        panel.current.style.setProperty('--caption-y', `${Math.max(12, Math.min(window.innerHeight - 64, y + 60)) - y}px`);
+      }
     };
     follow();
     const observer = new ResizeObserver(follow);
@@ -38,7 +45,7 @@ export function ForgeRitual({ weaponName, weaponArt, rate, anchor, result, onCom
     window.addEventListener('resize', follow);
     window.addEventListener('scroll', follow, true);
     return () => { observer.disconnect(); window.removeEventListener('resize', follow); window.removeEventListener('scroll', follow, true); };
-  }, [anchor]);
+  }, [anchor, mobile]);
   useEffect(() => {
     let alive = true;
     panel.current?.focus({ preventScroll: true });
@@ -81,7 +88,7 @@ export function ForgeRitual({ weaponName, weaponArt, rate, anchor, result, onCom
   const title = !revealed ? phase === 'loadError' ? '未消耗卷軸，請重試' : phase === 'loading' ? '準備刻印…' : '強化中…'
     : success ? '強化成功' : destroyed ? '強化失敗・武器損毀' : outcome?.kind === 'error' ? '無法強化' : '強化失敗・武器保留';
   // A transparent overlay anchored to the existing showcase, outside all scroll clipping.
-  return createPortal(<div ref={panel} tabIndex={-1} className={`forge-ritual forge-${art} ${destroyed ? 'forge-destroyed' : ''} ${reduced ? 'forge-reduced' : ''}`}
+  return createPortal(<div ref={panel} tabIndex={-1} className={`forge-ritual forge-${art} ${mobile ? 'forge-mobile' : ''} ${destroyed ? 'forge-destroyed' : ''} ${reduced ? 'forge-reduced' : ''}`}
     data-phase={phase} data-outcome={revealed ? outcome?.kind : undefined} role="region" aria-label={`${weaponName}・${rate}% 卷軸強化`} aria-busy={!revealed && phase !== 'loadError'}
     onKeyDown={e => {
       if (e.key === 'Escape' || e.code === 'KeyI') { e.stopPropagation(); if (phase === 'loadError') onDismiss(); }

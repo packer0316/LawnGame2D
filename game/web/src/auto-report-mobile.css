@@ -1,0 +1,71 @@
+/* 電腦版保留原本的連續報表，手機版分頁閱讀。 */
+.auto-report-content, .auto-report-overview, .auto-report-trend, .auto-report-loot { display: contents; }
+.auto-report-content > section > * { flex-shrink: 0; }
+.hud-mobile .auto-report.mobile-report { inset: 0 !important; transform: none; width: 100% !important; height: 100dvh; max-height: 100dvh !important; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); border: 0; border-radius: 0; overflow: hidden; gap: 0; background: linear-gradient(145deg, #193a31, #0c2220); }
+.mobile-report > .auto-report-heading { flex-shrink: 0; min-height: 56px; padding: 8px 12px 4px; align-items: center; }
+.mobile-report .auto-report-heading .eyebrow { display: none; }
+.mobile-report .auto-report-heading h3 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+.hud .mobile-report .auto-report-heading button { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #c8c39442; border-radius: 50%; background: #ffffff08; padding: 0; }
+.mobile-report > .auto-report-status { padding: 0 14px 8px; font-size: 12px; line-height: 1.5; }
+.auto-report-mobile-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 0 12px; border-bottom: 1px solid #b6b18140; flex-shrink: 0; }
+.hud .auto-report-mobile-nav button { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #a9bdb1; font-size: 14px; }
+.hud .auto-report-mobile-nav button[aria-pressed="true"] { border-bottom-color: #e7cd8c; background: #b5a35f12; color: #f2dba0; }
+.auto-report-mobile-nav small { font-size: 10px; padding: 2px 5px; background: #ffffff10; border-radius: 10px; }
+.mobile-report .auto-report-content { display: block; flex: 1; min-height: 0; overflow: hidden; padding: 16px; }
+.mobile-report .auto-report-overview, .mobile-report .auto-report-loot { display: block; height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.mobile-report .auto-report-trend { display: flex; flex-direction: column; height: 100%; gap: 12px; min-height: 0; }
+.mobile-report .auto-report-content:not([data-view="overview"]) .auto-report-overview,
+.mobile-report .auto-report-content:not([data-view="trend"]) .auto-report-trend,
+.mobile-report .auto-report-content:not([data-view="loot"]) .auto-report-loot { display: none; }
+.hud-mobile .mobile-report .auto-report-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mobile-report .auto-report-stats > div { padding: 16px 12px; min-height: 112px; gap: 8px; border: 1px solid #c5c7a21c; border-radius: 10px; }
+.mobile-report .auto-report-stats > div:nth-child(2) { order: -1; border-color: #d0bb7952; background: #8a804b19; }
+.mobile-report .auto-report-stats small { font-size: 12px; }
+.mobile-report .auto-report-stats strong { font-size: clamp(17px, 5vw, 24px); white-space: normal; overflow: visible; overflow-wrap: anywhere; line-height: 1.25; }
+.mobile-report .auto-report-stats span { font-size: 12px; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.hud .auto-report-loot-summary { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; margin-top: 12px; padding: 12px; border-color: #c5c7a22e; border-radius: 10px; background: #0a221f99; color: #adbfad; font-size: 12px; }
+.auto-report-loot-summary strong { margin-left: auto; color: #e9d9a4; font-size: 13px; }
+.auto-report-loot-summary .icon { width: 14px; height: 14px; transform: rotate(-90deg); }
+.mobile-report .auto-report-chart-heading { flex-shrink: 0; display: flex; flex-wrap: nowrap; gap: 8px; margin: 0; }
+.mobile-report .auto-report-chart-heading h4 { display: none; }
+.hud .mobile-report .auto-report-ranges { flex: 1; gap: 3px; }
+.hud .mobile-report .auto-report-ranges button { flex: 1; min-width: 0; height: 38px; padding: 0 4px; font-size: 13px; }
+.hud .mobile-report .auto-report-zoom-button { width: 40px; height: 40px; flex-shrink: 0; }
+.mobile-report .auto-report-chart { flex: 1; height: 0; min-height: 100px; }
+.mobile-report .auto-report-loot h4 { margin: 0 0 12px; font-size: 14px; }
+.mobile-report .auto-report-loot h4 small { font-size: 11px; }
+.mobile-report .auto-report-empty { font-size: 14px; padding: 24px 14px; line-height: 1.7; }
+.mobile-report .auto-report-items { gap: 8px; }
+.mobile-report .auto-report-items li { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px; font-size: 14px; }
+.mobile-report .auto-report-thumb { grid-row: 1 / 3; width: 48px; height: 48px; }
+.mobile-report .auto-report-items .name { white-space: normal; overflow-wrap: anywhere; }
+.mobile-report .auto-report-items b { grid-column: 3; grid-row: 1 / 3; font-size: 16px; }
+.mobile-report .auto-report-items time { grid-column: 2; font-size: 12px; }
+
+/* 放大圖仍保留關閉與時間切換；圖表依實際空間排座標，不縮小文字。 */
+.hud-mobile .auto-report-zoom-backdrop { padding: 0; }
+.hud-mobile .auto-report-zoom { width: 100%; height: 100dvh; max-height: 100dvh; padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); border: 0; border-radius: 0; overflow: hidden; gap: 10px; }
+.hud-mobile .auto-report-zoom .auto-report-heading { display: grid; grid-template-columns: minmax(0, 1fr) 40px; gap: 8px; flex-shrink: 0; align-items: center; }
+.hud-mobile .auto-report-zoom .eyebrow, .hud-mobile .auto-report-zoom .auto-report-stats { display: none; }
+.hud-mobile .auto-report-zoom h3 { margin: 0; font-size: 18px; }
+.hud-mobile .auto-report-zoom-tools { display: contents; }
+.hud-mobile .auto-report-zoom-tools > button { grid-column: 2; grid-row: 1; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid #c8c39442; border-radius: 50%; }
+.hud-mobile .auto-report-zoom .auto-report-ranges { grid-column: 1 / -1; grid-row: 2; }
+.hud-mobile .auto-report-zoom .auto-report-ranges button { flex: 1; min-width: 0; height: 36px; }
+.hud-mobile .auto-report-zoom .auto-report-status { font-size: 12px; flex-shrink: 0; }
+.hud-mobile .auto-report-zoom .auto-report-chart { flex: 1; height: 0; min-height: 100px; }
+@media (orientation: landscape) and (max-height: 540px) {
+  .mobile-report > .auto-report-heading { min-height: 44px; padding-block: 4px; }
+  .hud .mobile-report .auto-report-heading button { width: 36px; height: 36px; }
+  .mobile-report > .auto-report-status { position: absolute; right: 58px; top: max(15px, env(safe-area-inset-top)); padding: 0; max-width: 60%; font-size: 11px; }
+  .hud .auto-report-mobile-nav button { min-height: 36px; font-size: 13px; }
+  .mobile-report .auto-report-content { padding: 10px 12px; }
+  .hud-mobile .mobile-report .auto-report-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mobile-report .auto-report-stats > div { min-height: 96px; padding: 12px 8px; gap: 6px; }
+  .mobile-report .auto-report-stats strong { font-size: 20px; }
+  .hud .auto-report-loot-summary { min-height: 40px; margin-top: 8px; padding: 8px 12px; }
+  .mobile-report .auto-report-trend { gap: 8px; }
+  .hud .mobile-report .auto-report-ranges button { height: 32px; }
+  .hud .mobile-report .auto-report-zoom-button { width: 36px; height: 36px; }
+  .mobile-report .auto-report-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

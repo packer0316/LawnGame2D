@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { sfx, type GameCommand, type GameMode, type HudState, type InventoryAction } from '@lawn/engine';
 import { Icon } from './Icons';
+import type { HudLayoutPreference } from './useHudLayout';
 
 const MODES: { id: GameMode; label: string; detail: string }[] = [
   { id: 'real', label: '實際模式', detail: '每個技能有價格（格子右上角的 ×N）：放一次、每一刀都打滿時共扣 押注 × N，最貴 20 倍。打得少就按比例少扣、揮空不扣；花得多擊殺率越高，返還率一樣是 96%。' },
@@ -11,13 +12,25 @@ const MODES: { id: GameMode; label: string; detail: string }[] = [
 const BALANCE_PRESETS = [1_000, 10_000, 100_000, 1_000_000];
 
 /** 右上角設定（SPEC §2.6）：遊戲模式、音效音量、持有金幣。 */
-export function SettingsPanel({ state, command, onClose }: { state: HudState; command: (cmd: GameCommand) => void; onClose: () => void }) {
+export function SettingsPanel({ state, command, onClose, layout, mobile, onLayoutChange, onAutoSettings, onReport }: {
+  state: HudState; command: (cmd: GameCommand) => void; onClose: () => void;
+  layout: HudLayoutPreference; mobile: boolean; onLayoutChange: (layout: HudLayoutPreference) => void;
+  onAutoSettings: () => void; onReport: () => void;
+}) {
   return (
     <div className="panel settings" role="dialog" aria-label="設定">
       <div className="settings-heading">
         <span className="eyebrow">設定</span>
         <button aria-label="關閉設定" onClick={onClose}><Icon name="close" /></button>
       </div>
+      <span className="settings-label">介面版本<small>目前：{mobile ? '手機' : '電腦'}</small></span>
+      <div className="layout-options" role="group" aria-label="介面版本">
+        {([['auto', '自動'], ['desktop', '電腦版本'], ['mobile', '手機版本']] as const).map(([value, label]) => <button key={value} aria-pressed={layout === value} onClick={() => onLayoutChange(value)}>{label}</button>)}
+      </div>
+      <SfxVolume />
+      {mobile && <div className="mobile-settings-links"><button onClick={onAutoSettings}>自動冒險設定</button><button disabled={!state.autoReport} onClick={onReport}>掛機收益</button></div>}
+      <details className="settings-advanced" open={!mobile}>
+      <summary>遊戲模式與測試</summary>
       <span className="settings-label">遊戲模式</span>
       <div className="mode-options">
         {MODES.map((mode) => (
@@ -27,9 +40,9 @@ export function SettingsPanel({ state, command, onClose }: { state: HudState; co
           </button>
         ))}
       </div>
-      <SfxVolume />
       <BalanceSetter balance={state.balance} command={command} />
       <TestTools state={state} command={command} />
+      </details>
     </div>
   );
 }

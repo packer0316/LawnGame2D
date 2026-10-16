@@ -1,0 +1,124 @@
+/* 介面版本切換：只影響 HUD，遊戲與目前房間不重啟。 */
+.layout-options { display: grid; grid-template-columns: .8fr 1fr 1fr; gap: 5px; }
+.hud .layout-options button { min-height: 36px; padding: 7px 5px; border-radius: 6px; color: #b7c9ba; font-size: 12px; }
+.hud .layout-options button[aria-pressed="true"] { border-color: #ccb67a; color: #ffe5aa; background: #4a60396b; }
+.settings-advanced { border-top: 1px solid #b4c6a42e; padding-top: 10px; }
+.settings-advanced summary { color: #b4c5b2; cursor: pointer; font-size: 12px; }
+.settings-advanced > .settings-label { display: block; margin: 14px 0 8px; }
+.settings-advanced .balance-presets { margin-top: 6px; }
+.hud .settings { max-height: calc(100dvh - 140px); overflow-y: auto; overscroll-behavior: contain; }
+.settings > * { flex-shrink: 0; }
+
+/* 手機版沿畫面四邊配置，中央不再擺大型控制台。 */
+.hud-mobile { --mobile-skill-size: 32px; --mobile-action-size: 36px; --mobile-left: max(8px, env(safe-area-inset-left)); --mobile-right: max(8px, env(safe-area-inset-right)); --mobile-bottom: max(8px, env(safe-area-inset-bottom)); }
+.hud-mobile::before { background: linear-gradient(#061e2433, transparent 12%, transparent 82%, #071b284d); }
+.hud-mobile button, .hud-mobile select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.mobile-location { position: absolute; left: var(--mobile-left); top: max(8px, env(safe-area-inset-top)); display: flex; align-items: center; gap: 6px; max-width: calc(100% - var(--mobile-left) - var(--mobile-right)); }
+.hud-mobile .mobile-room { display: flex; align-items: center; gap: 5px; height: 32px; max-width: min(180px, 45vw); padding: 0 9px; border-radius: 6px; border-color: #b4c6a42e; background: #153930aa; color: var(--text); font-size: 11px; }
+.hud-mobile .mobile-room:hover, .hud-mobile .mobile-room[aria-expanded="true"] { background: #315347c2; border-color: #d6c79580; }
+.hud-mobile .mobile-room:active { background: #112d2599; }
+.mobile-room .icon { width: 15px; height: 15px; color: var(--gold); }
+.mobile-room span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mobile-class { position: relative; display: flex; align-items: center; height: 32px; border: 1px solid #b4c6a43b; border-radius: 6px; background: #102b25c4; padding-left: 4px; pointer-events: auto; }
+.mobile-class .pixel-icon { width: 23px; height: 23px; }
+.mobile-class select { appearance: none; height: 100%; min-width: 65px; border: 0; border-radius: 6px; padding: 0 20px 0 4px; background: transparent; color: #e9e3c9; font: 11px var(--hud-font); cursor: pointer; }
+.mobile-class option { background: #15332c; color: #e9e3c9; }
+.mobile-class > .icon { position: absolute; right: 5px; width: 12px; height: 12px; color: #bcc8a8; pointer-events: none; }
+.mobile-class select:focus-visible { outline: 2px solid #f0d699; outline-offset: 2px; }
+
+/* 設定、全螢幕、說明：右側中央的三顆小圖示。 */
+.hud-mobile .hud-top-right { top: 42%; right: var(--mobile-right); flex-direction: column; gap: 4px; transform: translateY(-50%); }
+.hud-mobile .hud-top-right .help-toggle { width: 32px; height: 32px; padding: 0; border-color: #becba94a; background: #102b258c; color: #e1e1bf; box-shadow: 0 2px 5px #001a1733; }
+.hud-mobile .hud-top-right .icon { width: 16px; height: 16px; }
+
+/* 底部共用一條操作帶：財產／押注在左、技能居中、圓形入口在右。 */
+.mobile-bottom-bar { position: absolute; left: var(--mobile-left); right: var(--mobile-right); bottom: var(--mobile-bottom); display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.hud-mobile .mobile-finance { position: relative; width: 116px; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.mobile-wallet { display: flex; align-items: center; justify-content: center; gap: 5px; height: 20px; padding: 0 5px; color: #f1d492; border-radius: 12px 12px 0 0; background: #0d282291; text-shadow: 0 1px 3px #001a17; }
+.mobile-wallet .icon { width: 12px; height: 12px; flex-shrink: 0; }
+.mobile-wallet strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hud-mobile .mobile-finance .bet-controls { height: 26px; gap: 2px; border: 1px solid #b5bc8e35; border-radius: 14px; padding: 1px; background: #0d2822bd; }
+.hud-mobile .mobile-finance .bet-controls > button:not(.value) { width: 22px; height: 22px; border: 0; border-radius: 50%; background: #66846426; }
+.hud-mobile .mobile-finance .bet-controls .icon { width: 12px; height: 12px; }
+.hud-mobile .mobile-finance .value { display: flex; flex: 1; align-items: center; justify-content: center; gap: 4px; min-width: 0; height: 22px; padding: 0 2px; border-radius: 12px; }
+.mobile-finance .value small { font-size: 8px; color: #b1c2a4; letter-spacing: .3px; }
+.mobile-finance .value strong { font-size: 12px; font-weight: 600; }
+
+/* AUTO 與背包和技能同一排；只有字樣／圖示，以亮框表示自動冒險啟用。 */
+.mobile-side-actions { position: relative; display: flex; align-items: center; gap: 6px; }
+.hud-mobile .mobile-side-actions .mobile-side-button { position: relative; display: flex; align-items: center; justify-content: center; flex: 0 0 var(--mobile-action-size); width: var(--mobile-action-size); height: var(--mobile-action-size); min-width: 0; min-height: 0; padding: 0; border-radius: 50%; background: #17392dc9; border: 1px solid #b4c6a470; color: #e2e6cc; box-shadow: inset 0 1px 2px #e5efd714, 0 2px 6px #00181333; }
+.mobile-side-actions .mobile-side-button span { display: block; font-size: 9px; font-weight: 700; letter-spacing: -.2px; line-height: 1; }
+.mobile-side-actions .mobile-side-button .icon { width: 18px; height: 18px; }
+.hud-mobile .mobile-side-actions .auto-button { border-color: #cab57680; color: #eddba5; }
+.hud-mobile .mobile-side-actions .auto-button.is-on { background: linear-gradient(135deg, #597849ed, #2e513ced); border-color: #e2d28f; color: #fff1c4; box-shadow: 0 0 0 2px #c7d18328, inset 0 0 8px #f0dc7b22; }
+.mobile-side-actions .auto-button.is-on::after { content: ''; position: absolute; bottom: 4px; width: 3px; height: 3px; border-radius: 50%; background: #e4f1b7; }
+/* 有掛機資料時才出現小入口；停止後仍可點開同一份紀錄。 */
+.hud-mobile .mobile-report-button { position: absolute; right: 0; bottom: calc(100% + 5px); display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; height: 26px; padding: 0 5px; border-radius: 14px; border-color: #b4c6a459; background: #102b25b3; color: #d5dfbf; font-size: 10px; }
+.mobile-report-button .icon { width: 13px; height: 13px; }
+.hud-mobile .mobile-report-button.is-live { border-color: #b3cb8180; color: #e3edb7; background: #244631c7; }
+
+/* 技能固定底部單排，移除快捷鍵、職業圖示列與大型背板。 */
+.mobile-skills { display: grid; grid-template-columns: repeat(var(--mobile-skill-count), minmax(0, 1fr)); align-items: center; justify-self: center; gap: 3px; width: 100%; max-width: calc(var(--mobile-skill-count) * (var(--mobile-skill-size) + 3px) - 3px); min-width: 0; pointer-events: auto; }
+.hud-mobile .mobile-skill { position: relative; display: grid; place-items: center; width: 100%; min-width: 0; aspect-ratio: 1; padding: 1px; border-radius: 5px; border-color: #a5beac66; background: radial-gradient(ellipse at 50% 30%, #3d637966, #102b29b8); overflow: hidden; }
+.mobile-skill .pixel-icon { width: 100%; height: 100%; min-width: 0; }
+.hud-mobile .mobile-skill.basic { border-color: #b9ceafaa; }
+.hud-mobile .mobile-skill.ultimate { border-color: #d1b978b3; }
+.hud-mobile .mobile-skill:disabled { opacity: 1; }
+.mobile-skill:disabled .pixel-icon { opacity: .55; }
+.mobile-skill .cooldown-number { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; z-index: 2; color: #fff3d4; font-size: 12px; text-shadow: 0 1px 3px #000; }
+
+/* 手機獲得提示只留小字，用淡文字陰影維持明亮場景上的辨識度。 */
+.hud-mobile .win-feed { left: var(--mobile-left); top: 46px; bottom: auto; width: min(190px, 48vw); max-height: 30px; gap: 2px; }
+.hud-mobile .win-feed .win-feed-line { min-height: 0; max-height: 14px; padding: 0; gap: 4px; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 9px; line-height: 1.4; text-shadow: 0 1px 2px #001813cc; }
+.hud-mobile .win-feed-line .label { font-size: 8px; letter-spacing: 0; }
+.hud-mobile .win-feed-line:nth-last-child(n+3) { display: none; }
+.hud-mobile .combo-hud { top: 48px; right: 48px; width: 120px; transform: scale(.55); transform-origin: top right; }
+.hud-mobile .net-badge { top: max(8px, env(safe-area-inset-top)); left: auto; right: var(--mobile-right); transform: none; padding: 3px 6px; font-size: 9px; letter-spacing: 0; }
+.hud-mobile .net-denied { top: 45px; max-width: 160px; white-space: normal; }
+
+/* 開啟面板才使用中央空間；橫放時也能完整捲動內容。 */
+.hud .mobile-panel-backdrop { position: absolute; inset: 0; z-index: 12; width: 100%; height: 100%; border: 0; border-radius: 0; padding: 0; background: #03151278; backdrop-filter: blur(2px); }
+.hud .mobile-panel-backdrop:hover { background: #03151278; }
+.hud .mobile-panel-backdrop:active { transform: none; }
+.hud-mobile .settings, .hud-mobile .auto-settings, .hud-mobile .help, .hud-mobile .room-list, .hud-mobile .auto-report {
+  position: absolute; z-index: 14; left: 50% !important; right: auto; top: 50%; bottom: auto !important; transform: translate(-50%, -50%); width: min(360px, calc(100% - 32px)) !important; max-height: calc(100dvh - 32px) !important; padding: 14px; margin: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin;
+}
+.hud-mobile .settings { gap: 10px; }
+.hud-mobile .settings-heading { position: sticky; top: -14px; padding-block: 4px; z-index: 1; background: #16332e; }
+.hud-mobile .settings-heading button, .hud-mobile .auto-settings-heading button, .hud-mobile .room-list-heading button { display: grid; place-items: center; min-width: 30px; min-height: 30px; }
+.hud-mobile .settings-advanced .mode-options button { padding: 9px; }
+.mobile-settings-links { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.hud .mobile-settings-links button { min-height: 36px; border-radius: 6px; font-size: 12px; }
+.hud-mobile .auto-report { width: min(420px, calc(100% - 32px)) !important; }
+.hud-mobile .auto-report-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hud-mobile .room-list { width: min(480px, calc(100% - 32px)) !important; }
+.hud-mobile .room-list > button { min-height: 72px; padding: 10px 8px; }
+.hud-mobile .room-categories { gap: 4px; }
+.hud-mobile .room-categories button { padding: 5px 7px; }
+.hud-mobile .help h3 { margin: 10px 0 16px; }
+.hud-mobile .help p { font-size: 12px; line-height: 1.7; }
+.hud-mobile .mobile-finance .bet-picker { position: fixed; z-index: 14; left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(280px, calc(100vw - 64px)); max-height: calc(100dvh - 32px); padding: 12px; }
+.hud-mobile .bet-picker-list { max-height: calc(100dvh - 112px); }
+.hud-mobile .mobile-finance .bet-picker-list button { width: 100%; min-height: 36px; font-size: 16px; }
+.hud-mobile .toast { z-index: 5; max-width: 75%; padding: 8px 12px; font-size: 11px; text-align: center; }
+
+/* 窄直向：財產與 BET 合併成左側薄膠囊，下一排仍保留全部技能及圓形入口。 */
+@media (max-width: 520px) {
+  .mobile-bottom-bar { grid-template-columns: minmax(0, 1fr) auto; gap: 5px 8px; }
+  .hud-mobile .mobile-finance { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; width: fit-content; max-width: 100%; }
+  .mobile-wallet { height: 26px; min-width: 96px; border-radius: 14px; padding: 0 8px; }
+  .hud-mobile .mobile-finance .bet-controls { width: 116px; }
+  .mobile-skills { gap: 2px; max-width: calc(var(--mobile-skill-count) * (var(--mobile-skill-size) + 2px) - 2px); }
+}
+
+@media (max-height: 360px) {
+  .hud-mobile { --mobile-skill-size: 28px; --mobile-action-size: 32px; --mobile-bottom: max(5px, env(safe-area-inset-bottom)); }
+  .hud-mobile .hud-top-right { top: 36%; gap: 3px; }
+  .hud-mobile .hud-top-right .help-toggle { width: 28px; height: 28px; }
+  .hud-mobile .hud-top-right .icon { width: 14px; height: 14px; }
+  .hud-mobile .mobile-location { top: max(5px, env(safe-area-inset-top)); }
+  .hud-mobile .mobile-room, .mobile-class { height: 28px; }
+  .hud-mobile .win-feed { top: 38px; max-height: 14px; }
+  .hud-mobile .win-feed-line:not(:last-child) { display: none; }
+  .hud-mobile .combo-hud { top: 7px; right: 48px; transform: scale(.45); }
+}

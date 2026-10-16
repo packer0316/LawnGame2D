@@ -17,6 +17,8 @@ export function Icon({ name, className = '' }: { name: string; className?: strin
     pause: <><path d="M9 5v14M15 5v14"/></>,
     plus: <path d="M5 12h14M12 5v14"/>,
     minus: <path d="M5 12h14"/>,
+    chevronDown: <path d="m6 9 6 6 6-6"/>,
+    chart: <><path d="M4 4v16h16"/><path d="m7 14 4-4 4 2 5-7"/></>,
     help: <><circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17h.01"/></>,
     close: <path d="m6 6 12 12M18 6 6 18"/>,
     expand: <><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></>,

@@ -12,14 +12,19 @@ import { HudAction } from './HudAction';
 import { BASIC_SKILL, CLASS_DESCRIPTION, SKILL_DESCRIPTION } from './skillArt';
 import { useUiSounds } from './uiSounds';
 import { WinFeed } from './WinFeed';
+import { BetPicker } from './BetPicker';
+import { MobileHud } from './MobileHud';
+import { useHudLayout } from './useHudLayout';
 import './hud-compact.css';
 import './hud-actions.css';
+import './mobile-hud.css';
 
 /** 依 SPEC §2.6 的 HUD 配置。HUD 只顯示狀態，所有操作透過 command() 送回遊戲。 */
 /** 技能列：第一格是普攻（鍵盤 1），後面固定八格職業技能（鍵盤 2–9），不足八個時後面留空。 */
 const HOTBAR_SLOTS = 8;
 
 export function Hud({ state, loading, command, action }: { state: HudState | null; loading?: LoadingProgress | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | SkillAction) => void }) {
+  const { preference, change: changeLayout, mobile } = useHudLayout();
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
@@ -53,35 +58,43 @@ export function Hud({ state, loading, command, action }: { state: HudState | nul
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     else void document.documentElement.requestFullscreen?.().catch(() => undefined);
   };
-  const closeAll = () => {
+  const closeAll = useCallback(() => {
     setRoomsOpen(false);
     setHelpOpen(false);
     setAutoOpen(false);
     setSettingsOpen(false);
     setBetOpen(false);
     setReportOpen(false);
-  };
+  }, []);
+  const panelOpen = roomsOpen || helpOpen || autoOpen || settingsOpen || betOpen || reportOpen;
+  useEffect(() => {
+    if (!panelOpen || reportOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeAll(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panelOpen, reportOpen, closeAll]);
 
   if (!state || state.loading || state.error) return <div className="hud"><LoadingScreen progress={loading} error={state?.error} /></div>;
 
   const roomIndex = state.rooms.findIndex((r) => r.id === state.roomId) + 1;
 
   return (
-    <div className={`hud ${state.autoReport ? 'has-auto-report' : ''}`}>
+    <div className={`hud ${mobile ? 'hud-mobile' : 'hud-desktop'} ${state.autoReport ? 'has-auto-report' : ''}`}>
       {!state.inventoryOpen && <ComboHud combo={state.combo} />}
       {!state.inventoryOpen && <WinFeed entries={state.feed ?? []} />}
+      {mobile && panelOpen && <button className="mobile-panel-backdrop" aria-label="關閉面板" onClick={closeAll} />}
       {state.online !== undefined && <div className="net-badge" title="同一房的玩家（含你）"><i />線上 {state.online} 人</div>}
       {state.netDenied && <button className="net-badge net-denied" onClick={() => command({ type: 'netPermissions' })} title="多人連線需要你允許這個頁面的「房間」權限">多人連線未開啟 · 點此開啟</button>}
-      <div className="hud-top-left">
+      {!mobile && <div className="hud-top-left">
         <div className="brand-mark"><Icon name="leaf" /></div>
         <div className="world-title">
           <span className="eyebrow">LAWN / ADVENTURE</span>
           <strong>{state.roomName}</strong>
-          <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}>
-            <Icon name="compass" />尊榮{String(roomIndex).padStart(2, '0')} 換房
-          </button>
         </div>
-      </div>
+        <button className="room-switch" aria-expanded={roomsOpen} onClick={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}>
+          <Icon name="compass" />尊榮{String(roomIndex).padStart(2, '0')} 換房
+        </button>
+      </div>}
 
       {roomsOpen && (
         <RoomPicker state={state} command={command} onClose={() => setRoomsOpen(false)} />
@@ -93,7 +106,12 @@ export function Hud({ state, loading, command, action }: { state: HudState | nul
         <button className="help-toggle" aria-label="操作說明" aria-expanded={helpOpen} onClick={() => { const open = !helpOpen; closeAll(); setHelpOpen(open); }}><Icon name="help" /></button>
       </div>
 
-      <div className="hud-bottom-stack">
+      {mobile ? <MobileHud state={state} command={command} action={action} roomsOpen={roomsOpen} betOpen={betOpen} reportOpen={reportOpen}
+        onRooms={() => { const open = !roomsOpen; closeAll(); setRoomsOpen(open); }}
+        onBet={() => { const open = !betOpen; closeAll(); setBetOpen(open); }} closeBet={closeBet}
+        onInventory={() => { closeAll(); command({ type: 'inventoryOpen', open: true }); }}
+        onReport={() => { const open = !reportOpen; closeAll(); setReportOpen(open); }}
+        onAuto={() => { closeAll(); command({ type: 'toggleAuto' }); }} /> : <div className="hud-bottom-stack">
       <div className="hud-bottom" ref={dockRef}>
         <div className="class-section">
           <span className="eyebrow">冒險職業</span>
@@ -145,21 +163,22 @@ export function Hud({ state, loading, command, action }: { state: HudState | nul
           </button>
         </div>
       </div>
-      </div>
+      </div>}
 
-      {state.autoReport && <AutoReportButton report={state.autoReport} open={reportOpen} anchor={autoGroupRef} dock={dockRef} buttonRef={reportButtonRef} onClick={() => { const open = !reportOpen; closeAll(); setReportOpen(open); }} />}
-      {reportOpen && state.autoReport && <AutoReportPanel report={state.autoReport} buttonRef={reportButtonRef} onClose={closeReport} />}
-      <div className="hud-footer"><span>← → 移動 <i>·</i> SPACE 跳躍 <i>·</i> SHIFT 翻滾</span><span className="fps">{state.fps} FPS</span></div>
-      {settingsOpen && <SettingsPanel state={state} command={command} onClose={() => setSettingsOpen(false)} />}
+      {!mobile && state.autoReport && <AutoReportButton report={state.autoReport} open={reportOpen} anchor={autoGroupRef} dock={dockRef} buttonRef={reportButtonRef} onClick={() => { const open = !reportOpen; closeAll(); setReportOpen(open); }} />}
+      {reportOpen && state.autoReport && <AutoReportPanel report={state.autoReport} buttonRef={reportButtonRef} onClose={closeReport} mobile={mobile} />}
+      {!mobile && <div className="hud-footer"><span>← → 移動 <i>·</i> SPACE 跳躍 <i>·</i> SHIFT 翻滾</span><span className="fps">{state.fps} FPS</span></div>}
+      {settingsOpen && <SettingsPanel state={state} command={command} layout={preference} mobile={mobile} onLayoutChange={changeLayout} onClose={() => setSettingsOpen(false)}
+        onAutoSettings={() => { closeAll(); setAutoOpen(true); }} onReport={() => { closeAll(); setReportOpen(true); }} />}
       {autoOpen && <AutoPanel state={state} command={command} onClose={() => setAutoOpen(false)} />}
-      {helpOpen && <div className="panel help"><span className="eyebrow">冒險指南</span><h3>操作說明</h3><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>1</kbd> 普攻（按住連擊） <kbd>2–9</kbd> 技能列</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>A</kbd> 自動冒險（點職業圖示切換職業）</p><p><kbd>F1</kbd> 碰撞與導航圖</p><small>命中時扣除押注；揮空不扣款。</small></div>}
+      {helpOpen && <div className="panel help" role="dialog" aria-label="操作說明"><div className="settings-heading"><span className="eyebrow">冒險指南</span><button aria-label="關閉操作說明" onClick={() => setHelpOpen(false)}><Icon name="close" /></button></div><h3>操作說明</h3>{mobile ? <><p>點底部技能圖示施放，數字顯示剩餘冷卻。</p><p>右下 AUTO 開關自動移動與戰鬥。</p><p>左下調整押注，點數字選擇金額。</p><p>上方下拉選單切換職業。</p><p>點右下「紀錄」查看掛機時間、輸贏與掉落；自動冒險選項在設定內。</p></> : <><p><kbd>← →</kbd> 移動 <kbd>↑ ↓</kbd> 爬梯／進傳送點</p><p><kbd>Space</kbd> 跳躍 <kbd>↓ Space</kbd> 下跳</p><p><kbd>1</kbd> 普攻（按住連擊） <kbd>2–9</kbd> 技能列</p><p><kbd>Shift</kbd> 翻滾 <kbd>Q E</kbd> 調整押注</p><p><kbd>A</kbd> 自動冒險（點職業圖示切換職業）</p><p><kbd>F1</kbd> 碰撞與導航圖</p></>}<small>命中時扣除押注；揮空不扣款。</small></div>}
 
       {state.toast && (
         <div key={state.toast.id} className="panel toast">
           {state.toast.text}
         </div>
       )}
-      {state.inventoryOpen && state.inventory && <InventoryPanel state={state} command={command} />}
+      {state.inventoryOpen && state.inventory && <InventoryPanel state={state} command={command} mobile={mobile} />}
     </div>
   );
 }
@@ -170,46 +189,4 @@ function SkillDetails({ skill, hotkey, state }: { skill: NonNullable<HudState['s
     <span>{state.mode === 'dev' ? '開發模式：每刀 1 倍押注' : `施放打滿最多 ${skill.price} 倍押注（${(skill.price * state.bet).toLocaleString()} 金幣）`}</span>
     {skill.cooldownMs > 0 && <span className="tip-status">冷卻中 · 剩餘 {Math.ceil(skill.cooldownMs / 1000)} 秒</span>}
   </>;
-}
-
-/** 押注清單：從押注數字往上展開，打開時目前押注置中；底下 MIN／MAX。點清單外面或按 Esc 關閉。 */
-function BetPicker({ levels, bet, onPick, onClose }: { levels: number[]; bet: number; onPick: (bet: number) => void; onClose: () => void }) {
-  const listRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const list = listRef.current;
-    const current = list?.querySelector<HTMLElement>('.current');
-    if (list && current) list.scrollTop = current.offsetTop - (list.clientHeight - current.offsetHeight) / 2;
-  }, []);
-  useEffect(() => {
-    // 押注數字本身在 .panel.bet 裡，點它由按鈕自己切換開關
-    const onPointer = (e: PointerEvent) => {
-      if (!(e.target instanceof Element) || !e.target.closest('.panel.bet')) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('pointerdown', onPointer);
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('pointerdown', onPointer);
-      window.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-  const min = levels[0];
-  const max = levels.at(-1);
-  return (
-    <div className="panel bet-picker">
-      <div className="bet-picker-list" ref={listRef} role="listbox" aria-label="每刀押注">
-        {levels.map((level) => (
-          <button key={level} role="option" aria-selected={level === bet} className={level === bet ? 'current' : ''} onClick={() => onPick(level)}>
-            {level.toLocaleString()}
-          </button>
-        ))}
-      </div>
-      <div className="bet-picker-ends">
-        <button disabled={min === undefined || bet === min} onClick={() => min !== undefined && onPick(min)}>MIN</button>
-        <button disabled={max === undefined || bet === max} onClick={() => max !== undefined && onPick(max)}>MAX</button>
-      </div>
-    </div>
-  );
 }

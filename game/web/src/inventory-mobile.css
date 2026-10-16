@@ -1,0 +1,149 @@
+/* 手機背包一次只顯示一個工作區，保留完整寬度與手指操作空間。 */
+.inventory-window.inventory-mobile { width: 100%; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; box-shadow: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+.inventory-mobile .inventory-header { padding: 8px 12px; gap: 12px; min-height: 56px; }
+.inventory-mobile .inventory-header h2 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+.inventory-mobile .inventory-header .inventory-kicker, .inventory-mobile .inventory-header p, .inventory-mobile .inventory-bottom { display: none; }
+.inventory-mobile .inventory-wallet { min-width: 0; }
+.inventory-mobile .inventory-wallet small { font-size: 10px; }
+.inventory-mobile .inventory-wallet strong { font-size: 16px; margin-top: 2px; overflow-wrap: anywhere; }
+.inventory-mobile .inventory-close { width: 40px; height: 40px; flex-basis: 40px; }
+.inventory-mobile-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); flex-shrink: 0; padding: 0 12px; border-bottom: 1px solid #b6b18140; }
+.hud .inventory-mobile-nav button { min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #a9bdb1; font-size: 14px; }
+.hud .inventory-mobile-nav button[aria-pressed="true"] { border-bottom-color: #e7cd8c; background: #b5a35f12; color: #f2dba0; }
+.inventory-mobile .inventory-body { display: block; position: relative; min-height: 0; overflow: hidden; }
+.inventory-mobile .inventory-browse { display: contents; }
+.inventory-mobile .inventory-collection, .inventory-mobile .inventory-detail, .inventory-mobile .inventory-merchant { height: 100%; min-height: 0; border: 0; padding: 12px; }
+.inventory-mobile:not([data-mobile-view="collection"]) .inventory-collection,
+.inventory-mobile:not([data-mobile-view="detail"]) .inventory-detail,
+.inventory-mobile:not([data-mobile-view="shop"]) .inventory-merchant { display: none; }
+
+/* 收藏：固定分類，只有物品格捲動，點選後直接進入換裝／強化。 */
+.inventory-mobile .inventory-collection { overflow: hidden; }
+.inventory-mobile .inventory-tabs { padding-bottom: 6px; }
+.inventory-mobile .inventory-tabs button { min-height: 38px; padding: 4px; font-size: 13px; }
+.inventory-mobile .inventory-tabs small { display: inline; font-size: 11px; margin-left: 4px; }
+.inventory-mobile .inventory-outfit-slot { flex-direction: row; flex-wrap: nowrap; align-items: center; min-height: 38px; margin-top: 8px; padding: 6px 8px; }
+.inventory-mobile .inventory-outfit-slot strong { font-size: 12px; }
+.inventory-mobile .inventory-outfit-slot small { display: none; }
+.inventory-mobile .inventory-filters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; margin: 8px 0; }
+.inventory-mobile .inventory-filters button { min-height: 36px; padding: 4px 0; font-size: 12px; }
+.inventory-mobile .inventory-grid { flex: 1; min-height: 0; max-height: none; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; overflow: auto; }
+.inventory-mobile .inventory-item { min-height: 120px; padding: 6px 3px; }
+.inventory-mobile .inventory-item-name { font-size: 12px; white-space: normal; text-align: center; }
+.inventory-mobile .inventory-item > small { font-size: 10px; }
+.inventory-mobile .inventory-grid .weapon-art { width: 46px; height: 77px; }
+.inventory-mobile .inventory-grid .outfit-art { width: 77px; height: 77px; }
+.inventory-mobile .inventory-equipped { font-size: 10px; }
+.inventory-mobile .inventory-collection-footer { padding-top: 6px; }
+.inventory-mobile .inventory-collection-footer p { display: none; }
+.inventory-mobile .inventory-demo { width: 100%; min-height: 36px; }
+
+/* 詳情：換裝在上，卷軸、風險與施作鈕常駐下方。 */
+.inventory-mobile .inventory-detail { display: flex; flex-direction: column; gap: 10px; }
+.inventory-mobile .inventory-detail-content:not(.inventory-outfit-detail) { display: flex; flex-direction: column; overflow: hidden; }
+.inventory-mobile .inventory-detail-content > .inventory-weapon-summary { flex: 1; min-height: 0; overflow-y: auto; }
+.inventory-mobile .inventory-equip-row, .inventory-mobile .inventory-catalog-note { flex-shrink: 0; }
+.inventory-mobile .inventory-weapon-summary { grid-template-columns: 88px minmax(0, 1fr); gap: 12px; min-height: 112px; }
+.inventory-mobile .inventory-weapon-summary .inventory-showcase { height: 112px; }
+.inventory-mobile .inventory-weapon-summary .weapon-art.large { width: 66px; height: 110px; }
+.inventory-mobile .inventory-weapon-kind { display: block; font-size: 11px; letter-spacing: 0; }
+.inventory-mobile .inventory-weapon-copy h3 { margin: 6px 0; font-size: 20px; }
+.inventory-mobile .inventory-weapon-copy .inventory-description { display: block; font-size: 12px; line-height: 1.6; }
+.inventory-mobile .inventory-weapon-copy .inventory-cosmetic { display: block; font-size: 11px; margin-top: 6px; }
+.inventory-mobile .inventory-equip-row { flex-wrap: nowrap; gap: 8px; margin-top: 6px; padding-top: 8px; }
+.inventory-mobile .inventory-equip-row .inventory-value { flex: 1; flex-direction: column; align-items: flex-start; font-size: 11px; }
+.inventory-mobile .inventory-equip-row .inventory-value strong { font-size: 18px; }
+.inventory-mobile .inventory-equip-row .inventory-primary { width: auto; min-width: 120px; min-height: 42px; }
+.inventory-mobile .inventory-forge { margin: 0; padding: 12px; }
+.inventory-mobile .inventory-forge .inventory-scroll-heading { margin-bottom: 8px; }
+.inventory-mobile .inventory-forge h4 { margin: 0; font-size: 13px; }
+.inventory-mobile .inventory-forge .inventory-scroll-heading small { display: block; font-size: 10px; }
+.inventory-mobile .inventory-forge .inventory-scrolls button { padding: 6px; gap: 2px; }
+.inventory-mobile .inventory-forge .inventory-scrolls button .scroll-art { width: 36px; height: 36px; }
+.inventory-mobile .inventory-forge .inventory-scrolls strong { font-size: 16px; margin: 0; }
+.inventory-mobile .inventory-forge .inventory-scrolls small { font-size: 11px; }
+.inventory-mobile .inventory-forge .inventory-slots { margin-top: 10px; }
+.inventory-mobile .inventory-slots > span { font-size: 12px; }
+.inventory-mobile .inventory-forge .inventory-slots > div { margin: 5px 0 0; }
+.inventory-mobile .inventory-forge .inventory-risk { margin: 8px 0; font-size: 12px; line-height: 1.6; }
+.inventory-mobile .inventory-forge .inventory-risk small { font-size: 10px; }
+.hud .inventory-mobile .inventory-primary, .hud .inventory-mobile .inventory-forge .upgrade { min-height: 42px; font-size: 14px !important; padding: 8px; }
+.inventory-mobile .inventory-outfit-detail { display: flex; flex-direction: column; }
+.inventory-mobile .outfit-showcase { height: 180px; flex-shrink: 0; }
+.inventory-mobile .inventory-outfit-detail h3 { margin: 12px 0 6px; }
+.inventory-mobile .inventory-outfit-detail .inventory-description { font-size: 13px; }
+.inventory-mobile .inventory-outfit-detail .inventory-primary { margin-top: auto; flex-shrink: 0; }
+.inventory-mobile .outfit-details, .inventory-mobile .outfit-note { display: none; }
+.inventory-mobile .inventory-catalog-note { margin-top: 16px; font-size: 13px; }
+.inventory-mobile .inventory-empty { margin: auto; padding: 20px; }
+
+/* 商店：直接顯示補給與選中武器的出售操作，省去大幅商人立繪。 */
+.inventory-mobile .inventory-merchant { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+.inventory-mobile .inventory-merchant > .inventory-kicker, .inventory-mobile .merchant-stage, .inventory-mobile .merchant-subtitle { display: none; }
+.inventory-mobile .inventory-merchant > h3 { order: 0; margin: 0; font-size: 17px; }
+.inventory-mobile .merchant-dialogue { order: 1; min-height: 0; padding: 10px; font-size: 12px; }
+.inventory-mobile .inventory-storage-error { order: 1; }
+.inventory-mobile .merchant-shop { order: 2; margin: 0; }
+.inventory-mobile .merchant-trade { order: 3; margin: 0; padding-top: 8px; }
+.inventory-mobile .inventory-merchant h4 { margin: 0 0 8px; font-size: 14px; }
+.inventory-mobile .merchant-shop > div { flex-wrap: nowrap; gap: 8px; margin: 8px 0; padding: 8px; border-radius: 8px; background: #071d1980; font-size: 13px; }
+.inventory-mobile .merchant-shop > div > span { display: flex; align-items: center; gap: 6px; }
+.inventory-mobile .merchant-shop .scroll-art { width: 32px; height: 32px; }
+.inventory-mobile .merchant-shop small { margin: 0; font-size: 11px; }
+.inventory-mobile .merchant-shop button { min-width: 80px; min-height: 40px; font-size: 13px; }
+.inventory-mobile .merchant-trade p { font-size: 12px; }
+.inventory-mobile .inventory-sell, .inventory-mobile .merchant-confirm button { min-height: 42px; font-size: 13px; }
+.inventory-mobile .merchant-confirm { font-size: 13px; }
+.forge-mobile .forge-stage { width: min(320px, 90vw); height: 240px; }
+.forge-mobile .forge-weapon .weapon-art.large { width: 66px; height: 110px; }
+.forge-mobile .forge-caption { left: calc(50% + var(--caption-x)); top: calc(50% + var(--caption-y)); width: 220px; max-width: calc(100vw - 24px); white-space: normal; font-size: 12px; line-height: 1.5; }
+
+/* 橫向矮螢幕把詳情與強化左右分開，施作鈕不用往下找。 */
+@media (orientation: landscape) and (max-height: 540px) {
+  .inventory-mobile .inventory-header { min-height: 44px; padding-block: 4px; }
+  .inventory-mobile .inventory-close { width: 36px; height: 36px; flex-basis: 36px; }
+  .hud .inventory-mobile-nav button { min-height: 36px; font-size: 13px; }
+  .inventory-mobile .inventory-collection, .inventory-mobile .inventory-detail, .inventory-mobile .inventory-merchant { padding: 8px 12px; }
+  .inventory-mobile .inventory-collection { display: grid; grid-template-columns: 140px minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 6px 10px; }
+  .inventory-mobile .inventory-tabs { grid-column: 2; grid-row: 1; padding: 0; }
+  .inventory-mobile .inventory-tabs button { min-height: 30px; }
+  .inventory-mobile .inventory-outfit-slot { grid-column: 1; grid-row: 1; margin: 0; min-height: 30px; }
+  .inventory-mobile .inventory-outfit-slot > span { display: none; }
+  .inventory-mobile .inventory-filters { grid-column: 1; grid-row: 2; grid-template-columns: repeat(2, 1fr); margin: 0; }
+  .inventory-mobile .inventory-filters button { min-height: 36px; }
+  .inventory-mobile .inventory-grid { grid-column: 2; grid-row: 2 / 4; }
+  .inventory-mobile .inventory-collection-footer { grid-column: 1; grid-row: 3; overflow: auto; padding: 0; }
+  .inventory-mobile .inventory-detail { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 12px; }
+  .inventory-mobile .inventory-detail-content { height: 100%; }
+  .inventory-mobile .inventory-weapon-summary { grid-template-columns: 52px minmax(0, 1fr); min-height: 72px; gap: 8px; }
+  .inventory-mobile .inventory-weapon-summary .inventory-showcase { height: 72px; }
+  .inventory-mobile .inventory-weapon-summary .weapon-art.large { width: 42px; height: 70px; }
+  .inventory-mobile .inventory-weapon-copy h3 { font-size: 17px; margin: 4px 0; }
+  .inventory-mobile .inventory-weapon-copy .inventory-description { font-size: 11px; }
+  .inventory-mobile .inventory-weapon-copy .inventory-cosmetic { display: none; }
+  .inventory-mobile .inventory-equip-row { flex-wrap: wrap; }
+  .inventory-mobile .inventory-equip-row .inventory-primary { min-width: 0; flex: 1; }
+  .inventory-mobile .inventory-equip-row .inventory-value { flex: 1; white-space: nowrap; }
+  .inventory-mobile .inventory-forge { align-self: stretch; display: flex; flex-direction: column; padding: 8px; min-height: 0; }
+  .inventory-mobile .inventory-forge .inventory-scroll-heading { display: none; }
+  .inventory-mobile .inventory-forge .inventory-scrolls button { display: grid; grid-template-columns: 24px 1fr; gap: 2px; padding: 4px; }
+  .inventory-mobile .inventory-forge .inventory-scrolls button .scroll-art { width: 24px; height: 24px; grid-row: 1 / 3; }
+  .inventory-mobile .inventory-forge .inventory-scrolls strong { font-size: 14px; }
+  .inventory-mobile .inventory-forge .inventory-scrolls small { font-size: 10px; }
+  .inventory-mobile .inventory-forge .inventory-slots { margin-top: 6px; }
+  .inventory-mobile .inventory-forge .inventory-risk { margin: 5px 0; font-size: 11px; line-height: 1.4; }
+  .hud .inventory-mobile .inventory-primary, .hud .inventory-mobile .inventory-forge .upgrade { min-height: 36px; padding: 6px; font-size: 13px !important; }
+  .inventory-mobile .inventory-forge .upgrade { margin-top: auto; }
+  .inventory-mobile .inventory-outfit-detail { grid-column: 1 / -1; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 6px 16px; align-content: center; }
+  .inventory-mobile .outfit-showcase { grid-column: 1; grid-row: 1 / 5; height: 140px; }
+  .inventory-mobile .inventory-outfit-detail h3, .inventory-mobile .inventory-outfit-detail p { margin: 0; min-height: 0; }
+  .inventory-mobile .inventory-merchant { display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 10px 18px; }
+  .inventory-mobile .inventory-merchant > h3 { grid-column: 1 / -1; }
+  .inventory-mobile .merchant-dialogue { grid-column: 2; grid-row: 2; }
+  .inventory-mobile .merchant-shop { grid-column: 1; grid-row: 2 / 4; }
+  .inventory-mobile .merchant-shop > div { padding: 4px; margin: 4px 0; }
+  .inventory-mobile .merchant-trade { grid-column: 2; grid-row: 3; }
+  .inventory-mobile:not([data-mobile-view="collection"]) .inventory-collection,
+  .inventory-mobile:not([data-mobile-view="detail"]) .inventory-detail,
+  .inventory-mobile:not([data-mobile-view="shop"]) .inventory-merchant { display: none; }
+}

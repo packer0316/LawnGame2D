@@ -3,6 +3,7 @@ import { SCROLL_RATES, WEAPONS, WEAPON_ART, WEAPON_BY_ID, type AutoReportItem, t
 import { Icon } from './Icons';
 import { ScrollArt } from './ForgeRitual';
 import './auto-report.css';
+import './auto-report-mobile.css';
 
 /** 掛機時間：10:39、1:02:05 */
 export function formatDuration(ms: number): string {
@@ -98,12 +99,14 @@ function RangeTabs({ range, onChange }: { range: RangeId; onChange: (range: Rang
 }
 
 /** 掛機收益：財產變化折線圖＋獲得的裝備與卷軸（同樣的合併成 ×N）。停止後仍可查看，直到下次開始掛機。 */
-export function AutoReportPanel({ report, onClose, buttonRef }: { report: AutoReportView; onClose: () => void; buttonRef: RefObject<HTMLButtonElement | null> }) {
+export function AutoReportPanel({ report, onClose, buttonRef, mobile = false }: { report: AutoReportView; onClose: () => void; buttonRef: RefObject<HTMLButtonElement | null>; mobile?: boolean }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState<'overview' | 'trend' | 'loot'>('overview');
   const [range, setRange] = useState<RangeId>('all');
   const [zoom, setZoom] = useState(false);
   // 從「已掛機」按鈕往上展開，左右不超出畫面
   usePlacement(panelRef, (el) => {
+    if (mobile) return;
     const b = buttonRef.current?.getBoundingClientRect();
     if (!b) return;
     const width = Math.min(440, window.innerWidth - 24);
@@ -113,6 +116,12 @@ export function AutoReportPanel({ report, onClose, buttonRef }: { report: AutoRe
     el.style.bottom = `${window.innerHeight - b.top + 8}px`;
     el.style.maxHeight = `${Math.max(160, b.top - 20)}px`;
   });
+  useEffect(() => {
+    if (!mobile) return;
+    const previous = document.activeElement as HTMLElement | null;
+    panelRef.current?.querySelector<HTMLButtonElement>('.auto-report-heading button')?.focus();
+    return () => previous?.focus();
+  }, [mobile]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -129,27 +138,44 @@ export function AutoReportPanel({ report, onClose, buttonRef }: { report: AutoRe
   const rangeMs = RANGES.find((r) => r.id === range)!.ms;
   return (
     <>
-      <div ref={panelRef} className="panel auto-report" role="dialog" aria-label="掛機收益">
+      <div ref={panelRef} className={`panel auto-report ${mobile ? 'mobile-report' : ''}`} role="dialog" aria-label="掛機收益" aria-modal={mobile || undefined} inert={zoom} onKeyDown={event => {
+        if (!mobile || event.key !== 'Tab') return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')].filter(button => button.getClientRects().length > 0);
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0]?.focus(); }
+      }}>
         <div className="auto-report-heading">
           <div>
             <span className="eyebrow">AUTO ADVENTURE REPORT</span>
-            <h3>掛機收益</h3>
+            <h3>{mobile ? '掛機紀錄' : '掛機收益'}</h3>
           </div>
           <button aria-label="關閉掛機收益" onClick={onClose}><Icon name="close" /></button>
         </div>
         <Status report={report} />
+        {mobile && <nav className="auto-report-mobile-nav" aria-label="掛機紀錄頁面">
+          <button aria-pressed={view === 'overview'} onClick={() => setView('overview')}>總覽</button>
+          <button aria-pressed={view === 'trend'} onClick={() => setView('trend')}>財產曲線</button>
+          <button aria-pressed={view === 'loot'} onClick={() => setView('loot')}>掉落物{weapons + scrolls > 0 && <small>{weapons + scrolls}</small>}</button>
+        </nav>}
+        <div className="auto-report-content" data-view={view}>
+        <section className="auto-report-overview" aria-label="掛機總覽">
         <div className="auto-report-stats">
           <div><small>掛機時間</small><strong>{formatDuration(report.elapsedMs)}</strong></div>
           <div><small>輸贏</small><strong className={tone(net)}>{signed(net)}</strong></div>
           <div><small>財產</small><strong>{Math.round(report.balance).toLocaleString()}</strong><span>起始 {Math.round(report.startBalance).toLocaleString()}</span></div>
           <div><small>最高／最低</small><strong>{Math.round(report.high).toLocaleString()}</strong><span>最低 {Math.round(report.low).toLocaleString()}</span></div>
         </div>
+        {mobile && <button className="auto-report-loot-summary" onClick={() => setView('loot')}><span>本次掉落</span><strong>裝備 {weapons} · 卷軸 {scrolls}</strong><Icon name="chevronDown" /></button>}
+        </section>
+        <section className="auto-report-trend" aria-label="財產曲線">
         <div className="auto-report-chart-heading">
           <h4>財產變化</h4>
           <RangeTabs range={range} onChange={setRange} />
           <button className="auto-report-zoom-button" aria-label="放大財產變化" title="放大" onClick={() => setZoom(true)}><Icon name="expand" /></button>
         </div>
-        <BalanceChart report={report} rangeMs={rangeMs} size="small" onClick={() => setZoom(true)} />
+        <BalanceChart report={report} rangeMs={rangeMs} size="small" responsive={mobile} onClick={mobile ? undefined : () => setZoom(true)} />
+        </section>
+        <section className="auto-report-loot" aria-label="掛機掉落物">
         <h4>獲得裝備與卷軸 <small>{weapons > 0 || scrolls > 0 ? `裝備 ${weapons} 件 · 卷軸 ${scrolls} 張` : ''}</small></h4>
         {items.length === 0 ? (
           <p className="auto-report-empty">這次掛機還沒有掉落裝備或卷軸。</p>
@@ -165,8 +191,10 @@ export function AutoReportPanel({ report, onClose, buttonRef }: { report: AutoRe
             ))}
           </ul>
         )}
+        </section>
+        </div>
       </div>
-      {zoom && <ChartZoom report={report} range={range} onRange={setRange} onClose={() => setZoom(false)} />}
+      {zoom && <ChartZoom report={report} range={range} onRange={setRange} onClose={() => setZoom(false)} mobile={mobile} />}
     </>
   );
 }
@@ -201,14 +229,25 @@ function ItemArt({ item }: { item: AutoReportItem }) {
 }
 
 /** 放大看：整個畫面的大圖，同樣可以切時間級距。 */
-function ChartZoom({ report, range, onRange, onClose }: { report: AutoReportView; range: RangeId; onRange: (range: RangeId) => void; onClose: () => void }) {
+function ChartZoom({ report, range, onRange, onClose, mobile }: { report: AutoReportView; range: RangeId; onRange: (range: RangeId) => void; onClose: () => void; mobile: boolean }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    return () => { requestAnimationFrame(() => previous?.focus()); };
+  }, []);
   const rangeMs = RANGES.find((r) => r.id === range)!.ms;
   const window_ = visibleWindow(report, rangeMs);
   const change = window_.points.at(-1)![1] - window_.points[0]![1];
   const net = report.balance - report.startBalance;
   return (
     <div className="auto-report-zoom-backdrop" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="panel auto-report-zoom" role="dialog" aria-label="財產變化（放大）">
+      <div className="panel auto-report-zoom" role="dialog" aria-modal="true" aria-label="財產變化（放大）" onKeyDown={event => {
+        if (event.key !== 'Tab') return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+        if (event.shiftKey && document.activeElement === buttons[0]) { event.preventDefault(); buttons.at(-1)?.focus(); }
+        else if (!event.shiftKey && document.activeElement === buttons.at(-1)) { event.preventDefault(); buttons[0]?.focus(); }
+      }}>
         <div className="auto-report-heading">
           <div>
             <span className="eyebrow">BALANCE CHART</span>
@@ -216,7 +255,7 @@ function ChartZoom({ report, range, onRange, onClose }: { report: AutoReportView
           </div>
           <div className="auto-report-zoom-tools">
             <RangeTabs range={range} onChange={onRange} />
-            <button aria-label="關閉放大圖" onClick={onClose}><Icon name="close" /></button>
+            <button ref={closeRef} aria-label="關閉放大圖" onClick={onClose}><Icon name="close" /></button>
           </div>
         </div>
         <Status report={report} />
@@ -226,7 +265,7 @@ function ChartZoom({ report, range, onRange, onClose }: { report: AutoReportView
           <div><small>總輸贏</small><strong className={tone(net)}>{signed(net)}</strong></div>
           <div><small>財產</small><strong>{Math.round(report.balance).toLocaleString()}</strong></div>
         </div>
-        <BalanceChart report={report} rangeMs={rangeMs} size="large" />
+        <BalanceChart report={report} rangeMs={rangeMs} size="large" responsive={mobile} />
       </div>
     </div>
   );
@@ -298,10 +337,21 @@ const SIZES = {
   large: { W: 1000, H: 430, left: 78, right: 16, top: 16, bottom: 30, yTicks: 5, xTicks: 7, font: 12 },
 };
 
-function BalanceChart({ report, rangeMs, size, onClick }: { report: AutoReportView; rangeMs: number; size: 'small' | 'large'; onClick?: () => void }) {
+function BalanceChart({ report, rangeMs, size, onClick, responsive = false }: { report: AutoReportView; rangeMs: number; size: 'small' | 'large'; onClick?: () => void; responsive?: boolean }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverT, setHoverT] = useState<number | null>(null);
-  const S = SIZES[size];
+  const [bounds, setBounds] = useState({ width: 400, height: 220 });
+  useLayoutEffect(() => {
+    if (!responsive || !svgRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry || entry.contentRect.width === 0 || entry.contentRect.height === 0) return;
+      const width = Math.round(entry.contentRect.width), height = Math.round(entry.contentRect.height);
+      setBounds(previous => previous.width === width && previous.height === height ? previous : { width, height });
+    });
+    observer.observe(svgRef.current);
+    return () => observer.disconnect();
+  }, [responsive]);
+  const S = responsive ? { ...SIZES.small, W: bounds.width, H: bounds.height, left: 72, right: 12, top: 18, bottom: 26, yTicks: bounds.height > 260 ? 4 : 2, xTicks: bounds.width > 600 ? 5 : 3, font: 12 } : SIZES[size];
   const plot = { left: S.left, right: S.W - S.right, top: S.top, bottom: S.H - S.bottom };
   const { points, tStart, tEnd } = visibleWindow(report, rangeMs);
   const span = Math.max(1000, tEnd - tStart);
@@ -373,7 +423,7 @@ function BalanceChart({ report, rangeMs, size, onClick }: { report: AutoReportVi
       {hovered && (() => {
         const hx = x(hovered[0]);
         const hy = y(hovered[1]);
-        const label = `${formatDuration(hovered[0])}（${clock(report.startedAt + hovered[0])}）  ${Math.round(hovered[1]).toLocaleString()}（${signed(hovered[1] - report.startBalance)}）`;
+        const label = responsive ? `${formatDuration(hovered[0])} · ${Math.round(hovered[1]).toLocaleString()}` : `${formatDuration(hovered[0])}（${clock(report.startedAt + hovered[0])}）  ${Math.round(hovered[1]).toLocaleString()}（${signed(hovered[1] - report.startBalance)}）`;
         const boxW = textWidth(label, S.font) + 12;
         const boxH = S.font + 8;
         const bx = Math.min(plot.right - boxW, Math.max(plot.left, hx - boxW / 2));
