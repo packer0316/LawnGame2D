@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { sfx, type InventoryFeedback, type ScrollRate } from '@lawn/engine';
-import { FORGE_CHARGE_MS, FORGE_RESULT_MS, preloadForgeArt, SCROLL_ART } from './forgeArt';
+import { FORGE_CHARGE_MS, FORGE_RESULT_MS, preloadForgeArt, SCROLL_ART, SCROLL_ART_VIEWS } from './forgeArt';
 import { ForgeSequence, type ForgeSequencePlayer } from './ForgeSequence';
 import './forge.css';
 
 export function ScrollArt({ rate }: { rate: ScrollRate }) {
-  return <span className="scroll-art" role="img" aria-label={`${rate}% 武器卷軸`} style={{ backgroundImage: `url("${SCROLL_ART}")`, backgroundPosition: `${rate === 10 ? 0 : rate === 60 ? 50 : 100}% 50%` }} />;
+  return <svg className="scroll-art" role="img" aria-label={`${rate}% 武器卷軸`} viewBox={SCROLL_ART_VIEWS[rate]} preserveAspectRatio="xMidYMid meet"><image href={SCROLL_ART} width="2172" height="724" /></svg>;
 }
 
 type Phase = 'loading' | 'charge' | 'waiting' | 'result' | 'done' | 'loadError';

@@ -3,6 +3,7 @@ import { BAG_CAPACITY, MERCHANT_ART, SCROLL_RATES, SCROLL_RULES, UPGRADE_SLOTS, 
 import './inventory.css';
 import { ForgeRitual, ScrollArt } from './ForgeRitual';
 import { preloadForgeArt } from './forgeArt';
+import { Icon } from './Icons';
 import { OUTFITS, OUTFIT_ART, OUTFIT_BY_ID } from '@lawn/engine';
 
 function OutfitArt({ outfit, large = false }: { outfit: (typeof OUTFITS)[number]; large?: boolean }) {
@@ -79,7 +80,7 @@ export function InventoryPanel({ state, command }: { state: HudState; command: (
         else if (!e.shiftKey && document.activeElement === controls.at(-1)) { e.preventDefault(); controls[0]?.focus(); }
       }
     }}>
-      <header className="inventory-header" inert={!!ritual}><div><span className="inventory-kicker">THE WAYFARER’S COLLECTION</span><h2 id="inventory-title">行囊與換裝工坊</h2><p>收藏武器與套服，穿出你的冒險風格。</p></div><div className="inventory-wallet"><small>持有金幣</small><strong>◈ {state.balance.toLocaleString()}</strong></div><button className="inventory-close" aria-label="關閉背包" onClick={close}>×</button></header>
+      <header className="inventory-header" inert={!!ritual}><div><span className="inventory-kicker">THE WAYFARER’S COLLECTION</span><h2 id="inventory-title">行囊與換裝工坊</h2><p>收藏武器與套服，穿出你的冒險風格。</p></div><div className="inventory-wallet"><small>持有金幣</small><strong>◈ {state.balance.toLocaleString()}</strong></div><button className="inventory-close" aria-label="關閉背包" onClick={close}><Icon name="close" /></button></header>
       <div className="inventory-body" inert={!!ritual}>
         <section className="inventory-collection" aria-label="裝備收藏">
           <div className="inventory-tabs"><button aria-pressed={tab === 'bag'} onClick={() => setTab('bag')}>我的行囊 <small>{bag.items.length}/{BAG_CAPACITY}</small></button><button aria-pressed={tab === 'catalog'} onClick={() => setTab('catalog')}>外觀圖鑑 <small>{WEAPONS.length + OUTFITS.length} 款</small></button></div>

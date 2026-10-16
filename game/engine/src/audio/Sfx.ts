@@ -193,13 +193,16 @@ function matchesWhen(layer: SfxLayer, index: number, count: number): boolean {
   }
 }
 
+/** 沒存過音量時的預設（使用者指定 50%） */
+const DEFAULT_VOLUME = 0.5;
+
 function readVolume(): number {
   try {
     const raw = typeof localStorage === 'undefined' ? null : localStorage.getItem(VOLUME_KEY);
     const value = raw === null ? NaN : Number(raw);
-    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0.8;
+    return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : DEFAULT_VOLUME;
   } catch {
-    return 0.8;
+    return DEFAULT_VOLUME;
   }
 }
 

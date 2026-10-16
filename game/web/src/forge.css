@@ -1,4 +1,4 @@
-.scroll-art { display: inline-block; width: 72px; height: 72px; flex-shrink: 0; background-size: 300% 100%; background-repeat: no-repeat; image-rendering: pixelated; }
+.scroll-art { display: inline-block; width: 72px; height: 72px; flex-shrink: 0; overflow: hidden; image-rendering: pixelated; }
 .inventory-scrolls button .scroll-art { width: 64px; height: 64px; }
 .inventory-scrolls button { overflow: hidden; padding: 7px 3px 9px; }
 .inventory-scrolls button[aria-pressed=true] .scroll-art { filter: drop-shadow(0 0 6px #f5da8370); }

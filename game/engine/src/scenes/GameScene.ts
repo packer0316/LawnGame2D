@@ -11,6 +11,7 @@ import {
   type MapDef,
   type NavGraph,
   type Rect,
+  type RoomDef,
   type SkillCue,
   type SkillDef,
   type SkillMove,
@@ -27,7 +28,7 @@ import { loadOutfitArt } from '../avatar/outfits';
 import { loadInventoryArt } from '../inventory/loadArt';
 import { WEAPON_BY_ID } from '../inventory/catalog';
 import type { InventorySnapshot } from '../inventory/model';
-import type { ContentBundle } from '../content/bundle';
+import type { ContentBundle, SheetAsset } from '../content/bundle';
 import { InputState, SKILL_ACTIONS } from '../core/input';
 import { FxLayer, TIER_TINT } from '../feel/FxLayer';
 import { Pickups } from '../feel/Pickups';
@@ -54,6 +55,8 @@ const MODE_KEY = 'lawn.mode';
 const HOTBAR_SLOTS = 8;
 /** 換層位移（昇龍斬、瞬移術）落點跟角色至少差這麼多，才會斜上斜下 */
 const TIER_MIN_DX = 160;
+/** 進房後多久開始在背景預載相鄰房間（先讓背景音樂與畫面穩定） */
+const PREFETCH_DELAY_MS = 1500;
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
@@ -127,6 +130,9 @@ export class GameScene extends Phaser.Scene {
   private unsubscribes: (() => void)[] = [];
   private readonly damageStacks = new Map<number, { count: number; at: number }>();
   private playerLight: Phaser.GameObjects.Light | null = null;
+  /** 相鄰房間預載：排程與進行中的下載 */
+  private prefetchTimer: Phaser.Time.TimerEvent | null = null;
+  private readonly prefetching = new Map<number, Promise<void>>();
   /** 掉落物：金幣、武器、卷軸（落地漂浮後吸到玩家身上） */
   private pickups!: Pickups;
   private bgm!: BgmPlayer;
@@ -166,6 +172,7 @@ export class GameScene extends Phaser.Scene {
     this.fx = new FxLayer(this, this.bundle);
     this.pickups = new Pickups(this, this.bundle);
     this.pickups.target = () => ({ x: this.player?.body.x ?? 0, y: (this.player?.body.y ?? 0) - 26 });
+    this.pickups.world = () => this.world ?? null;
     this.pickups.onCollect = (x, y, kind) => {
       this.fx.spawn('hit_spark', x, y, { additive: true, scale: kind === 'item' ? 1.4 : 0.7 });
       this.collectSound(kind);
@@ -252,9 +259,13 @@ export class GameScene extends Phaser.Scene {
 
   private async enterRoom(snapshot: Snapshot, arriveAt: 'spawn' | 'next' | 'prev'): Promise<void> {
     this.comboTracker.reset();
+    this.cancelPrefetch();
     const map = this.opts.mapOverride ?? (await this.bundle.loadMap(snapshot.mapId));
     const theme = this.bundle.themes.get(map.theme);
-    await MapView.preload(this, this.bundle.source, map, theme);
+    const room = this.bundle.rooms.find(r => r.id === snapshot.roomId);
+    const sheets = this.roomSheets(room, map, snapshot.monsters.map(spawn => spawn.typeId));
+    // 背景、地形與怪物圖同時下載；相鄰房間預載過的直接用
+    await Promise.all([MapView.preload(this, this.bundle.source, map, theme), loadSheetAssets(this, this.bundle.source, sheets)]);
     if (this.dead) return;
 
     this.mapView?.destroy();
@@ -266,16 +277,9 @@ export class GameScene extends Phaser.Scene {
     this.pickups.clear();
     this.skillFx.clear();
 
-    const roomMonsterIds = new Set([...map.spawnZones.flatMap(zone => zone.pool.map(entry => entry.mobId)), ...snapshot.monsters.map(spawn => spawn.typeId)]);
-    const room = this.bundle.rooms.find(r => r.id === snapshot.roomId);
-    for (const id of room?.lineup ?? []) roomMonsterIds.add(id);
-    for (const entry of room?.wave?.pool ?? []) roomMonsterIds.add(entry.mobId);
-    if (room?.boss) roomMonsterIds.add(room.boss.mobId);
-    const sheets = [...roomMonsterIds].flatMap(id => this.bundle.monsters.get(id)?.sheet ?? []);
-    const needed = new Set(sheets.map(sheet => sheet.path));
-    for (const key of this.textures.getTextureKeys()) if (isThemedMonsterSheet(key) && !needed.has(key)) this.textures.remove(key);
-    await loadSheetAssets(this, this.bundle.source, sheets);
-    if (this.dead) return;
+    // 主題怪物圖很大：只留這一房與相鄰兩房的（相鄰的是預載來的），其他釋放
+    const keep = new Set([...sheets, ...this.neighborIds(snapshot.roomId).flatMap((id) => this.roomSheets(this.bundle.rooms.find((r) => r.id === id)))].map((sheet) => sheet.path));
+    for (const key of this.textures.getTextureKeys()) if (isThemedMonsterSheet(key) && !keep.has(key)) this.textures.remove(key);
 
     this.world = new FootholdWorld(map);
     // 編輯器預覽的地圖可能還沒產生導航圖：現場算一份
@@ -320,11 +324,59 @@ export class GameScene extends Phaser.Scene {
     this.applyZoom();
     camera.centerOn(body.x, body.y - 30);
     camera.fadeIn(250, 0, 0, 0);
+    // 進房穩定後（背景音樂先開始緩衝）再在背景預載相鄰房間，換過去幾乎不用等
+    if (!this.opts.mapOverride) this.prefetchTimer = this.time.delayedCall(PREFETCH_DELAY_MS, () => {
+      for (const id of this.neighborIds(this.roomId)) void this.prefetchRoom(id);
+    });
+  }
+
+  /** 這一房會用到的怪物圖：地圖的生怪區、房間的怪物組成、怪潮、Boss，加上目前場上的怪。 */
+  private roomSheets(room: RoomDef | undefined, map?: MapDef, extra: string[] = []): SheetAsset[] {
+    const ids = new Set([...(map?.spawnZones.flatMap((zone) => zone.pool.map((entry) => entry.mobId)) ?? []), ...extra]);
+    for (const id of room?.lineup ?? []) ids.add(id);
+    for (const entry of room?.wave?.pool ?? []) ids.add(entry.mobId);
+    if (room?.boss) ids.add(room.boss.mobId);
+    return [...ids].flatMap((id) => this.bundle.monsters.get(id)?.sheet ?? []);
+  }
+
+  /** 上一房、下一房（依房間編號排序，頭尾相接）。 */
+  private neighborIds(roomId: number): number[] {
+    const ids = this.bundle.rooms.map((r) => r.id).sort((a, b) => a - b);
+    const index = ids.indexOf(roomId);
+    if (index < 0 || ids.length < 2) return [];
+    return [...new Set([ids[(index + 1) % ids.length]!, ids[(index - 1 + ids.length) % ids.length]!])].filter((id) => id !== roomId);
+  }
+
+  /** 預先下載一間房的地圖、背景、地形與怪物圖（已經有的跳過；同一間同時只跑一次）。 */
+  private prefetchRoom(roomId: number): Promise<void> {
+    const running = this.prefetching.get(roomId);
+    if (running) return running;
+    const room = this.bundle.rooms.find((r) => r.id === roomId);
+    if (!room) return Promise.resolve();
+    const task = (async () => {
+      const map = await this.bundle.loadMap(room.mapId);
+      if (this.dead) return;
+      await Promise.all([
+        MapView.preload(this, this.bundle.source, map, this.bundle.themes.get(map.theme)),
+        loadSheetAssets(this, this.bundle.source, this.roomSheets(room, map)),
+      ]);
+    })()
+      .catch(() => undefined)
+      .finally(() => this.prefetching.delete(roomId));
+    this.prefetching.set(roomId, task);
+    return task;
+  }
+
+  private cancelPrefetch(): void {
+    this.prefetchTimer?.remove(false);
+    this.prefetchTimer = null;
   }
 
   private async changeRoom(roomId: number, via: 'portal' | 'menu', arriveAt: 'spawn' | 'next' | 'prev'): Promise<void> {
     if (this.switching || roomId === this.roomId) return;
     this.switching = true;
+    // 一按換房就開始下載新房間（跟淡出、伺服器換房同時進行）
+    void this.prefetchRoom(roomId);
     try {
       const camera = this.cameras.main;
       camera.fadeOut(200, 0, 0, 0);

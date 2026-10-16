@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -68,9 +69,39 @@ function bundleContent(): Plugin {
     configResolved(config) { outDir = path.resolve(config.root, config.build.outDir); },
     writeBundle() {
       const dir = path.join(repoRoot, 'content');
-      if (fs.existsSync(path.join(dir, 'manifest.json'))) fs.cpSync(dir, path.join(outDir, 'content'), { recursive: true });
+      if (!fs.existsSync(path.join(dir, 'manifest.json'))) return;
+      fs.cpSync(dir, path.join(outDir, 'content'), { recursive: true });
+      compressBackgrounds(path.join(outDir, 'content'));
     },
   };
+}
+
+/**
+ * 建置版的場景背景畫（每張約 0.9 MB 的 PNG）轉成 WebP（約 0.3 MB），換房下載少很多；content/ 裡的原圖不動。
+ * 用 ffmpeg（libwebp，bgra 輸入讓 libwebp 自己轉色彩，顏色不會變淡）；沒有 ffmpeg 就維持 PNG。
+ */
+function compressBackgrounds(contentDir: string): void {
+  const dir = path.join(contentDir, 'backgrounds');
+  const themesPath = path.join(contentDir, 'themes', 'themes.json');
+  if (!fs.existsSync(dir) || !fs.existsSync(themesPath)) return;
+  const converted: string[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    const src = path.join(dir, name);
+    if (!name.endsWith('.png') || fs.statSync(src).size < 200_000) continue;
+    const dst = src.replace(/\.png$/, '.webp');
+    const result = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', src, '-pix_fmt', 'bgra', '-c:v', 'libwebp', '-quality', '85', '-compression_level', '6', dst]);
+    if (result.status !== 0 || !fs.existsSync(dst)) {
+      console.warn(`[背景 WebP] 略過 ${name}：${result.error ? '找不到 ffmpeg' : result.stderr.toString().trim()}`);
+      if (result.error) return;
+      continue;
+    }
+    fs.rmSync(src);
+    converted.push(name);
+  }
+  let themes = fs.readFileSync(themesPath, 'utf8');
+  for (const name of converted) themes = themes.replaceAll(`backgrounds/${name}`, `backgrounds/${name.replace(/\.png$/, '.webp')}`);
+  fs.writeFileSync(themesPath, themes);
+  if (converted.length) console.log(`[背景 WebP] ${converted.length} 張場景背景畫轉成 WebP`);
 }
 
 export default defineConfig({

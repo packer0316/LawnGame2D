@@ -8,7 +8,11 @@ export function frameName(layer: string | null, index: number): string {
   return layer === null ? String(index) : `${layer}|${index}`;
 }
 
-/** 用 Phaser Loader 載入圖片（可附法線貼圖），等全部完成。 */
+/**
+ * 用 Phaser Loader 載入圖片（可附法線貼圖），等這幾張完成。
+ * 只等自己的圖（貼圖管理器的 addtexture-<key>，有法線貼圖的也是兩張都到才觸發）：背景預載相鄰房間時，
+ * 換房不必等預載的其他檔案；同一張已經在下載中（被預載排進去了）就直接等它完成，不會重複下載。
+ */
 export async function loadImages(scene: Phaser.Scene, source: ContentSource, images: { key: string; path: string; normal?: string }[]): Promise<void> {
   const pending = images.filter((image) => !scene.textures.exists(image.key));
   if (pending.length === 0) return;
@@ -17,13 +21,27 @@ export async function loadImages(scene: Phaser.Scene, source: ContentSource, ima
   );
   // 等網址期間場景可能已被銷毀（例如預覽元件很快就 destroy）
   if (!isSceneAlive(scene)) return;
-  await new Promise<void>((resolve) => {
-    for (const { key, url, normal } of urls) {
-      scene.load.image(normal ? { key, url, normalMap: normal } : { key, url });
-    }
-    scene.load.once(Phaser.Loader.Events.COMPLETE, () => resolve());
-    scene.load.start();
-  });
+  const load = scene.load;
+  const textures = scene.textures;
+  const done = urls.map(({ key, url, normal }) => new Promise<void>((resolve) => {
+    if (textures.exists(key)) return resolve();
+    const event = `${Phaser.Textures.Events.ADD_KEY}${key}`;
+    const finish = () => {
+      textures.off(event, finish);
+      load.off(Phaser.Loader.Events.FILE_LOAD_ERROR, failed);
+      resolve();
+    };
+    // 載入失敗也結束等待（缺圖顯示成 Phaser 的預設貼圖，不卡住換房）
+    const failed = (file: Phaser.Loader.File) => {
+      if (file.key === key) finish();
+    };
+    textures.on(event, finish);
+    load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, failed);
+    load.image(normal ? { key, url, normalMap: normal } : { key, url });
+  }));
+  // 載入器閒置時才需要 start；正在跑的話新加的檔案會自動排進去
+  load.start();
+  await Promise.all(done);
 }
 
 /** 場景還沒被銷毀（Phaser 銷毀後 sys.game 與 load 會變成 null）。 */

@@ -68,6 +68,8 @@
 
 ## 接入與驗證
 
+怪物掉落卷軸目前使用側面像素紙卷 v4：金黃星印／朱紅火印／冰藍葉印。素材、對應成功率與驗證方式見 [loot-scrolls-v4.md](loot-scrolls-v4.md)。
+
 新增 `GameCommand`：`inventoryOpen`、`inventory`。後者的 action 有 `equip`、`unequip`、`upgrade`、`sell`、`buyScroll`、`demoCollection`。`GameServer` 新增 `inventorySnapshot()`、`manageInventory()` 與 `inventory` 事件；HUD 只送指令、顯示結果。
 
 `npm run typecheck`、`npm test`、`npm run build`；`node scripts/inventory-review.mjs` 檢查四職業換裝、圖鑑、交易、強化、商人序列、重整存檔與手機版。`node scripts/weapon-grip-review.mjs` 檢查 40 把 × 5 姿勢 × 2 朝向，共 400 組位置／方向／遮擋狀態。截圖與報告寫入忽略版控的 `game/art-review/`。
