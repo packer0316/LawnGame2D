@@ -54,6 +54,9 @@ import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server
 
 export const INTERNAL_HEIGHT = 540;
 const STEP_MS = PHYSICS.dt * 1000;
+/** 聖劍斬：只打劍氣碰到的怪，碰到後每 HOLY_BEAT_MS 一刀、吃滿技能的刀數 */
+const HOLY_SKILL = 'skill_0040';
+const HOLY_BEAT_MS = 180;
 /** 放技能的人（自己或其他玩家）：判定範圍與特效的中心 */
 interface Caster {
   x: number;
@@ -193,6 +196,8 @@ export class GameScene extends Phaser.Scene {
   private scatter: { skillId: string; points: FxPoint[] } | null = null;
   /** 連鎖技能：這次施放已經打過的怪與上一個點 */
   private chain: { skillId: string; hit: Set<number>; last: FxPoint | null } | null = null;
+  /** 聖劍斬：劍氣碰到的怪（uid → 還剩幾刀），照碰到的先後打 */
+  private holy: { pending: Map<number, number>; waitMs: number; beat: number } | null = null;
 
   constructor() {
     super('game');
@@ -670,6 +675,8 @@ export class GameScene extends Phaser.Scene {
   private async changeRoom(roomId: number, via: 'portal' | 'menu', arriveAt: 'spawn' | 'next' | 'prev'): Promise<void> {
     if (this.switching || roomId === this.roomId) return;
     this.switching = true;
+    // 怪物 uid 換房後會重用：還沒打完的聖劍斬不帶過去
+    this.holy = null;
     // 一按換房就開始下載新房間（跟淡出、伺服器換房同時進行）
     void this.prefetchRoom(roomId);
     try {
@@ -818,6 +825,7 @@ export class GameScene extends Phaser.Scene {
     this.player.step(this.world, input);
     for (const monster of this.monsters.values()) monster.step();
     this.stepProjectiles();
+    this.stepHoly();
     // 掛機只有在「前往傳送點」時才會用 ↑ 換房，爬繩時按 ↑ 不會誤觸旁邊的傳送點
     this.checkPortals(driving ? input.up && this.auto.status === 'portal' : manual.up);
   }
@@ -1340,6 +1348,8 @@ export class GameScene extends Phaser.Scene {
         .sort((a,b)=>Math.abs(a.x-box.x-box.w/2)-Math.abs(b.x-box.x-box.w/2))
         .slice(0,strike.maxTargets):[];
     }
+    // 聖劍斬：時間軸上的刀不自己找目標，命中由劍氣碰到怪時決定（stepHoly）
+    else if (skill.id === HOLY_SKILL) targets = [];
     else targets = this.findTargets(strike.area, strike.maxTargets, strike.pierce);
     // Rain is launched during wind-up. Its landing and applyHits share this exact step.
     const rainLanded = this.skillFx.landRain(skill, index);
@@ -1347,6 +1357,42 @@ export class GameScene extends Phaser.Scene {
     if (strike.fx) this.playSfx([`fx:${strike.fx}:${skill.classId}`, `fx:${strike.fx}`], { ...beat, x: targets[0]?.x ?? body.x });
     if (strike.fx && !rainLanded) this.skillFx.play(strike.fx, this.fxContext(skill, strike.area, targets, from, strike.atMs));
     this.applyHits(skill, index, targets);
+  }
+
+  /**
+   * 聖劍斬的命中：只有劍氣碰到的怪才會被打。劍氣碰到就排進來，從碰到那一刻起每 HOLY_BEAT_MS 一刀，
+   * 每隻吃滿技能的刀數（跟原本五刀一樣的扣款與機率），同一刀一起打所有還沒打完的怪。
+   */
+  private stepHoly(): void {
+    const contacts = this.skillFx.takeHolyContacts();
+    const skill = this.bundle.skills.get(HOLY_SKILL);
+    if (!skill) return;
+    if (contacts.length > 0) {
+      this.holy ??= { pending: new Map(), waitMs: 0, beat: 0 };
+      for (const id of contacts) {
+        const uid = Number(id);
+        if (!this.holy.pending.has(uid)) this.holy.pending.set(uid, skill.strikes.length);
+      }
+    }
+    const holy = this.holy;
+    if (!holy) return;
+    holy.waitMs = Math.max(0, holy.waitMs - STEP_MS);
+    if (holy.waitMs > 0) return;
+    const index = holy.beat % skill.strikes.length;
+    const targets: MonsterActor[] = [];
+    for (const [uid, left] of holy.pending) {
+      const monster = this.monsters.get(uid);
+      if (!monster?.alive || left <= 0) holy.pending.delete(uid);
+      else if (targets.length < skill.strikes[index]!.maxTargets) targets.push(monster);
+    }
+    if (targets.length === 0) {
+      if (holy.pending.size === 0) this.holy = null;
+      return;
+    }
+    for (const m of targets) holy.pending.set(m.spawn.uid, holy.pending.get(m.spawn.uid)! - 1);
+    this.applyHits(skill, index, targets);
+    holy.beat += 1;
+    holy.waitMs = HOLY_BEAT_MS;
   }
 
   /**

@@ -478,6 +478,8 @@ export class SkillFx {
 
   tigerHitRect(index:number):Rect|null {return this.tiger?.hitRect(index)??null;}
   phoenixTargetIds(index:number):string[]{return this.phoenix?.targetIds(index)??[];}
+  /** 聖劍斬：劍氣新碰到的怪（id）；只有碰到的才算命中。 */
+  takeHolyContacts():string[]{return this.warriorBlades.takeHolyContacts();}
   tigerFloorAt(x:number):number|null {return this.tiger?.floorAt(x)??null;}
   get tigerImpactX():number|undefined{return this.tiger?.sprite.x;}
 
