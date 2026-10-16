@@ -59,8 +59,19 @@ async function loadSheet(source: ContentSource, path: string): Promise<SheetAsse
 }
 
 /** 讀取 manifest 與所有固定檔案（圖片之後由 Phaser 載入）。 */
-export async function loadContentBundle(source: ContentSource): Promise<ContentBundle> {
+export async function loadContentBundle(source: ContentSource, onProgress?: (loaded: number, total: number) => void): Promise<ContentBundle> {
   const manifest = ContentManifestFile.migrate(await source.json(contentPaths.manifest));
+  const total = 8 + manifest.avatarItems.length * 2 + manifest.monsters.length * 2 + manifest.fx.length;
+  let loaded = 1;
+  onProgress?.(loaded, total);
+  const originalSource = source;
+  source = {
+    imageUrl: originalSource.imageUrl.bind(originalSource),
+    async json<T>(path: string): Promise<T> {
+      try { return await originalSource.json<T>(path); }
+      finally { onProgress?.(++loaded, total); }
+    },
+  };
   const [base, themes, rooms, math, classes, skills, betLevels] = await Promise.all([
 
     loadSheet(source, contentPaths.avatarBaseSheet),
@@ -96,6 +107,8 @@ export async function loadContentBundle(source: ContentSource): Promise<ContentB
   await Promise.all(manifest.fx.map(async (id) => fx.set(id, await loadSheet(source, contentPaths.fxSheet(id)))));
 
   const mapCache = new Map<string, Promise<MapDef>>();
+  // Subsequent room loads are outside the initial data batch.
+  source = originalSource;
   return {
     source,
     manifest,

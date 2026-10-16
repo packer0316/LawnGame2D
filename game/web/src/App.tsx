@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { createGame, httpContentSource, type GameCommand, type GameHandle, type HudState } from '@lawn/engine';
+import { createGame, httpContentSource, type GameCommand, type GameHandle, type HudState, type LoadingProgress } from '@lawn/engine';
 import type { ClassId } from '@lawn/shared';
 import { Hud } from './Hud';
 
@@ -15,6 +15,7 @@ export function App() {
   const stageRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<GameHandle | null>(null);
   const [hud, setHud] = useState<HudState | null>(null);
+  const [loading, setLoading] = useState<LoadingProgress | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -28,6 +29,7 @@ export function App() {
       spawnScale: Number(params.get('mobs') ?? 1),
       showColliders: params.get('debug') === '1',
       onHud: setHud,
+      onLoading: setLoading,
     });
     return () => {
       handleRef.current?.destroy();
@@ -56,7 +58,7 @@ export function App() {
   return (
     <div style={{ position: 'absolute', inset: 0 }}>
       <div ref={stageRef} style={{ position: 'absolute', inset: 0 }} />
-      <Hud state={hud} command={command} action={(key) => {
+      <Hud state={hud} loading={loading} command={command} action={(key) => {
         handleRef.current?.press(key);
         window.setTimeout(() => handleRef.current?.release(key), 80);
       }} />

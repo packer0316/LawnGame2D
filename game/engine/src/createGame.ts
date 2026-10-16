@@ -6,6 +6,7 @@ import type { Action } from './core/input';
 import type { GameCommand, GameMode, HudState } from './hud';
 import { GameScene } from './scenes/GameScene';
 import { applyThemedRosters } from './monster/themedRoster';
+import { LoadingReporter, type LoadingProgress } from './loading';
 
 export interface CreateGameOptions {
   /** Shipped game art pack; opt in so custom editor previews retain their own monsters. */
@@ -21,6 +22,7 @@ export interface CreateGameOptions {
   onExit?: () => void;
   /** HUD 狀態（約每 100ms 一次，有變化時也會推）。 */
   onHud?: (state: HudState) => void;
+  onLoading?: (progress: LoadingProgress) => void;
   classId?: ClassId;
   /** 開發模式／實際模式；沒給就用上次在設定裡選的（預設實際模式） */
   mode?: GameMode;
@@ -76,11 +78,14 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
   let insetBottom = 0;
 
   const start = async () => {
-    const original = await loadContentBundle(options.content);
+    const loading = new LoadingReporter(progress => { if (!destroyed) options.onLoading?.(progress); });
+    loading.update('讀取冒險資料', 0, 20);
+    const original = await loadContentBundle(options.content, (done, total) => loading.update('讀取冒險資料', 0, 20, done, total));
     const bundle = options.themedMonsters && !options.mapOverride ? applyThemedRosters(original) : original;
     if (destroyed) return;
     game.scene.add('game', GameScene, true, {
       bundle,
+      loadingReporter: loading,
       ...(options.roomId !== undefined ? { roomId: options.roomId } : {}),
       ...(options.mapOverride ? { mapOverride: options.mapOverride } : {}),
       ...(options.classId ? { classId: options.classId } : {}),
@@ -95,6 +100,7 @@ export function createGame(parent: HTMLElement, options: CreateGameOptions): Gam
     scene.setViewInsets(insetBottom);
   };
   start().catch((error: unknown) => {
+    if (destroyed) return;
     console.error(error);
     options.onHud?.({ loading: false, error: error instanceof Error ? error.message : String(error) } as HudState);
   });

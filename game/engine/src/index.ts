@@ -1,5 +1,6 @@
 export type { ContentSource } from './content';
 export { httpContentSource } from './content';
+export type { LoadingProgress } from './loading';
 export type { CreateGameOptions, GameHandle } from './createGame';
 export { createGame, INTERNAL_HEIGHT } from './createGame';
 export type { AutoConfig, AutoStatus, GameCommand, GameMode, HudFeedEntry, HudSkill, HudState } from './hud';

@@ -43,6 +43,7 @@ import { MonsterActor } from '../monster/MonsterActor';
 import { isThemedMonsterSheet } from '../monster/themedRoster';
 import { loadSheetAssets } from '../render/sheets';
 import { LocalServer } from '../server/LocalServer';
+import type { LoadingReporter } from '../loading';
 import type { AttackResult, GameServer, MonsterSpawn, Snapshot } from '../server/types';
 
 export const INTERNAL_HEIGHT = 540;
@@ -63,6 +64,7 @@ const PREFETCH_DELAY_MS = 1500;
 
 export interface GameSceneOptions {
   bundle: ContentBundle;
+  loadingReporter?: LoadingReporter;
   roomId?: number;
   mapOverride?: MapDef;
   classId?: ClassId;
@@ -189,6 +191,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardown());
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.applyZoom());
     this.boot().catch((error: unknown) => {
+      if (this.dead) return;
       console.error(error);
       this.emitHud({ error: error instanceof Error ? error.message : String(error) });
     });
@@ -196,16 +199,20 @@ export class GameScene extends Phaser.Scene {
 
   private async boot(): Promise<void> {
     const { bundle } = this;
-    await loadSheetAssets(this, bundle.source, [
+    await this.loadStage('下載角色與怪物素材', 20, 40, () => loadSheetAssets(this, bundle.source, [
       bundle.base,
       ...[...bundle.items.values()].map((entry) => entry.sheet),
       ...[...bundle.monsters.values()].map((entry) => entry.sheet).filter(sheet => !isThemedMonsterSheet(sheet.path)),
       ...bundle.fx.values(),
-    ]);
-    await loadHeroMotions(this);
-    await loadInventoryArt(this);
-    await loadOutfitArt(this);
-    await SkillFx.preload(this);
+    ]));
+    if (this.dead) return;
+    await this.loadStage('下載旅人動作', 40, 50, () => loadHeroMotions(this));
+    if (this.dead) return;
+    await this.loadStage('下載武器與裝備', 50, 62, () => loadInventoryArt(this));
+    if (this.dead) return;
+    await this.loadStage('下載旅人造型', 62, 72, () => loadOutfitArt(this));
+    if (this.dead) return;
+    await this.loadStage('下載技能特效', 72, 85, () => SkillFx.preload(this));
     if (this.dead) return;
     this.server = new LocalServer(bundle, { spawnScale: this.opts.spawnScale ?? 1 });
     this.inventoryState = this.server.inventorySnapshot();
@@ -251,11 +258,45 @@ export class GameScene extends Phaser.Scene {
 
     const snapshot = await this.server.join({ roomId: this.opts.roomId ?? 1, classId: this.classId });
     if (this.dead) return;
-    await this.enterRoom(snapshot, 'spawn');
+    await this.loadStage('下載場景・準備出發', 85, 99, () => this.enterRoom(snapshot, 'spawn'));
     if (this.dead) return;
     this.ready = true;
+    this.opts.loadingReporter?.complete();
     this.opts.onReady?.();
     this.emitHud({ loading: false });
+  }
+
+  /** Listen to actual loader events, including partial downloads of large images. */
+  private async loadStage(label: string, from: number, to: number, task: () => Promise<void>): Promise<void> {
+    const loader = this.load;
+    const partial = new Map<Phaser.Loader.File, number>();
+    let failure: string | undefined;
+    const update = () => {
+      if (this.dead) return;
+      const downloaded = loader.totalComplete + [...partial.values()].reduce((sum, value) => sum + value, 0);
+      this.opts.loadingReporter?.update(label, from, to, loader.totalComplete, loader.totalToLoad,
+        loader.totalToLoad ? downloaded / loader.totalToLoad : 0);
+    };
+    const start = () => { partial.clear(); update(); };
+    const progress = (file: Phaser.Loader.File, value: number) => { partial.set(file, value); update(); };
+    const complete = (file: Phaser.Loader.File) => { partial.delete(file); update(); };
+    const failed = (file: Phaser.Loader.File) => { partial.delete(file); failure = `圖片下載失敗：${file.key}`; };
+    this.opts.loadingReporter?.update(label, from, to);
+    loader.on(Phaser.Loader.Events.START, start);
+    loader.on(Phaser.Loader.Events.FILE_PROGRESS, progress);
+    loader.on(Phaser.Loader.Events.FILE_LOAD, complete);
+    loader.on(Phaser.Loader.Events.FILE_LOAD_ERROR, failed);
+    try {
+      await task();
+      if (this.dead) return;
+      if (failure) throw new Error(failure);
+      this.opts.loadingReporter?.update(label, to, to);
+    } finally {
+      loader.off(Phaser.Loader.Events.START, start);
+      loader.off(Phaser.Loader.Events.FILE_PROGRESS, progress);
+      loader.off(Phaser.Loader.Events.FILE_LOAD, complete);
+      loader.off(Phaser.Loader.Events.FILE_LOAD_ERROR, failed);
+    }
   }
 
   // ---------------------------------------------------------------------------

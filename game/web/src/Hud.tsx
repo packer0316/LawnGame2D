@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GameCommand, HudState, SkillAction } from '@lawn/engine';
+import type { GameCommand, HudState, SkillAction, LoadingProgress } from '@lawn/engine';
+import { LoadingScreen } from './LoadingScreen';
 import { AUTO_STATUS_TEXT, AutoPanel } from './AutoPanel';
 import { Icon } from './Icons';
 import { SettingsPanel } from './SettingsPanel';
@@ -15,7 +16,7 @@ import { WinFeed } from './WinFeed';
 /** 技能列固定八格（鍵盤 1–8），職業技能不足八個時後面留空。 */
 const HOTBAR_SLOTS = 8;
 
-export function Hud({ state, command, action }: { state: HudState | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | 'secondary' | SkillAction) => void }) {
+export function Hud({ state, loading, command, action }: { state: HudState | null; loading?: LoadingProgress | null; command: (cmd: GameCommand) => void; action: (key: 'attack' | 'secondary' | SkillAction) => void }) {
   const [roomsOpen, setRoomsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
@@ -40,9 +41,7 @@ export function Hud({ state, command, action }: { state: HudState | null; comman
     setBetOpen(false);
   };
 
-  if (!state) return <div className="hud"><div className="loading"><Icon name="leaf" /><span>正在走進森林…</span></div></div>;
-  if (state.error) return <div className="hud"><div className="loading error">載入失敗：{state.error}</div></div>;
-  if (state.loading) return <div className="hud"><div className="loading">載入中…</div></div>;
+  if (!state || state.loading || state.error) return <div className="hud"><LoadingScreen progress={loading} error={state?.error} /></div>;
 
   const roomIndex = state.rooms.findIndex((r) => r.id === state.roomId) + 1;
 

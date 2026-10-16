@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "asset": "rare-beasts-v2.png",
+  "runtimeAsset": "rare-beasts-v2.webp",
+  "prompt": "Use case: stylized-concept. Create a NEW premium loading-screen key art illustration for the existing 森境 / Lawn 2D fantasy adventure game. Wide landscape 1536x1024. User explicitly rejected the previous sparse forest scene and all mushrooms: ABSOLUTELY NO MUSHROOMS, NO MUSHROOM CHARACTERS, NO FUNGI anywhere. This time make a richly populated magical rare-beast gathering, with a new composition. References: 1 actual forest backdrop, use its handcrafted painterly pixel-textured aesthetic, teal foliage and warm morning lighting; 2 actual hero sprite sheet, preserve identity and costume of chestnut-haired chibi traveler with leaf hairpin, cream scarf, green gold-trim tunic, sage cape and brown leather boots; 3 actual moon-garden beast sprite sheet, preserve creature designs; 4 actual celestial creature sheet, preserve designs. ONE traveler at the center walking toward us, surrounded by SIX individually clear and charming rare beasts from the game's own artwork: majestic white stag with rose antlers and moonstone armor behind the traveler on the right; elegant white fox with midnight-blue flower cape on left; little lavender moon rabbit by boots; one floating translucent lavender star jellyfish high left; large navy and gold constellation manta ray gliding overhead; inquisitive small astronomer cat with blue star scarf and brass telescope pack on a mossy rock right. A golden morning magical clearing, ancient teal trees, pale ruined arches and distant waterfalls. Make beasts prominent and full of personality, varied sizes, readable silhouettes, interact naturally with traveler. Cohesive detailed 2D RPG illustration, cute 2.5-head chibi hero, crisp pixel-textured painted edges, no 3D, no photorealism. Main character ensemble fits central 70 percent width, all faces between 22 and 60 percent height; quiet dark foliage bottom 23 percent reserved for HTML progress UI; some calm top-left for title. No text, no lettering, no logos, no UI, no watermarks. Absolutely no mushrooms.",
+  "references": [
+    "content/backgrounds/forest_painted.png",
+    "game/assets/verdant/hero.png",
+    "game/assets/monsters/map_0007-v1.png",
+    "game/assets/monsters/map_0018-v1.png"
+  ],
+  "constraints": [
+    "No mushrooms or fungi",
+    "Match existing hero and creature designs"
+  ],
+  "runtimeEncoding": "WebP quality 84; source PNG retained"
+}
